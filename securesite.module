@@ -1,0 +1,91 @@
+<?php
+
+function securesite_perm() {
+  return array('access site');
+}
+
+function securesite_help($section) {
+  if ($section == 'admin/modules#description') {
+    return t('Lets you use basic HTTP authentication for log in.');
+  }
+}
+
+function securesite_init() {
+  global $user, $base_url;
+
+  $guest_name = variable_get('securesite_guest_name', '');
+  $guest_pass = variable_get('securesite_guest_pass', '');
+  $edit = array('name'=> $_SERVER['PHP_AUTH_USER'], 'pass' => $_SERVER['PHP_AUTH_PW']);
+  if (!module_hook('user', 'deny')) {
+    drupal_load('module', 'user');
+  }
+  if (!variable_get('securesite_enabled', 0) || ($user->uid && user_access('access site')) || (!empty($guest_name) && $guest_name == $edit['name'] && $guest_pass == $edit['pass'])) {
+    return;
+  }
+
+  if (!empty($_POST)) {
+    securesite_user_pass();
+  }
+
+  if (!user_deny('user', $edit['name']) && ($account = user_authenticate($edit['name'], $edit['pass'])) && user_access('access site', $account)) {
+    $user = $account;
+    watchdog('user', securesite_t('Session opened for %name.', array('%name' => securesite_theme_placeholder($user->name))));
+    db_query("UPDATE {users} SET changed = '%d' WHERE uid = '%s'", time(), $user->uid);
+    user_module_invoke('login', $edit, $user);
+    securesite_goto();
+  }
+  else {
+    _securitesite_auth();
+  }
+  exit;
+}
+
+function securesite_user($op, &$edit, &$user) {
+  if ($op == 'logout') {
+    _securitesite_auth();
+    unset($user);
+    module_invoke_all('exit', request_uri());
+    exit;
+  }
+}
+
+function _securitesite_auth() {
+  header('WWW-Authenticate: Basic realm="'. str_replace("\n", ' ', (variable_get('site_name', 'local'))) .'"');
+  header('HTTP/1.0 401 Unauthorized');
+  securesite_user_pass();
+}
+
+
+function securesite_goto() {
+  global $base_url;
+  $url = (arg(0) == 'logout' ? $base_url :  request_uri());
+  if (ini_get('session.use_trans_sid') && session_id() && !strstr($url, session_id())) {
+    $url .= (strstr($url, '?') && !strstr($url, $sid) ? '&' : '?'). session_name() .'='. session_id();
+  }
+  module_invoke_all('exit', $url);
+  header('Location: '. $url);
+}
+
+function securesite_t($string, $args = 0) {
+  if (!$args) {
+    return $string;
+  }
+  else {
+    return strtr($string, $args);
+  }
+}
+
+function securesite_theme_placeholder($text) {
+  return '<strong>'. htmlspecialchars($text, ENT_QUOTES) .'</strong>';
+}
+
+function securesite_settings() {
+  include('securesite.inc');
+  return _securesite_settings();
+}
+
+function securesite_user_pass() {
+  include('securesite.inc');
+  _securesite_user_pass();
+}
+?>
