@@ -57,11 +57,41 @@ function _securesite_user_pass() {
 }
 
 function _securesite_settings() {
-  $output = form_checkbox(t('Enable HTTP auth'), 'securesite_enabled', 1, variable_get('securesite_enabled', 0));
-  $output .= form_textfield(t('Guest user'), 'securesite_guest_name', variable_get('securesite_guest_name', ''), 16, 40, t('Leave empty for no guest access'));
-  $output .= form_textfield(t('Guest password'), 'securesite_guest_pass', variable_get('securesite_guest_pass', ''), 16, 40);
-  $output .= form_textarea(t('HTML for the Request new password form'), 'securesite_request_form', variable_get('securesite_request_form', _securesite_request_form()), 60, 10);
-  $output .= form_textfield(t('Error message for the Request new password form'), 'securesite_request_error', variable_get('securesite_request_error', 'The name or the mail address is not recognized'), 60, 100);
-  return $output;
+  $form['securesite_enabled'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable HTTP auth'),
+    '#return_value' => 1,
+    '#default_value' => variable_get('securesite_enabled', 0),
+  );
+  $form['securesite_guest_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Guest user'),
+    '#default_value' => variable_get('securesite_guest_name', ''),
+    '#size' => 16,
+    '#maxlength' => 40,
+    '#description' => t('Leave empty for no guest access'),
+  );
+  $form['securesite_guest_pass'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Guest password'),
+    '#default_value' => variable_get('securesite_guest_pass', ''),
+    '#size' => 16,
+    '#maxlength' => 40,
+  );
+  $form['securesite_request_form'] = array(
+    '#type' => 'textarea',
+    '#title' => t('HTML for the Request new password form'),
+    '#default_value' => variable_get('securesite_request_form', _securesite_request_form()),
+    '#cols' => 60,
+    '#rows' => 10,
+  );
+  $form['securesite_request_error'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Error message for the Request new password form'),
+    '#default_value' => variable_get('securesite_request_error', 'The name or the mail address is not recognized'),
+    '#size' => 60,
+    '#maxlength' => 100,
+  );
+  return $form;
 }
 ?>

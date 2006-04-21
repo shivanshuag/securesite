@@ -16,7 +16,7 @@ function securesite_init() {
   $guest_name = variable_get('securesite_guest_name', '');
   $guest_pass = variable_get('securesite_guest_pass', '');
   $edit = array('name'=> $_SERVER['PHP_AUTH_USER'], 'pass' => $_SERVER['PHP_AUTH_PW']);
-  if (!module_hook('user', 'deny')) {
+  if (!module_hook('user', 'authenticate')) {
     drupal_load('module', 'user');
   }
   if (!variable_get('securesite_enabled', 0) || ($user->uid && user_access('access site')) || (!empty($guest_name) && $guest_name == $edit['name'] && $guest_pass == $edit['pass'])) {
@@ -27,11 +27,10 @@ function securesite_init() {
     securesite_user_pass();
   }
 
-  if (!user_deny('user', $edit['name']) && ($account = user_authenticate($edit['name'], $edit['pass'])) && user_access('access site', $account)) {
+  if (($account = user_authenticate($edit['name'], $edit['pass'])) && user_access('access site', $account)) {
     $user = $account;
     watchdog('user', securesite_t('Session opened for %name.', array('%name' => securesite_theme_placeholder($user->name))));
-    db_query("UPDATE {users} SET changed = '%d' WHERE uid = '%s'", time(), $user->uid);
-    user_module_invoke('login', $edit, $user);
+    user_login_submit('user_login', $edit);
     securesite_goto();
   }
   else {
