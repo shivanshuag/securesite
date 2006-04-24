@@ -103,4 +103,3 @@ function securesite_user_pass() {
   include('securesite.inc');
   _securesite_user_pass();
 }
-?>
