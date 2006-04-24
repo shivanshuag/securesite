@@ -57,11 +57,21 @@ function _securesite_user_pass() {
 }
 
 function _securesite_settings() {
+  $options =array(t('Enabled on only the listed pages.'), t('Enabled on every page except the listed pages.') );
   $form['securesite_enabled'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Enable HTTP auth'),
-    '#return_value' => 1,
+    '#type' => 'radios',
+    '#title' => t('Enable HTTP authorization'),
+    '#options' => $options,
     '#default_value' => variable_get('securesite_enabled', 0),
+  );
+
+  $description = t("Enter one page per line as Drupal paths. The '*' character is a wildcard. Example paths are '%blog' for the blog page and %blog-wildcard for every personal blog. %front is the front page.", array('%blog' => theme('placeholder', 'blog'), '%blog-wildcard' =>  theme('placeholder', 'blog/*'), '%front' => theme('placeholder', '<front>')));
+
+  $form['securesite_pages'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Enable securesite for specific pages'),
+    '#default_value' => variable_get('securesite_pages', ''),
+    '#description' => $description
   );
   $form['securesite_guest_name'] = array(
     '#type' => 'textfield',

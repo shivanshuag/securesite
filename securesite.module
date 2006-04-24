@@ -19,7 +19,7 @@ function securesite_init() {
   if (!module_hook('user', 'authenticate')) {
     drupal_load('module', 'user');
   }
-  if (!variable_get('securesite_enabled', 0) || ($user->uid && user_access('access site')) || (!empty($guest_name) && $guest_name == $edit['name'] && $guest_pass == $edit['pass'])) {
+  if (!securesite_page_match() || ($user->uid && user_access('access site')) || (!empty($guest_name) && $guest_name == $edit['name'] && $guest_pass == $edit['pass'])) {
     return;
   }
 
@@ -37,6 +37,22 @@ function securesite_init() {
     _securitesite_auth();
   }
   exit;
+}
+function securesite_page_match($refresh = false) {
+  static $page_match = null;
+
+  if (is_null($page_match) || $refresh) {
+    $pages = variable_get('securesite_pages', FALSE);
+    if ($pages) {
+      $path = drupal_get_path_alias($_GET['q']);
+      $regexp = '/^('. preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1'. preg_quote(variable_get('site_frontpage', 'node'), '/') .'\2'), preg_quote($pages, '/')) .')$/';
+      $page_match = preg_match($regexp, $path);
+    }
+    else {
+      $page_match = variable_get('securesite_enabled', 0);
+    }
+  }
+  return $page_match;
 }
 
 function securesite_user($op, &$edit, &$user) {
