@@ -31,12 +31,12 @@ function securesite_init() {
     $user = $account;
     watchdog('user', securesite_t('Session opened for %name.', array('%name' => securesite_theme_placeholder($user->name))));
     user_login_submit('user_login', $edit);
-    securesite_goto();
+    $_SESSION['securesite_auth'] = TRUE;
   }
   else {
     _securitesite_auth();
+    exit;
   }
-  exit;
 }
 function securesite_page_match($refresh = false) {
   static $page_match = null;
@@ -56,7 +56,8 @@ function securesite_page_match($refresh = false) {
 }
 
 function securesite_user($op, &$edit, &$user) {
-  if ($op == 'logout') {
+  if ($op == 'logout' && $_SESSION['securesite_auth']) {
+    unset($_SESSION['securesite_auth']);
     _securitesite_auth();
     unset($user);
     module_invoke_all('exit', request_uri());
