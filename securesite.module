@@ -11,6 +11,8 @@ function securesite_help($section) {
 }
 
 function securesite_init() {
+  drupal_bootstrap(DRUPAL_BOOTSTRAP_PATH);
+
   global $user, $base_url;
 
   $guest_name = variable_get('securesite_guest_name', '');
