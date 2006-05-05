@@ -73,6 +73,7 @@ function _securesite_settings() {
     '#default_value' => variable_get('securesite_pages', ''),
     '#description' => $description
   );
+  /*
   $form['securesite_guest_name'] = array(
     '#type' => 'textfield',
     '#title' => t('Guest user'),
@@ -87,7 +88,7 @@ function _securesite_settings() {
     '#default_value' => variable_get('securesite_guest_pass', ''),
     '#size' => 16,
     '#maxlength' => 40,
-  );
+  );*/
   $form['securesite_request_form'] = array(
     '#type' => 'textarea',
     '#title' => t('HTML for the Request new password form'),

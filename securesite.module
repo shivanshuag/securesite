@@ -15,13 +15,14 @@ function securesite_init() {
 
   global $user, $base_url;
 
-  $guest_name = variable_get('securesite_guest_name', '');
-  $guest_pass = variable_get('securesite_guest_pass', '');
+  #$guest_name = variable_get('securesite_guest_name', '');
+  #$guest_pass = variable_get('securesite_guest_pass', '');
   $edit = array('name'=> $_SERVER['PHP_AUTH_USER'], 'pass' => $_SERVER['PHP_AUTH_PW']);
+
   if (!module_hook('user', 'authenticate')) {
     drupal_load('module', 'user');
   }
-  if (!securesite_page_match() || ($user->uid && user_access('access site')) || (!empty($guest_name) && $guest_name == $edit['name'] && $guest_pass == $edit['pass'])) {
+  if (!securesite_page_match() || ($user->uid && user_access('access site'))) {
     return;
   }
 
@@ -29,14 +30,15 @@ function securesite_init() {
     securesite_user_pass();
   }
 
-  if (($account = user_authenticate($edit['name'], $edit['pass'])) && user_access('access site', $account)) {
-    $user = $account;
+  $account = user_authenticate($edit['name'], $edit['pass']);
+
+  if ($account->uid && user_access('access site', $account)) {
     watchdog('user', securesite_t('Session opened for %name.', array('%name' => securesite_theme_placeholder($user->name))));
     user_login_submit('user_login', $edit);
     $_SESSION['securesite_auth'] = TRUE;
   }
   else {
-    _securitesite_auth();
+    _securesite_auth();
     exit;
   }
 }
@@ -67,7 +69,7 @@ function securesite_user($op, &$edit, &$user) {
   }
 }
 
-function _securitesite_auth() {
+function _securesite_auth() {
   header('WWW-Authenticate: Basic realm="'. str_replace("\n", ' ', (variable_get('site_name', 'local'))) .'"');
   header('HTTP/1.0 401 Unauthorized');
   securesite_user_pass();
