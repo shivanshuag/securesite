@@ -62,7 +62,7 @@ function securesite_page_match($refresh = false) {
 function securesite_user($op, &$edit, &$user) {
   if ($op == 'logout' && $_SESSION['securesite_auth']) {
     unset($_SESSION['securesite_auth']);
-    _securitesite_auth();
+    _securesite_auth();
     unset($user);
     module_invoke_all('exit', request_uri());
     exit;
