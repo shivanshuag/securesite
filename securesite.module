@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 function securesite_perm() {
   return array('access site');
@@ -11,6 +12,12 @@ function securesite_help($section) {
 }
 
 function securesite_init() {
+  if ($_SESSION['securesite_sent']) {
+    print t('Your password and further instructions have been sent to your e-mail address.');
+    unset($_SESSION['securesite_sent']);
+    exit;
+  }
+
   drupal_bootstrap(DRUPAL_BOOTSTRAP_PATH);
 
   global $user, $base_url;
@@ -109,3 +116,4 @@ function securesite_user_pass() {
   include('securesite.inc');
   _securesite_user_pass();
 }
+

@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 function _securesite_request_form() {
 return '<p>Enter your username <strong><em>or</em></strong> your e-mail address.</p><div class="form-item">
@@ -36,7 +37,7 @@ function _securesite_user_pass() {
     $mail_success = user_mail($account->mail, $subject, $body, $headers);
     if ($mail_success) {
       watchdog('user', securesite_t('Password mailed to %name at %email.', array('%name' => securesite_theme_placeholder($account->name), '%email' => securesite_theme_placeholder($account->mail))));
-      print t('Your password and further instructions have been sent to your e-mail address.');
+      $_SESSION['securesite_sent'] = TRUE;
     }
     else {
       watchdog('user', securesite_t('Error mailing password to %name at %email.', array('%name' => securesite_theme_placeholder($account->name), '%email' => securesite_theme_placeholder($account->mail))), WATCHDOG_ERROR);
