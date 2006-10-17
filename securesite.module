@@ -51,6 +51,7 @@ function securesite_page_match($refresh = false) {
       $path = drupal_get_path_alias($_GET['q']);
       $regexp = '/^('. preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1'. preg_quote(variable_get('site_frontpage', 'node'), '/') .'\2'), preg_quote($pages, '/')) .')$/';
       $page_match = preg_match($regexp, $path);
+      return (variable_get('securesite_enabled', 0) ? !$page_match : $page_match);
     }
     else {
       $page_match = variable_get('securesite_enabled', 0);
