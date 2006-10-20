@@ -45,6 +45,9 @@ function securesite_init() {
     $_SESSION['securesite_auth'] = TRUE;
   }
   else {
+    if (!(empty($edit['name']) && empty($edit['pass']))) {
+      watchdog('user', securesite_t('Failed authentication attempt for %name.', array('%name' => securesite_theme_placeholder($edit['name']))));
+    }
     _securesite_auth();
     exit;
   }
@@ -76,7 +79,8 @@ function securesite_user($op, &$edit, &$user) {
 }
 
 function _securesite_auth() {
-  header('WWW-Authenticate: Basic realm="'. str_replace("\n", ' ', (variable_get('site_name', 'local'))) .'"');
+  $realm = variable_get('securesite_realm', str_replace('\n', ' ', (variable_get('site_name', 'local'))));
+  header('WWW-Authenticate: Basic realm="'. $realm .'"');
   header('HTTP/1.0 401 Unauthorized');
   securesite_user_pass();
 }

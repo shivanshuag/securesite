@@ -74,6 +74,14 @@ function _securesite_settings() {
     '#default_value' => variable_get('securesite_pages', ''),
     '#description' => $description
   );
+  $form['securesite_realm'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Authentication realm'),
+    '#default_value' => variable_get('securesite_realm', str_replace('\n', ' ', (variable_get('site_name', 'local')))),
+    '#size' => 16,
+    '#maxlength' => 40,
+    '#description' => t('Authentication realm used when asking for credentials.'),
+  );
   /*
   $form['securesite_guest_name'] = array(
     '#type' => 'textfield',
