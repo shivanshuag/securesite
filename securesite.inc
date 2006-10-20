@@ -32,7 +32,7 @@ function _securesite_user_pass() {
     // Mail new password:
     $variables = array('%username' => $account->name, '%site' => variable_get('site_name', 'drupal'), '%password' => $pass, '%uri' => $base_url, '%uri_brief' => substr($base_url, strlen('http://')), '%mailto' => $account->mail, '%date' => format_date(time()), '%login_uri' => url('user', NULL, NULL, TRUE), '%edit_uri' => url('user/'. $account->uid .'/edit', NULL, NULL, TRUE));
     $subject = _user_mail_text('pass_subject', $variables);
-    $body = _user_mail_text('pass_body', $variables);
+    $body = t("%username,\n\nHere is your new password for %site. You may now login to %login_uri using the following username and password:\n\nusername: %username\npassword: %password\n\nAfter logging in, you may wish to change your password at %edit_uri", $variables);
     $headers = "From: $from\nReply-to: $from\nX-Mailer: Drupal\nReturn-path: $from\nErrors-to: $from";
     $mail_success = user_mail($account->mail, $subject, $body, $headers);
     if ($mail_success) {
