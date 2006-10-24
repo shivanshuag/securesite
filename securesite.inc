@@ -1,117 +1,63 @@
 <?php
 // $Id$
 
-function _securesite_request_form() {
-return '<p>Enter your username <strong><em>or</em></strong> your e-mail address.</p><div class="form-item">
-<label for="edit-name">Username:</label><br />
-<input type="text" maxlength="64" class="form-text" name="edit[name]" id="edit-name" size="30" value="" />
-</div>
-<div class="form-item">
-<label for="edit-mail">E-mail address:</label><br />
-<input type="text" maxlength="64" class="form-text" name="edit[mail]" id="edit-mail" size="30" value="" />
-</div>
-<input type="submit" class="form-submit" name="op" value="E-mail new password"  />';
+/**
+ * returns complete form for login
+ */
+function _securesite_login_form() {
+  return '<form action="'. request_uri() .'" method="post"><input type="hidden" name="securesite_login_form" value="1"><p>'. variable_get('securesite_login_form', 'Enter your '. variable_get('site_name', 'local') .' username and password.') .'</p>'. theme_status_messages() .
+'<div class="form-item"><label for="edit-name">'. t('Username') .':</label> <input type="text" maxlength="55" class="form-text" name="edit[name]" id="edit-name" size="30" value="" /></div>
+<div class="form-item"><label for="edit-pass">'. t('Password') .':</label> <input type="password" class="form-password" maxlength="24" name="edit[pass]" id="edit-pass" size="12" value="" /></div>
+<input type="submit" class="form-submit" name="op" value="Login" />
+</form>';
 }
 
-function _securesite_user_pass() {
-  global $base_url;
-  $edit = $_POST['edit'];
-  if ($edit['name'] && !($account = user_load(array('name' => $edit['name'], 'status' => 1)))) {
-    $error = 1;
+/**
+ * returns complete form for password reset request -if- securesite_request_form var exists
+ */
+function _securesite_request_form() {
+  if ($formMsg = variable_get('securesite_request_form', t('Enter your username <strong><em>or</em></strong> your e-mail address.'))) {
+    return '<form action="'. request_uri() .'" method="post"><input type="hidden" name="securesite_request_form" value="1"><p>'. $formMsg .'</p>'. theme_status_messages() .'<div class="form-item"><label for="edit-name">'. t('Username') .
+':</label> <input type="text" maxlength="55" class="form-text" name="edit[name]" id="edit-name" size="30" value="" /></div>
+<div class="form-item"><label for="edit-mail">'.t('E-mail address').':</label> <input type="text" maxlength="64" class="form-text" name="edit[mail]" id="edit-mail" size="30" value="" /></div>
+<input type="submit" class="form-submit" name="op" value="'.t('E-mail new password').'" />
+</form>';
   }
-  else if ($edit['mail'] && !($account = user_load(array('mail' => $edit['mail'], 'status' => 1)))) {
-    $error = 1;
-  }
-  if ($account) {
-    $from = variable_get('site_mail', ini_get('sendmail_from'));
-    $pass = user_password();
+  return '';
+}
 
-    // Save new password:
-    user_save($account, array('pass' => $pass));
+/**
+ * prints dialog page, should be moved to theme.inc and expanded for error reporting and no DB connection
+ */
+function dialog_page($content) {
 
-    // Mail new password:
-    $variables = array('%username' => $account->name, '%site' => variable_get('site_name', 'drupal'), '%password' => $pass, '%uri' => $base_url, '%uri_brief' => substr($base_url, strlen('http://')), '%mailto' => $account->mail, '%date' => format_date(time()), '%login_uri' => url('user', NULL, NULL, TRUE), '%edit_uri' => url('user/'. $account->uid .'/edit', NULL, NULL, TRUE));
-    $subject = _user_mail_text('pass_subject', $variables);
-    $body = t("%username,\n\nHere is your new password for %site. You may now login to %login_uri using the following username and password:\n\nusername: %username\npassword: %password\n\nAfter logging in, you may wish to change your password at %edit_uri", $variables);
-    $headers = "From: $from\nReply-to: $from\nX-Mailer: Drupal\nReturn-path: $from\nErrors-to: $from";
-    $mail_success = user_mail($account->mail, $subject, $body, $headers);
-    if ($mail_success) {
-      watchdog('user', securesite_t('Password mailed to %name at %email.', array('%name' => securesite_theme_placeholder($account->name), '%email' => securesite_theme_placeholder($account->mail))));
-      $_SESSION['securesite_sent'] = TRUE;
-    }
-    else {
-      watchdog('user', securesite_t('Error mailing password to %name at %email.', array('%name' => securesite_theme_placeholder($account->name), '%email' => securesite_theme_placeholder($account->mail))), WATCHDOG_ERROR);
-      print t('Unable to send mail. Please contact the site admin.');
-    }
-    securesite_goto();
+  // Display themed dialog
+  $themes      = list_themes();
+  $theme       = variable_get('theme_default', 'bluemarine');
+  $dialog_file = dirname($themes[$theme]->filename) .'/securesite-dialog.tpl.php';
+  if (file_exists($dialog_file)) {
+    include_once($dialog_file);
   }
   else {
-    if ($error) {
-      print variable_get('securesite_error message', 'The name or the mail address is not recognized');
-    }
-    // Display form:
-    $form = variable_get('securesite_request_form', _securesite_request_form());
-    $form .= '<input type="hidden" name="securesite_request_form" value="1">';
-    print '<form action="'. request_uri() .'" method="post">'. $form .'</form>';
+    // Display default dialog
+    print '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<title>'. variable_get('site_name', 'drupal') .'</title>
+<style type="text/css" media="all">
+body { font-family: Verdana, Geneva, Arial, Helvetica, sans-serif; font-size: 11px; margin: 50px auto; text-align: center; }
+#content { width: 300px; margin: 0 auto; }
+.dialog { border: 1px #000066 solid; margin-bottom: 20px; text-align: left; padding: 10px; clear: both; }
+.dialog p {font-weight: bold; background: #000066; color: #FFFFFF; padding: 5px; margin: 0 0 10px 0;}
+.error { color: #ff0000; padding-bottom: 5px; }
+label { position: absolute; width: 100px; }
+input, textarea { margin-left: 110px; width: 165px; margin-bottom: 5px; }
+.form-submit { width: auto; padding: 0; margin: 0 0 10px 0; }
+form { padding: 0; margin: 0; }
+</style>
+</head>
+<body><div id="content"><div class="dialog">'. $content .'</div></div></body>
+</html>';
   }
-  exit;
-}
-
-function _securesite_settings() {
-  $options =array(t('Enabled on only the listed pages.'), t('Enabled on every page except the listed pages.') );
-  $form['securesite_enabled'] = array(
-    '#type' => 'radios',
-    '#title' => t('Enable HTTP authorization'),
-    '#options' => $options,
-    '#default_value' => variable_get('securesite_enabled', 0),
-  );
-
-  $description = t("Enter one page per line as Drupal paths. The '*' character is a wildcard. Example paths are '%blog' for the blog page and %blog-wildcard for every personal blog. %front is the front page.", array('%blog' => theme('placeholder', 'blog'), '%blog-wildcard' =>  theme('placeholder', 'blog/*'), '%front' => theme('placeholder', '<front>')));
-
-  $form['securesite_pages'] = array(
-    '#type' => 'textarea',
-    '#title' => t('Enable securesite for specific pages'),
-    '#default_value' => variable_get('securesite_pages', ''),
-    '#description' => $description
-  );
-  $form['securesite_realm'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Authentication realm'),
-    '#default_value' => variable_get('securesite_realm', str_replace('\n', ' ', (variable_get('site_name', 'local')))),
-    '#size' => 16,
-    '#maxlength' => 40,
-    '#description' => t('Authentication realm used when asking for credentials.'),
-  );
-  /*
-  $form['securesite_guest_name'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Guest user'),
-    '#default_value' => variable_get('securesite_guest_name', ''),
-    '#size' => 16,
-    '#maxlength' => 40,
-    '#description' => t('Leave empty for no guest access'),
-  );
-  $form['securesite_guest_pass'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Guest password'),
-    '#default_value' => variable_get('securesite_guest_pass', ''),
-    '#size' => 16,
-    '#maxlength' => 40,
-  );*/
-  $form['securesite_request_form'] = array(
-    '#type' => 'textarea',
-    '#title' => t('HTML for the Request new password form'),
-    '#default_value' => variable_get('securesite_request_form', _securesite_request_form()),
-    '#cols' => 60,
-    '#rows' => 10,
-  );
-  $form['securesite_request_error'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Error message for the Request new password form'),
-    '#default_value' => variable_get('securesite_request_error', 'The name or the mail address is not recognized'),
-    '#size' => 60,
-    '#maxlength' => 100,
-  );
-  return $form;
 }
 

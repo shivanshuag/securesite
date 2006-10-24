@@ -1,121 +1,306 @@
 <?php
 // $Id$
 
+/**
+ * Implementation of hook_perm().
+ */
 function securesite_perm() {
   return array('access site');
 }
 
+/**
+ * Implementation of hook_help().
+ */
 function securesite_help($section) {
   if ($section == 'admin/modules#description') {
-    return t('Lets you use basic HTTP authentication for log in.');
+    return t('Enables HTTP-AUTH security or an HTML form to restrict site access.');
   }
 }
 
+/**
+ * Implementation of hook_settings().
+ */
+function securesite_settings() {
+
+  // Authentication Settings
+  $form['authentication'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Authentication'),
+  );
+
+  $form['authentication']['securesite_enabled'] = array(
+    '#type' => 'radios',
+    '#title' => t('Secure Site'),
+    '#default_value' => variable_get('securesite_enabled', 0),
+    '#options' => array(
+      t('Disabled'),
+      t('Enabled with web browser HTTP-AUTH security'),
+      t('Enabled with HTML login form'),
+    ),
+    '#description' => t('HTTP-AUTH requires PHP to be installed as an Apache module. At least one role must also have permission under <a href="%access">access control page</a>.', array('%access' => url('admin/access'))),
+  );
+
+  $form['authentication']['securesite_guest_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Guest User'),
+    '#default_value' => variable_get('securesite_guest_name', ''),
+    '#length' => 30,
+    '#maxlength' => 40,
+    '#description' => t('Guests can access the secured site without an account. Leave empty for no guest access'),
+  );
+
+  $form['authentication']['securesite_guest_pass'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Guest Password'),
+    '#default_value' => variable_get('securesite_guest_pass', ''),
+    '#length' => 30,
+    '#maxlength' => 40,
+    '#description' => t('Leave empty for no guest access'),
+  );
+
+  $form['authentication']['securesite_realm'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Authentication realm'),
+    '#default_value' => variable_get('securesite_realm', variable_get('site_name', 'drupal')),
+    '#length' => 30,
+    '#maxlength' => 40,
+    '#description' => t('Authentication realm used when asking for credentials.'),
+  );
+
+  // HTML Login form Settings
+  $form['login_form'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('HTML Login form'),
+  );
+
+  $form['login_form']['securesite_login_form'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Message for HTML Login form'),
+    '#default_value' =>  variable_get('securesite_login_form', 'Enter your '. variable_get('site_name', 'drupal') .' username and password.'),
+    '#length' => 60,
+    '#height' => 3,
+    '#description' => t('Username and Password heading.'),
+  );
+
+  $form['login_form']['securesite_request_form'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Message for Request Password Reset form'),
+    '#default_value' =>  variable_get('securesite_request_form', t('Enter your username <strong><em>or</em></strong> your e-mail address.')),
+    '#length' => 60,
+    '#height' => 3,
+    '#description' => t('Leave empty to not process password resets through this module.'),
+  );
+
+  // Bypass Login Filter Pages Settings
+  $form['filter_pages'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Bypass Login Filter Pages'),
+  );
+
+  $form['filter_pages']['securesite_filter_pages'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Pages'),
+    '#default_value' =>  variable_get('securesite_filter_pages', ''),
+    '#length' => 60,
+    '#height' => 3,
+    '#description' => t("Enter one page per line as Drupal paths. The '*' character is a wildcard. Example paths are '<em>blog</em>' for the blog page and '<em>blog/*</em>' for every personal blog."),
+  );
+
+  $form['filter_pages']['statistics_ip_filter_check'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Session IP Check'),
+    '#default_value' => variable_get('statistics_ip_filter_check', FALSE),
+    '#description' => t("Check if a session exists for the users IP address before bypassing the login. Works for embedded video as media players does not have a session, but the user requesting to play the video does.  Anonymous User role will require the appropriate permission to the pages being bypassed."),
+  );
+
+  return $form;
+}
+
+/**
+ * Implementation of hook_init().
+ */
 function securesite_init() {
-  if ($_SESSION['securesite_sent']) {
-    print t('Your password and further instructions have been sent to your e-mail address.');
-    unset($_SESSION['securesite_sent']);
-    exit;
-  }
-
-  drupal_bootstrap(DRUPAL_BOOTSTRAP_PATH);
-
   global $user, $base_url;
 
-  #$guest_name = variable_get('securesite_guest_name', '');
-  #$guest_pass = variable_get('securesite_guest_pass', '');
-  $edit = array('name'=> $_SERVER['PHP_AUTH_USER'], 'pass' => $_SERVER['PHP_AUTH_PW']);
+  $guest_name         = variable_get('securesite_guest_name', '');
+  $guest_pass         = variable_get('securesite_guest_pass', '');
+  $securesite_enabled = variable_get('securesite_enabled', 0);
 
-  if (!module_hook('user', 'authenticate')) {
-    drupal_load('module', 'user');
-  }
-  if (!securesite_page_match() || ($user->uid && user_access('access site'))) {
+  if (!$securesite_enabled || strstr(request_uri(),'cron.php')) {
     return;
   }
 
-  if (!empty($_POST)) {
-    securesite_user_pass();
+  if ($securesite_enabled == 2 && !empty($_POST)) {
+    $edit = $_POST['edit'];
+  }
+  elseif($securesite_enabled == 1) {
+    $edit = array('name'=> $_SERVER['PHP_AUTH_USER'], 'pass' => $_SERVER['PHP_AUTH_PW']);
+  }
+
+  if (empty($edit) && ($user->uid == 0) || (!$user->uid && user_access('access site'))) {
+    securesite_user_auth();
+  }
+
+  if ((!empty($guest_name) && $guest_name == $edit['name'] && $guest_pass == $edit['pass']) || $_SESSION['securesite_guest']) {
+    $_SESSION['securesite_guest'] = TRUE;
+    return;
+  }
+  unset($_SESSION['securesite_guest']);
+
+  if (!module_hook('user', 'deny')) {
+    drupal_load('module', 'user');
+  }
+
+  if (($user->uid == 1) || ($user->uid && user_access('access site'))) {
+    return;
+  }
+
+  if ($check_name = securesite_filter_check()) {
+    $user = user_load(array('name' => $check_name, 'status' => 1));
+    return;
   }
 
   $account = user_authenticate($edit['name'], $edit['pass']);
 
   if ($account->uid && user_access('access site', $account)) {
-    watchdog('user', securesite_t('Session opened for %name.', array('%name' => securesite_theme_placeholder($user->name))));
-    user_login_submit('user_login', $edit);
-    $_SESSION['securesite_auth'] = TRUE;
+    $user = $account;
+
+    watchdog('user', t('Session opened for %name.', array('%name' => securesite_theme_placeholder($user->name))));
+    db_query("UPDATE {users} SET login = '%d' WHERE uid = '%s'", time(), $user->uid);
+    user_module_invoke('login', $edit, $user);
+    securesite_goto();
   }
   else {
-    if (!(empty($edit['name']) && empty($edit['pass']))) {
-      watchdog('user', securesite_t('Failed authentication attempt for %name.', array('%name' => securesite_theme_placeholder($edit['name']))));
-    }
-    _securesite_auth();
-    exit;
+    securesite_user_auth();
   }
 }
-function securesite_page_match($refresh = false) {
-  static $page_match = null;
 
-  if (is_null($page_match) || $refresh) {
-    $pages = variable_get('securesite_pages', FALSE);
-    if ($pages) {
-      $path = drupal_get_path_alias($_GET['q']);
-      $regexp = '/^('. preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1'. preg_quote(variable_get('site_frontpage', 'node'), '/') .'\2'), preg_quote($pages, '/')) .')$/';
-      $page_match = preg_match($regexp, $path);
-      return (variable_get('securesite_enabled', 0) ? !$page_match : $page_match);
+/**
+ * Implementation of hook_use().
+ */
+function securesite_user($op, &$edit, &$user) {
+  if ($op == 'logout') {
+    module_invoke_all('exit', request_uri());
+    unset($GLOBALS['user']);
+
+    if (variable_get('securesite_enabled', 0) == 1) {
+      $GLOBALS['mod_realm'] = TRUE;
+      securesite_user_auth();
     }
     else {
-      $page_match = variable_get('securesite_enabled', 0);
+      // redirect first to browser prevent caching problems
+      securesite_goto();
     }
   }
-  return $page_match;
 }
-
-function securesite_user($op, &$edit, &$user) {
-  if ($op == 'logout' && $_SESSION['securesite_auth']) {
-    unset($_SESSION['securesite_auth']);
-    _securesite_auth();
-    module_invoke_all('exit', request_uri());
-  }
-}
-
-function _securesite_auth() {
-  $realm = variable_get('securesite_realm', str_replace('\n', ' ', (variable_get('site_name', 'local'))));
-  header('WWW-Authenticate: Basic realm="'. $realm .'"');
-  header('HTTP/1.0 401 Unauthorized');
-  securesite_user_pass();
-}
-
 
 function securesite_goto() {
   global $base_url;
+
   $url = (arg(0) == 'logout' ? $base_url :  request_uri());
   if (ini_get('session.use_trans_sid') && session_id() && !strstr($url, session_id())) {
-    $url .= (strstr($url, '?') && !strstr($url, $sid) ? '&' : '?'). session_name() .'='. session_id();
+    $url .= (strstr($url, '?') && !strstr($url, $sid) ? '&' : '?') . session_name() . '=' . session_id();
   }
-  module_invoke_all('exit', $url);
-  header('Location: '. $url);
-}
 
-function securesite_t($string, $args = 0) {
-  if (!$args) {
-    return $string;
-  }
-  else {
-    return strtr($string, $args);
-  }
+  header('Location: ' . $url);
+  exit;
 }
 
 function securesite_theme_placeholder($text) {
-  return '<strong>'. htmlspecialchars($text, ENT_QUOTES) .'</strong>';
+  return '<strong>' . htmlspecialchars($text, ENT_QUOTES) . '</strong>';
 }
 
-function securesite_settings() {
-  include('securesite.inc');
-  return _securesite_settings();
+function securesite_user_auth() {
+  global $user, $base_url;
+  include_once('securesite.inc');
+  $edit = $_POST['edit'];
+  unset($content);
+
+  if ($_POST['securesite_login_form'] && $edit['name'] && $edit['pass']) {
+    watchdog('user', t('Login attempt failed for %name.', array('%name' => securesite_theme_placeholder($edit['name']))));
+    drupal_set_message(t('Sorry. Unrecognized username or password.'), 'error');
+  }
+
+  if ($_POST['securesite_request_form'] && $edit['name'] && $edit['mail']) {
+    if (!$account = user_load(array('name' => $edit['name'], 'status' => 1))) {
+      drupal_set_message(t('Sorry. Unrecognized username or e-mail address.'), 'error');
+    }
+    elseif (!$account = user_load(array('mail' => $edit['mail'], 'status' => 1))) {
+      drupal_set_message(t('Sorry. Unrecognized username or e-mail address.'), 'error');
+    }
+  }
+
+  if ($account->uid) {
+    $from = variable_get('site_mail', ini_get('sendmail_from'));
+    $pass = user_password();
+    // Save new password:
+    user_save($account, array('pass' => $pass));
+    // Mail new password:
+    $variables = array('%username' => $account->name, '%site' => variable_get('site_name', 'drupal'), '%login_url' => user_pass_reset_url($account), '%uri' => $base_url, '%uri_brief' => substr($base_url, strlen('http://')), '%mailto' => $account->mail, '%date' => format_date(time()), '%login_uri' => url('user', NULL, NULL, TRUE), '%edit_uri' => url('user/'. $account->uid .'/edit', NULL, NULL, TRUE));
+
+    $subject      = _user_mail_text('pass_subject', $variables);
+    $body         = _user_mail_text('pass_body', $variables);
+    $headers      = "From: $from\nReply-to: $from\nX-Mailer: Drupal\nReturn-path: $from\nErrors-to: $from";
+    $mail_success = user_mail($account->mail, $subject, $body, $headers);
+
+    if ($mail_success) {
+      watchdog('user', t('Password mailed to %name at %email.', array('%name' => securesite_theme_placeholder($account->name), '%email' => securesite_theme_placeholder($account->mail))));
+      drupal_set_message(t('Your password and further instructions have been sent to your e-mail address.'));
+    }
+    else {
+      watchdog('user', t('Error mailing password to %name at %email.', array('%name' => securesite_theme_placeholder($account->name), '%email' => securesite_theme_placeholder($account->mail))), WATCHDOG_ERROR);
+      drupal_set_message(t('Unable to send mail. Please contact the site admin.', 'error'));
+    }
+    //nowhere to go!! //securesite_goto();
+  }
+
+  if (variable_get('securesite_enabled',0) == 2) {
+    $content = _securesite_login_form();
+  }
+  $content .= _securesite_request_form();
+
+  if (variable_get('securesite_enabled', 0) == 1 && !$account->uid) {
+    $realm = variable_get('securesite_realm', variable_get('site_name', 'drupal'));
+    header('WWW-Authenticate: Basic realm="' . $realm . '"');
+    header('HTTP/1.0 401 Unauthorized');
+  }
+
+  dialog_page($content);
+  drupal_set_title('login');
+  module_invoke_all('exit', request_uri());
+  exit;
 }
 
-function securesite_user_pass() {
-  include('securesite.inc');
-  _securesite_user_pass();
+function securesite_filter_check() {
+
+  // Ignore page if requested (code used form block filter code.)
+  $pages = variable_get('securesite_filter_pages', '');
+
+  if ($pages) {
+    $path       = drupal_get_path_alias($_GET['q']);
+    $regexp     = '/^(' . preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1' . preg_quote(variable_get('site_frontpage', 'node'), '/') . '\2'), preg_quote($pages, '/')) . ')$/';
+    $page_match = !(preg_match($regexp, $path));
+    if (preg_match($regexp, $path)) {
+      if (variable_get('statistics_ip_filter_check', false)) {
+        return securesite_session_ip_check();
+      }
+      else {
+        return true;
+      }
+    }
+    else {
+      return false;
+    }
+  }
+}
+
+function securesite_session_ip_check() {
+  $result = db_query("SELECT u.name FROM users u INNER JOIN sessions s ON u.uid=s.uid WHERE s.hostname='%s' AND s.uid <> 0", $_SERVER['REMOTE_ADDR']);
+  if ($s = db_fetch_array($result)) {
+    return $s['name'];
+  }
+  else {
+    return false;
+  }
 }
 
