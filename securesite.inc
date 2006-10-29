@@ -27,7 +27,7 @@ function _securesite_request_form() {
 }
 
 /**
- * prints dialog page, should be moved to theme.inc and expanded for error reporting and no DB connection
+ * print html dialog page
  */
 function dialog_page($content) {
 

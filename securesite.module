@@ -126,10 +126,12 @@ function securesite_init() {
   $guest_pass         = variable_get('securesite_guest_pass', '');
   $securesite_enabled = variable_get('securesite_enabled', 0);
 
+  // bypass cron.php
   if (!$securesite_enabled || strstr(request_uri(),'cron.php')) {
     return;
   }
 
+  // create edit variables
   if ($securesite_enabled == 2 && !empty($_POST)) {
     $edit = $_POST['edit'];
   }
@@ -137,6 +139,7 @@ function securesite_init() {
     $edit = array('name'=> $_SERVER['PHP_AUTH_USER'], 'pass' => $_SERVER['PHP_AUTH_PW']);
   }
   
+  // Check if page should be Bypassed
   $check_name = securesite_filter_check();
   if ($check_name) {
     if (!is_bool($check_name)) {
@@ -145,15 +148,18 @@ function securesite_init() {
     return;
   }
 
+  // check if we should continue
   if (empty($edit) && ($user->uid == 0) || (!$user->uid && user_access('access site'))) {
     securesite_user_auth();
   }
 
+  // check if guest users
   if ((!empty($guest_name) && $guest_name == $edit['name'] && $guest_pass == $edit['pass']) || $_SESSION['securesite_guest']) {
+    // set guest SESSION to prevent re-login (note: guest cant log out)
     $_SESSION['securesite_guest'] = TRUE;
     return;
   }
-  unset($_SESSION['securesite_guest']);
+  unset($_SESSION['securesite_guest']); // if not a guest make sure to unset guest session
 
   if (!module_hook('user', 'deny')) {
     drupal_load('module', 'user');
@@ -166,6 +172,7 @@ function securesite_init() {
   $account = user_authenticate($edit['name'], $edit['pass']);
 
   if ($account->uid && user_access('access site', $account)) {
+    // login successful
     $user = $account;
 
     watchdog('user', t('Session opened for %name.', array('%name' => securesite_theme_placeholder($user->name))));
@@ -174,6 +181,7 @@ function securesite_init() {
     securesite_goto();
   }
   else {
+    // login failed
     securesite_user_auth();
   }
 }
@@ -197,6 +205,9 @@ function securesite_user($op, &$edit, &$user) {
   }
 }
 
+/**
+ * Securesite redirect
+ */
 function securesite_goto() {
   global $base_url;
 
@@ -213,17 +224,22 @@ function securesite_theme_placeholder($text) {
   return '<strong>' . htmlspecialchars($text, ENT_QUOTES) . '</strong>';
 }
 
+/**
+ * displays auth dialog and sends password requests
+ */
 function securesite_user_auth() {
   global $user, $base_url;
   include_once('securesite.inc');
   $edit = $_POST['edit'];
   unset($content);
 
+  // Log failed requests
   if ($_POST['securesite_login_form'] && $edit['name'] && $edit['pass']) {
     watchdog('user', t('Login attempt failed for %name.', array('%name' => securesite_theme_placeholder($edit['name']))));
     drupal_set_message(t('Sorry. Unrecognized username or password.'), 'error');
   }
 
+  // set user messages
   if ($_POST['securesite_request_form'] && $edit['name'] && $edit['mail']) {
     if (!$account = user_load(array('name' => $edit['name'], 'status' => 1))) {
       drupal_set_message(t('Sorry. Unrecognized username or e-mail address.'), 'error');
@@ -233,6 +249,7 @@ function securesite_user_auth() {
     }
   }
 
+  // Email password
   if ($account->uid) {
     $from = variable_get('site_mail', ini_get('sendmail_from'));
     $pass = user_password();
@@ -257,23 +274,29 @@ function securesite_user_auth() {
     //nowhere to go!! //securesite_goto();
   }
 
+  // get content for dialog
   if (variable_get('securesite_enabled',0) == 2) {
     $content = _securesite_login_form();
   }
   $content .= _securesite_request_form();
 
+  // HTTP AUTH
   if (variable_get('securesite_enabled', 0) == 1 && !$account->uid) {
     $realm = variable_get('securesite_realm', variable_get('site_name', 'drupal'));
     header('WWW-Authenticate: Basic realm="' . $realm . '"');
     header('HTTP/1.0 401 Unauthorized');
   }
 
+  // display dialog
   dialog_page($content);
   drupal_set_title('login');
   module_invoke_all('exit', request_uri());
   exit;
 }
 
+/**
+ * check if pages should bypass securesite
+ */
 function securesite_filter_check() {
 
   // Ignore page if requested (code used form block filter code.)
@@ -297,6 +320,9 @@ function securesite_filter_check() {
   }
 }
 
+/**
+ * check if for active user sessions, used by securesite_filter_check()
+ */
 function securesite_session_ip_check() {
   $result = db_query("SELECT u.name FROM users u INNER JOIN sessions s ON u.uid=s.uid WHERE s.hostname='%s' AND s.uid <> 0", $_SERVER['REMOTE_ADDR']);
   if ($s = db_fetch_array($result)) {
