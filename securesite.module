@@ -136,6 +136,14 @@ function securesite_init() {
   elseif($securesite_enabled == 1) {
     $edit = array('name'=> $_SERVER['PHP_AUTH_USER'], 'pass' => $_SERVER['PHP_AUTH_PW']);
   }
+  
+  $check_name = securesite_filter_check();
+  if ($check_name) {
+    if (!is_bool($check_name)) {
+      $user = user_load(array('name' => $check_name, 'status' => 1));
+    }
+    return;
+  }
 
   if (empty($edit) && ($user->uid == 0) || (!$user->uid && user_access('access site'))) {
     securesite_user_auth();
@@ -152,11 +160,6 @@ function securesite_init() {
   }
 
   if (($user->uid == 1) || ($user->uid && user_access('access site'))) {
-    return;
-  }
-
-  if ($check_name = securesite_filter_check()) {
-    $user = user_load(array('name' => $check_name, 'status' => 1));
     return;
   }
 
