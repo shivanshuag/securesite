@@ -139,13 +139,16 @@ function securesite_init() {
     $edit = array('name'=> $_SERVER['PHP_AUTH_USER'], 'pass' => $_SERVER['PHP_AUTH_PW']);
   }
   
-  // Check if page should be Bypassed
-  $check_name = securesite_filter_check();
-  if ($check_name) {
-    if (!is_bool($check_name)) {
-      $user = user_load(array('name' => $check_name, 'status' => 1));
+  // only bypass if user is not logged in
+  if (!$user->uid) {
+    // Check if page should be Bypassed
+    $check_name = securesite_filter_check();
+    if ($check_name) {
+      if (!is_bool($check_name)) {
+        $user = user_load(array('name' => $check_name, 'status' => 1));
+      }
+      return;
     }
-    return;
   }
 
   // check if we should continue
