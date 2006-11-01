@@ -35,9 +35,10 @@ function securesite_settings() {
     '#options' => array(
       t('Disabled'),
       t('Enabled with web browser HTTP-AUTH security'),
+      t('Enabled with web browser HTTP-AUTH security, with browser logout workaround'),
       t('Enabled with HTML login form'),
     ),
-    '#description' => t('HTTP-AUTH requires PHP to be installed as an Apache module. At least one role must also have permission under <a href="%access">access control page</a>.', array('%access' => url('admin/access'))),
+    '#description' => t('HTTP-AUTH requires PHP to be installed as an Apache module. At least one role must also have permission under <a href="%access">access control page</a>. The browser workaround is for when a user logs out, as all browsers manage the HTTP Auth variables differently the workaround will append to the end of the realm a random number to force the browser to clear the username and password. The workaround is only for some browsers. Without the workaround user will not be properly logged out in some browsers.', array('%access' => url('admin/access'))),
   );
 
   $form['authentication']['securesite_guest_name'] = array(
@@ -132,13 +133,13 @@ function securesite_init() {
   }
 
   // create edit variables
-  if ($securesite_enabled == 2 && !empty($_POST)) {
+  if ($securesite_enabled == 3 && !empty($_POST)) {
     $edit = $_POST['edit'];
   }
-  elseif($securesite_enabled == 1) {
+  elseif($securesite_enabled == 1 || $securesite_enabled == 2) {
     $edit = array('name'=> $_SERVER['PHP_AUTH_USER'], 'pass' => $_SERVER['PHP_AUTH_PW']);
   }
-  
+
   // only bypass if user is not logged in
   if (!$user->uid) {
     // Check if page should be Bypassed
@@ -197,8 +198,8 @@ function securesite_user($op, &$edit, &$user) {
     module_invoke_all('exit', request_uri());
     unset($GLOBALS['user']);
 
-    if (variable_get('securesite_enabled', 0) == 1) {
-      $GLOBALS['mod_realm'] = TRUE;
+    $securesite_enabled = variable_get('securesite_enabled', 0);
+    if ($securesite_enabled == 1 || $securesite_enabled == 2) {
       securesite_user_auth();
     }
     else {
@@ -234,6 +235,7 @@ function securesite_user_auth() {
   global $user, $base_url;
   include_once('securesite.inc');
   $edit = $_POST['edit'];
+  $securesite_enabled = variable_get('securesite_enabled', 0);
   unset($content);
 
   // Log failed requests
@@ -278,15 +280,28 @@ function securesite_user_auth() {
   }
 
   // get content for dialog
-  if (variable_get('securesite_enabled',0) == 2) {
+  if ($securesite_enabled == 3) {
     $content = _securesite_login_form();
   }
   $content .= _securesite_request_form();
 
   // HTTP AUTH
-  if (variable_get('securesite_enabled', 0) == 1 && !$account->uid) {
+  if (($securesite_enabled == 1 || $securesite_enabled == 2) && !$account->uid) {
     $realm = variable_get('securesite_realm', variable_get('site_name', 'drupal'));
-    header('WWW-Authenticate: Basic realm="' . $realm . '"');
+
+    if ($securesite_enabled == 2) {
+      // fix logout on cancel in Opera and IE
+      $browser_user_agent = strtolower( $_SERVER['HTTP_USER_AGENT'] );
+      if (strpos($browser_user_agent, "gecko") === FALSE) { //Firefox
+        $suffix = ' - '. mt_rand(10, 99);
+      }
+      else { //Opera, IE, others?
+        $suffix = '';
+      }
+      $realm .= $suffix;
+    }
+
+    header('WWW-Authenticate: Basic realm="'. $realm .'"');
     header('HTTP/1.0 401 Unauthorized');
   }
 
@@ -335,4 +350,3 @@ function securesite_session_ip_check() {
     return false;
   }
 }
-
