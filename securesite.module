@@ -182,6 +182,9 @@ function securesite_init() {
     watchdog('user', t('Session opened for %name.', array('%name' => securesite_theme_placeholder($user->name))));
     db_query("UPDATE {users} SET login = '%d' WHERE uid = '%s'", time(), $user->uid);
     user_module_invoke('login', $edit, $user);
+    if (arg(0) != 'logout') { // only redirect if on logout page
+      return;
+    }
     securesite_goto();
   }
   else {
