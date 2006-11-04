@@ -98,6 +98,16 @@ function securesite_settings() {
     '#title' => t('Bypass Login Filter Pages'),
   );
 
+  $form['filter_pages']['securesite_filter_pages_type'] = array(
+    '#type' => 'radios',
+    '#title' => t('Filter Type'),
+    '#default_value' => variable_get('securesite_filter_pages_type', 0),
+    '#options' => array(
+      t('Only the listed pages.'),
+      t('Every page except the listed pages.'),
+    ),
+  );
+
   $form['filter_pages']['securesite_filter_pages'] = array(
     '#type' => 'textarea',
     '#title' => t('Pages'),
@@ -107,10 +117,10 @@ function securesite_settings() {
     '#description' => t("Enter one page per line as Drupal paths. The '*' character is a wildcard. Example paths are '<em>blog</em>' for the blog page and '<em>blog/*</em>' for every personal blog."),
   );
 
-  $form['filter_pages']['statistics_ip_filter_check'] = array(
+  $form['filter_pages']['securesite_ip_filter_check'] = array(
     '#type' => 'checkbox',
     '#title' => t('Session IP Check'),
-    '#default_value' => variable_get('statistics_ip_filter_check', FALSE),
+    '#default_value' => variable_get('securesite_ip_filter_check', FALSE),
     '#description' => t("Check if a session exists for the users IP address before bypassing the login. Works for embedded video as media players does not have a session, but the user requesting to play the video does.  Anonymous User role will require the appropriate permission to the pages being bypassed."),
   );
 
@@ -328,15 +338,40 @@ function securesite_filter_check() {
     $regexp     = '/^(' . preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1' . preg_quote(variable_get('site_frontpage', 'node'), '/') . '\2'), preg_quote($pages, '/')) . ')$/';
     $page_match = !(preg_match($regexp, $path));
     if (preg_match($regexp, $path)) {
-      if (variable_get('statistics_ip_filter_check', false)) {
-        return securesite_session_ip_check();
+      if (variable_get('securesite_ip_filter_check', false)) {
+        if (variable_get('securesite_filter_pages_type', 0) == 0) {
+          return securesite_session_ip_check();
+        }
+        else {
+          return false;
+        }
       }
       else {
-        return true;
+        if (variable_get('securesite_filter_pages_type', 0) == 0) {
+          return true;
+        }
+        else {
+          return false;
+        }
       }
     }
     else {
-      return false;
+      if (variable_get('securesite_ip_filter_check', false)) {
+        if (variable_get('securesite_filter_pages_type', 0) == 1) {
+          return securesite_session_ip_check();
+        }
+        else {
+          return false;
+        }
+      }
+      else {
+        if (variable_get('securesite_filter_pages_type', 0) == 1) {
+          return true;
+        }
+        else {
+          return false;
+        }
+      }
     }
   }
 }
