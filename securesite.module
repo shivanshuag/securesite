@@ -162,6 +162,11 @@ function securesite_init() {
     }
   }
 
+  // check if loged in user
+  if (($user->uid == 1) || ($user->uid && user_access('access site'))) {
+    return;
+  }
+
   // check if we should continue
   if (empty($edit) && ($user->uid == 0) || (!$user->uid && user_access('access site'))) {
     securesite_user_auth();
@@ -174,14 +179,6 @@ function securesite_init() {
     return;
   }
   unset($_SESSION['securesite_guest']); // if not a guest make sure to unset guest session
-
-  if (!module_hook('user', 'deny')) {
-    drupal_load('module', 'user');
-  }
-
-  if (($user->uid == 1) || ($user->uid && user_access('access site'))) {
-    return;
-  }
 
   $account = user_authenticate($edit['name'], $edit['pass']);
 
