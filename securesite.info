@@ -1,0 +1,3 @@
+; $Id$
+name = Secure site
+description = Protects specified sections of site with basic http authentication prompt
