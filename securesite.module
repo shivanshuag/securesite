@@ -42,7 +42,7 @@ function securesite_admin_settings() {
       t('Enabled with web browser HTTP-AUTH security, with browser logout workaround'),
       t('Enabled with HTML login form'),
     ),
-    '#description' => t('HTTP-AUTH requires <a href="!extra">extra configuration</a> if your PHP is not configured as an Apache module. At least one role must also have permission under <a href="!access">access control page</a>. The browser workaround is for when a user logs out, as all browsers manage the HTTP Auth variables differently the workaround will append to the end of the realm a random number to force the browser to clear the username and password. The workaround is only for some browsers. Without the workaround user will not be properly logged out in some browsers.', array('!extra' => url('http://drupal.org/node/28408'), '!access' => url('admin/access'))),
+    '#description' => t('HTTP-AUTH requires <a href="!extra">extra configuration</a> if your PHP is not configured as an Apache module. At least one role must also have permission under <a href="!access">access control page</a>. The browser workaround is for when a user logs out, as all browsers manage the HTTP Auth variables differently the workaround will append to the end of the realm a random number to force the browser to clear the username and password. The workaround is only for some browsers. Without the workaround user will not be properly logged out in some browsers.', array('!extra' => url('http://drupal.org/node/28408'), '!access' => url('admin/user/access'))),
   );
 
   $form['authentication']['securesite_guest_name'] = array(
