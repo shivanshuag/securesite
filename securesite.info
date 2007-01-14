@@ -1,3 +1,4 @@
 ; $Id$
-name = Secure site
-description = Protects specified sections of site with basic http authentication prompt
+name = Securesite
+description = Enables HTTP-AUTH security or an HTML form to restrict site access.
+package = User access/authentication
