@@ -8,14 +8,19 @@ function securesite_perm() {
   return array('access site');
 }
 
+/**
+ * Implementation of hook_menu().
+ */
 function securesite_menu($may_cache) {
   if ($may_cache) {
-    $items[] = array('path' => 'admin/settings/securesite', 
-      'title' => t('Secure site configuration'), 
-      'callback' => 'drupal_get_form',
+    $items[] = array(
+      'path'               => 'admin/settings/securesite',
+      'title'              => t('Secure site'),
+      'callback'           => 'drupal_get_form',
       'callback arguments' => 'securesite_admin_settings',
-      'description' => t('Configure Secure site module'),
-      );
+      'description'        => t('Enables HTTP-AUTH security or an HTML form to restrict site access.'),
+      'access'             => user_access('administer site configuration'),
+    );
   }
   return $items;
 }
@@ -275,12 +280,12 @@ function securesite_user_auth() {
     // Save new password:
     user_save($account, array('pass' => $pass));
     // Mail new password:
-    $variables = array('%username' => $account->name, '%site' => variable_get('site_name', 'drupal'), '%login_url' => user_pass_reset_url($account), '%uri' => $base_url, '%uri_brief' => substr($base_url, strlen('http://')), '%mailto' => $account->mail, '%date' => format_date(time()), '%login_uri' => url('user', NULL, NULL, TRUE), '%edit_uri' => url('user/'. $account->uid .'/edit', NULL, NULL, TRUE));
+    $variables = array('%username' => $account->name, '!site' => variable_get('site_name', 'drupal'), '!login_url' => user_pass_reset_url($account), '!uri' => $base_url, '!uri_brief' => substr($base_url, strlen('http://')), '!mailto' => $account->mail, '!date' => format_date(time()), '!login_uri' => url('user', NULL, NULL, TRUE), '!edit_uri' => url('user/'. $account->uid .'/edit', NULL, NULL, TRUE));
 
     $subject      = _user_mail_text('pass_subject', $variables);
     $body         = _user_mail_text('pass_body', $variables);
     $headers      = "From: $from\nReply-to: $from\nX-Mailer: Drupal\nReturn-path: $from\nErrors-to: $from";
-    $mail_success = user_mail($account->mail, $subject, $body, $headers);
+    $mail_success = drupal_mail("securesite-password", $account->mail, $subject, $body, $headers);
 
     if ($mail_success) {
       watchdog('user', t('Password mailed to %name at %email.', array('%name' => securesite_theme_placeholder($account->name), '%email' => securesite_theme_placeholder($account->mail))));
@@ -331,13 +336,7 @@ function securesite_user_auth() {
  */
 function securesite_filter_check() {
 
-  // Ignore page if requested (code used form block filter code.)
-  $pages = variable_get('securesite_filter_pages', '');
-
-  $path       = drupal_get_path_alias($_GET['q']);
-  $regexp     = '/^(' . preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1' . preg_quote(variable_get('site_frontpage', 'node'), '/') . '\2'), preg_quote($pages, '/')) . ')$/';
-
-  if (preg_match($regexp, $path)) {
+  if (securesite_check_path()) {
     if (variable_get('securesite_ip_filter_check', false)) {
       if (variable_get('securesite_filter_pages_type', 0) == 0) {
         return securesite_session_ip_check();
@@ -371,6 +370,35 @@ function securesite_filter_check() {
       else {
         return false;
       }
+    }
+  }
+
+}
+
+/**
+ * check if current path is a securesite path
+ */
+function securesite_check_path() {
+
+  // Ignore page if requested (code used form block filter code.)
+  $pages = variable_get('securesite_filter_pages', '');
+
+  // don't know why but this is required for drupal_get_path_alias to work under curtain conditions
+  drupal_lookup_path('wipe');
+
+  $path       = drupal_get_path_alias($_GET['q']);
+  $regexp     = '/^(' . preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1' . preg_quote(variable_get('site_frontpage', 'node'), '/') . '\2'), preg_quote($pages, '/')) . ')$/';
+
+  if (preg_match($regexp, $path)) {
+    return true;
+  }
+  else {
+    $path = drupal_get_normal_path($_GET['q']);
+    if (preg_match($regexp, $path)) {
+      return true;
+    }
+    else {
+      return false;
     }
   }
 }
