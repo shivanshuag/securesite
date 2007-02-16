@@ -1,4 +1,0 @@
-; $Id$
-name = Securesite
-description = Enables HTTP-AUTH security or an HTML form to restrict site access.
-package = User access/authentication
