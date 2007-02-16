@@ -147,7 +147,7 @@ function securesite_init() {
   $securesite_enabled = variable_get('securesite_enabled', 0);
 
   // bypass cron.php
-  if (!$securesite_enabled || strstr(request_uri(),'cron.php')) {
+  if (!$securesite_enabled || request_uri() == $base_url .'/cron.php') {
     return;
   }
 
