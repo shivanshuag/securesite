@@ -1,0 +1,153 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Enables HTTP Auth security or an HTML form to restrict site access.
+ */
+
+/**
+ * Secure Site status: Disabled
+ */
+define('SECURESITE_DISABLED', 0);
+
+/**
+ * Secure Site status: Always on
+ */
+define('SECURESITE_ALWAYS', 1);
+
+/**
+ * Secure Site status: Only when site is offline
+ */
+define('SECURESITE_OFFLINE', 2);
+
+/**
+ * Secure Site status: Only for restricted pages
+ */
+define('SECURESITE_403', 3);
+
+/**
+ * Secure Site type: Web browser HTTP Auth security
+ */
+define('SECURESITE_AUTH', 0);
+
+/**
+ * Secure Site type: HTML log-in form
+ */
+define('SECURESITE_FORM', 1);
+
+/**
+ * Implementation of hook_help().
+ */
+function securesite_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#securesite':
+      module_load_include('inc', 'securesite', 'securesite.admin');
+      return _securesite_admin_help();
+  }
+}
+
+/**
+ * Implementation of hook_perm()
+ */
+function securesite_perm() {
+  return array('access secured pages');
+}
+
+/**
+ * Implementation of hook_menu()
+ */
+function securesite_menu() {
+  $items['securesite_403'] = array(
+    'page callback' => '_securesite_403',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'file' => 'securesite.inc',
+  );
+  $items['admin/settings/securesite'] = array(
+    'title' => 'Secure Site',
+    'description' => 'Enables HTTP Auth security or an HTML form to restrict site access.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('securesite_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'securesite.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_boot().
+ *
+ * This is where Secure Site does most of its processing
+ */
+function securesite_boot() {
+  global $user, $base_path;
+  $edit = array();
+  switch (variable_get('securesite_type', SECURESITE_AUTH)) {
+    // If log-in form is enabled, check for posted credentials.
+    case SECURESITE_FORM:
+      if (isset($_POST['securesite_login_form']) && !empty($_POST['edit'])) {
+        $edit = $_POST['edit'];
+      }
+      break;
+    // Check for credentials in HTTP headers.
+    default:
+      // PHP in CGI mode work-arounds. Sometimes "REDIRECT_" prefixes $_SERVER variables. See http://www.php.net/reserved.variables.
+      if (empty($_SERVER['HTTP_AUTHORIZATION']) && !empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $_SERVER['HTTP_AUTHORIZATION'] = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+      }
+      if (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
+        list($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']) = explode(':', base64_decode(substr($_SERVER['HTTP_AUTHORIZATION'], 6)));
+      }
+      if (!empty($_SERVER['PHP_AUTH_USER'])) {
+        $edit['name'] = $_SERVER['PHP_AUTH_USER'];
+      }
+      if (!empty($_SERVER['PHP_AUTH_PW'])) {
+        $edit['pass'] = $_SERVER['PHP_AUTH_PW'];
+      }
+      break;
+  }
+  if (empty($edit)) {
+    // Don't request credentials if user is logged in or if running from command line or cron.
+    if (empty($user->uid) && empty($_SESSION['securesite_guest']) && php_sapi_name() != 'cli' && request_uri() != $base_path .'cron.php') {
+      drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+      module_load_include('inc', 'securesite');
+      if (_securesite_forced()) {
+        _securesite_user_authenticate();
+      }
+    }
+  }
+  else {
+    // Fix missing indexes.
+    $edit['name'] = isset($edit['name']) ? $edit['name'] : '';
+    $edit['pass'] = isset($edit['pass']) ? $edit['pass'] : '';
+    if ($edit['name'] != $user->name && $edit['name'] != $_SESSION['securesite_guest']) {
+      drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+      module_load_include('inc', 'securesite');
+      _securesite_login($edit);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_user()
+ *
+ * When users logout, show the HTTP Auth dialog to make sure the HTTP Auth
+ * credentials are cleared
+ *
+ * @see _securesite_user_authenticate()
+ */
+function securesite_user($op, &$edit, &$user) {
+  switch ($op) {
+    case 'logout':
+      if (variable_get('securesite_type', SECURESITE_AUTH) == SECURESITE_AUTH && !empty($_SESSION['securesite_login'])) {
+        module_load_include('inc', 'securesite');
+        // Load the anonymous user
+        $user = drupal_anonymous_user();
+        // Clear stored credentials
+        _securesite_user_authenticate();
+      }
+      break;
+  }
+}
+
