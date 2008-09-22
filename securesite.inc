@@ -101,7 +101,6 @@ function _securesite_login($edit) {
   global $user, $base_path;
   // The LDAP auth module can't use the regular external user log-in system, so
   // we have to call its log-in function directly.
-  $account = $user;
   if (module_exists('ldapauth')) {
     ldapauth_authenticate($edit);
   }
@@ -109,30 +108,24 @@ function _securesite_login($edit) {
     user_authenticate(array('name' => $edit['name'], 'pass' => $edit['pass']));
   }
   if (empty($user->uid)) {
-    // Do anonymous users have permission to log in?
-    if (user_access('access secured pages', drupal_anonymous_user())) {
-      global $base_path;
-      $guest_name = variable_get('securesite_guest_name', '');
-      $guest_pass = variable_get('securesite_guest_pass', '');
-      if ((empty($guest_name) || $edit['name'] == $guest_name) && (empty($guest_pass) || $edit['pass'] == $guest_pass)) {
-        // Mark this session to prevent re-login (note: guests can't log out).
-        $_SESSION['securesite_guest'] = $edit['name'];
-        $_SESSION['securesite_login'] = TRUE;
-        // If path is front page, go to site root. Prevent a 403 error by redirecting off the logout page.
-        if (drupal_is_front_page() || strpos(request_uri(), $base_path .'logout') === 0) {
-          $path = '';
-        }
-        else {
-          $path = $_GET['q']; // Redirect to prevent some caching problems.
-        }
-        drupal_goto($path);
-      }
-      else {
-        _securesite_login_fail($edit);
-      }
+    // Check anonymous user permission and credentials
+    $guest_name = variable_get('securesite_guest_name', '');
+    $guest_pass = variable_get('securesite_guest_pass', '');
+    if (!user_access('access secured pages') || !empty($guest_name) && $edit['name'] != $guest_name || !empty($guest_pass) && $edit['pass'] != $guest_pass) {
+      _securesite_login_fail($edit);
     }
     else {
-      _securesite_login_fail($edit);
+      // Mark this session to prevent re-login (note: guests can't log out).
+      $_SESSION['securesite_guest'] = $edit['name'];
+      $_SESSION['securesite_login'] = TRUE;
+      // If path is front page, go to site root. Prevent a 403 error by redirecting off the logout page.
+      if (drupal_is_front_page() || strpos(request_uri(), $base_path .'logout') === 0) {
+        $path = '';
+      }
+      else {
+        $path = $_GET['q']; // Redirect to prevent some caching problems.
+      }
+      drupal_goto($path);
     }
   }
   elseif (user_access('access secured pages')) {
