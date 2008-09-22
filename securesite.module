@@ -110,10 +110,10 @@ function securesite_boot() {
       if (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
         list($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']) = explode(':', base64_decode(substr($_SERVER['HTTP_AUTHORIZATION'], 6)));
       }
-      if (!empty($_SERVER['PHP_AUTH_USER'])) {
+      if (isset($_SERVER['PHP_AUTH_USER'])) {
         $edit['name'] = $_SERVER['PHP_AUTH_USER'];
       }
-      if (!empty($_SERVER['PHP_AUTH_PW'])) {
+      if (isset($_SERVER['PHP_AUTH_PW'])) {
         $edit['pass'] = $_SERVER['PHP_AUTH_PW'];
       }
       break;
@@ -130,9 +130,9 @@ function securesite_boot() {
   }
   else {
     // Fix missing indexes.
-    $edit['name'] = isset($edit['name']) ? $edit['name'] : '';
-    $edit['pass'] = isset($edit['pass']) ? $edit['pass'] : '';
-    if ($edit['name'] != $user->name && $edit['name'] != $_SESSION['securesite_guest']) {
+    $edit += array('name' => '', 'pass' => '');
+    // If this is a new user, perform log-in.
+    if ($edit['name'] !== $user->name && $edit['name'] !== $_SESSION['securesite_guest']) {
       drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
       module_load_include('inc', 'securesite');
       _securesite_login($edit);

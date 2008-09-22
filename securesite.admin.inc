@@ -115,7 +115,7 @@ function securesite_admin_settings() {
   $form['guest'] = array(
     '#type' => 'fieldset',
     '#title' => t('Guest access'),
-    '#description' => t('Guest access allows anonymous users to view secure pages, though a user name and password are still required. If you give anonymous users the <em>!access</em> permission, you can set the user name and password for anonymous users below.', array('!access' => l('access secured pages', 'admin/user/permissions', array('fragment' => 'module-securesite')))),
+    '#description' => t('Guest access allows anonymous users to view secure pages, though they will still be prompted for a user name and password. If you give anonymous users the <em>!access</em> permission, you can set the user name and password for anonymous users below.', array('!access' => l('access secured pages', 'admin/user/permissions', array('fragment' => 'module-securesite')))),
   );
   $guest_access = !user_access('access secured pages', drupal_anonymous_user());
   $form['guest']['securesite_guest_name'] = array(
