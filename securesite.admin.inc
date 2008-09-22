@@ -71,7 +71,9 @@ function _securesite_admin_help() {
 
 /**
  * FAPI definition for Secure Site admin settings form
+ * @ingroup forms
  * @see system_settings_form()
+ * @see securesite_admin_settings_submit()
  */
 function securesite_admin_settings() {
   global $base_url;
@@ -158,14 +160,11 @@ function securesite_admin_settings() {
   return system_settings_form($form);
 }
 
+/**
+ * Restore core 403 error page when not using Secure Site page.
+ */
 function securesite_admin_settings_submit($form, &$form_state) {
-  if ($form_state['values']['securesite_enabled'] == SECURESITE_403) {
-    if (($site_403 = variable_get('site_403', '')) != 'securesite_403') {
-      variable_set('securesite_403', variable_get('site_403', ''));
-      variable_set('site_403', 'securesite_403');
-    }
-  }
-  else {
+  if ($form_state['values']['securesite_enabled'] != SECURESITE_403) {
     variable_set('site_403', variable_get('securesite_403', variable_get('site_403', '')));
     variable_del('securesite_403');
   }

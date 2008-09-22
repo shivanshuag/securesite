@@ -30,13 +30,18 @@ function _securesite_forced() {
       return TRUE;
     case SECURESITE_OFFLINE:
       return variable_get('site_offline', FALSE);
+    case SECURESITE_403:
+      if (variable_get('site_403', '') != 'securesite_403') {
+        variable_set('securesite_403', variable_get('site_403', ''));
+        variable_set('site_403', 'securesite_403');
+      }
     default:
       return FALSE;
   }
 }
 
 /**
- * Display authentication dialog and send password reset mails
+ * Display authentication dialog and send password reset mails.
  */
 function _securesite_user_authenticate() {
   global $base_path;
@@ -58,8 +63,8 @@ function _securesite_user_authenticate() {
     _securesite_password_reset($_POST['edit']);
   }
   // If using HTTP Auth, send the appropriate headers, but only if the user hasn't
-  // just submitted the password reset or log-in forms.
-  elseif (variable_get('securesite_type', SECURESITE_AUTH) == SECURESITE_AUTH && empty($_POST['securesite_login_form']) && empty($_POST['securesite_request_form'])) {
+  // just submitted the password reset form.
+  elseif (variable_get('securesite_type', SECURESITE_AUTH) == SECURESITE_AUTH && empty($_POST['securesite_request_form'])) {
     $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
     // If not on the home page of the site, Opera will not show the auth dialog
     // the first time after logout.  It will show the page displayed before
@@ -163,10 +168,9 @@ function _securesite_login_fail($edit) {
 }
 
 /**
- * Returns complete form for log-in when using the HTML form
+ * Return HTML log-in form.
  *
- * @return
- *   HTML used in the Secure Site dialog when the HTML log-in form is in use
+ * @return HTML string
  */
 function _securesite_login_form() {
   $status_msg = theme('status_messages');
@@ -185,10 +189,9 @@ function _securesite_login_form() {
 }
 
 /**
- * Returns complete form for password reset request (if enabled)
+ * Return password reset form (if enabled) or log-in message.
  *
- * @return
- *   HTML used in the Secure Site dialog when the HTTP Auth dialog is cancelled
+ * @return HTML string.
  */
 function _securesite_request_form() {
   $output = '';
@@ -216,7 +219,7 @@ function _securesite_request_form() {
 }
 
 /**
- * Print HTML dialog page for Secure Site
+ * Print HTML dialog page for Secure Site.
  *
  * @param $content
  * HTML to output for the log-in and/or password reset form
@@ -234,7 +237,7 @@ function _securesite_dialog_page($content) {
 }
 
 /**
- * Process password reset requests
+ * Process password reset requests.
  *
  * @param $edit
  * Username or e-mail address of user requesting password reset
@@ -298,7 +301,7 @@ function _securesite_password_reset($edit = array()) {
 }
 
 /**
- * Implementation of hook_mail()
+ * Implementation of hook_mail().
  */
 function securesite_mail($key, &$message, $params) {
   // Ignoring $key for now, since there's only one type of mail sent by Secure Site

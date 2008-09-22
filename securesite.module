@@ -48,14 +48,14 @@ function securesite_help($path, $arg) {
 }
 
 /**
- * Implementation of hook_perm()
+ * Implementation of hook_perm().
  */
 function securesite_perm() {
   return array('access secured pages');
 }
 
 /**
- * Implementation of hook_menu()
+ * Implementation of hook_menu().
  */
 function securesite_menu() {
   $items['securesite_403'] = array(
@@ -76,9 +76,20 @@ function securesite_menu() {
 }
 
 /**
+ * Implementation of hook_form_$form-id_alter().
+ */
+function securesite_form_system_error_reporting_settings_alter(&$form, &$form_state) {
+  if (variable_get('securesite_enabled', SECURESITE_403)) {
+    $form['securesite_403'] = $form['site_403'];
+    $form['securesite_403']['#default_value'] = variable_get('securesite_403', '');
+    unset($form['site_403']);
+  }
+}
+
+/**
  * Implementation of hook_boot().
  *
- * This is where Secure Site does most of its processing
+ * This is where Secure Site does most of its processing.
  */
 function securesite_boot() {
   global $user, $base_path;
@@ -130,12 +141,10 @@ function securesite_boot() {
 }
 
 /**
- * Implementation of hook_user()
+ * Implementation of hook_user().
  *
  * When users logout, show the HTTP Auth dialog to make sure the HTTP Auth
  * credentials are cleared
- *
- * @see _securesite_user_authenticate()
  */
 function securesite_user($op, &$edit, &$user) {
   switch ($op) {
