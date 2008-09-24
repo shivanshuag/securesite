@@ -29,6 +29,9 @@ function securesite_disable() {
  * Implentation of hook_uninstall().
  */
 function securesite_uninstall() {
+  if (variable_get('securesite_type', SECURESITE_BASIC) == SECURESITE_DIGEST) {
+    drupal_uninstall_schema('securesite');
+  }
   variable_del('securesite_enabled');
   variable_del('securesite_403');
   variable_del('securesite_type');
@@ -39,18 +42,44 @@ function securesite_uninstall() {
   variable_del('securesite_request_form');
 }
 
+function securesite_schema() {
+  $schema['securesite'] = array(
+    'description' => t('Stores user passwords.'),
+    'fields' => array(
+      'uid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t("User's {users}.uid."),
+      ),
+      'pass' => array(
+        'type' => 'varchar',
+        'length' => 25,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => t("User's password."),
+      ),
+    ),
+    'primary key' => array('uid'),
+    'indexes' => array(
+      'uid' => array('uid'),
+    ),
+  );
+  return $schema;
+}
+
 /**
  * Implementation of hook_update_N().
  * Convert variables from older versions.
  */
 function securesite_update_6200() {
-  switch (variable_get('securesite_enabled', 0)) {
+  switch (variable_get('securesite_enabled', SECURESITE_DISABLED)) {
     case 2:
       variable_del('securesite_enabled');
       break;
     case 3:
-      variable_set('securesite_enabled', 1);
-      variable_set('securesite_type', 1);
+      variable_set('securesite_enabled', SECURESITE_ALWAYS);
+      variable_set('securesite_type', SECURESITE_FORM);
       break;
   }
   variable_del('securesite_filter_pages');

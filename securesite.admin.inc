@@ -97,12 +97,13 @@ function securesite_admin_settings() {
   $form['authentication']['securesite_type'] = array(
     '#type' => 'radios',
     '#title' => t('Authentication type'),
-    '#default_value' => variable_get('securesite_type', SECURESITE_AUTH),
+    '#default_value' => variable_get('securesite_type', SECURESITE_BASIC),
     '#options' => array(
-      SECURESITE_AUTH => t('Use HTTP Auth'),
+      SECURESITE_BASIC => t('Use HTTP basic authentication'),
+      SECURESITE_DIGEST => t('Use HTTP digest authentication'),
       SECURESITE_FORM => t('Use HTML log-in form'),
     ),
-    '#description' => t('HTTP Auth requires extra configuration if PHP is not installed as an Apache module. See the !link section of the Secure Site help for details.', array('!link' => l('Known issues', 'admin/help/securesite', array('fragment' => 'issues')))),
+    '#description' => t('HTTP authentication requires extra configuration if PHP is not installed as an Apache module. See the !link section of the Secure Site help for details.', array('!link' => l('Known issues', 'admin/help/securesite', array('fragment' => 'issues')))),
   );
   $form['authentication']['securesite_realm'] = array(
     '#type' => 'textfield',
@@ -167,6 +168,12 @@ function securesite_admin_settings_submit($form, &$form_state) {
   if ($form_state['values']['securesite_enabled'] != SECURESITE_403) {
     variable_set('site_403', variable_get('securesite_403', variable_get('site_403', '')));
     variable_del('securesite_403');
+  }
+  if ($form_state['values']['securesite_type'] == SECURESITE_DIGEST) {
+    drupal_install_schema('securesite');
+  }
+  else {
+    drupal_uninstall_schema('securesite');
   }
 }
 
