@@ -11,8 +11,8 @@
  */
 function _securesite_403() {
   global $user, $base_path;
-  if (empty($user->uid) && empty($_SESSION['securesite_guest']) && strpos(request_uri(), $base_path .'logout') !== 0) {
-    _securesite_user_authenticate();
+  if (empty($user->uid) && empty($_SESSION['securesite_guest']) && $_GET['q'] != 'logout') {
+    _securesite_dialog();
   }
   else {
     $path = drupal_get_normal_path(variable_get('securesite_403', ''));
@@ -22,76 +22,102 @@ function _securesite_403() {
 }
 
 /**
- * Check user's credentials.
+ * Perform digest authentication.
  */
-function _securesite_login($edit) {
+function _securesite_digest_auth($edit) {
   global $user, $base_path;
-  switch (variable_get('securesite_type', SECURESITE_BASIC)) {
-    case SECURESITE_DIGEST:
-      // If digest credentials are missing, skip to form log-in.
-      if (isset($edit['response'])) {
-        if (!empty($edit['name'])) {
-          $pass = db_result(db_query("SELECT s.pass FROM {users} u INNER JOIN {securesite} s ON u.uid = s.uid WHERE u.name = '%s'", $edit['name']));
-          $ha1 = md5("$edit[name]:$edit[realm]:$pass");
-          $ha2 = md5($_SERVER['REQUEST_METHOD'] .':'. $edit['uri']);
-          if ($edit['response'] == md5($ha1 .':'. $edit['nonce'] .':'. $edit['nc'] .':'. $edit['cnonce'] .':'. $edit['qop'] .':'. $ha2)) {
-            $result = db_query("SELECT * FROM {users} WHERE LOWER(name) = LOWER('%s')", $edit['name']);
-            if ($user = db_fetch_object($result)) {
-              $user = drupal_unpack($user);
-              $user->roles = array();
-              if (!empty($user->uid)) {
-                $user->roles[DRUPAL_AUTHENTICATED_RID] = 'authenticated user';
-                $result = db_query('SELECT r.rid, r.name FROM {role} r INNER JOIN {users_roles} ur ON ur.rid = r.rid WHERE ur.uid = %d', $user->uid);
-                while ($role = db_fetch_object($result)) {
-                  $user->roles[$role->rid] = $role->name;
-                }
-                user_module_invoke('load', $edit, $user);
-                user_authenticate_finalize($edit);
-              }
-            }
-          }
-          break;
-        }
-        $edit['pass'] = '';
-      }
-    case SECURESITE_BASIC:
-    case SECURESITE_FORM:
-      // The LDAP auth module can't use the regular external user log-in system, so
-      // we have to call its log-in function directly.
+  if (!empty($edit['name'])) {
+    $edit['pass'] = db_result(db_query("SELECT s.pass FROM {users} u INNER JOIN {securesite} s ON u.uid = s.uid WHERE u.name = '%s'", $edit['name']));
+    $ha1 = md5("$edit[name]:$edit[realm]:$edit[pass]");
+    $ha2 = md5($_SERVER['REQUEST_METHOD'] .':'. $edit['uri']);
+    if ($edit['response'] == md5("$ha1:$edit[nonce]:$edit[nc]:$edit[cnonce]:$edit[qop]:$ha2")) {
       if (module_exists('ldapauth')) {
         ldapauth_authenticate($edit);
       }
       else {
-        user_authenticate(array('name' => $edit['name'], 'pass' => $edit['pass']));
+        user_authenticate($edit);
       }
-      break;
+      if (!empty($user->uid)) {
+        _securesite_user_login();
+      }
+    }
+  }
+  // If user log-in was unsuccessful, try guest log-in.
+  $guest_pass = variable_get('securesite_guest_pass', '');
+  if (!empty($guest_pass)) {
+    $ha1 = md5("$edit[name]:$edit[realm]:$guest_pass");
+    $ha2 = md5($_SERVER['REQUEST_METHOD'] .':'. $edit['uri']);
+    if ($edit['response'] == md5($ha1 .':'. $edit['nonce'] .':'. $edit['nc'] .':'. $edit['cnonce'] .':'. $edit['qop'] .':'. $ha2)) {
+      $edit['pass'] = $guest_pass;
+    }
+  }
+  _securesite_guest_login($edit);
+}
+
+/**
+ * Perform basic authentication.
+ */
+function _securesite_basic_auth($edit) {
+  global $user, $base_path;
+  // The LDAP auth module can't use the regular external user log-in system, so
+  // we have to call its log-in function directly.
+  if (module_exists('ldapauth')) {
+    ldapauth_authenticate($edit);
+  }
+  else {
+    user_authenticate($edit);
   }
   if (empty($user->uid)) {
-    // Check anonymous user permission and credentials
-    $guest_name = variable_get('securesite_guest_name', '');
-    $guest_pass = variable_get('securesite_guest_pass', '');
-    if (!user_access('access secured pages') || !empty($guest_name) && $edit['name'] != $guest_name || !empty($guest_pass) && $edit['pass'] != $guest_pass) {
-      _securesite_login_fail($edit);
+    _securesite_guest_login($edit);
+  }
+  else {
+    _securesite_user_login();
+  }
+}
+
+/**
+ * Log in guest user.
+ */
+function _securesite_guest_login($edit) {
+  global $base_path;
+  $guest_name = variable_get('securesite_guest_name', '');
+  $guest_pass = variable_get('securesite_guest_pass', '');
+  // Check anonymous user permission and credentials.
+  if (user_access('access secured pages') && (empty($guest_name) || $edit['name'] == $guest_name) && (empty($guest_pass) || $edit['pass'] == $guest_pass)) {
+    // Mark this session to prevent re-login (note: guests can't log out).
+    $_SESSION['securesite_guest'] = $edit['name'];
+    $_SESSION['securesite_login'] = TRUE;
+    // If path is front page, go to site root. Prevent a 403 error by redirecting off the logout page.
+    if (drupal_is_front_page() || $_GET['q'] == 'logout') {
+      $path = '';
     }
     else {
-      // Mark this session to prevent re-login (note: guests can't log out).
-      $_SESSION['securesite_guest'] = $edit['name'];
-      $_SESSION['securesite_login'] = TRUE;
-      // If path is front page, go to site root. Prevent a 403 error by redirecting off the logout page.
-      if (drupal_is_front_page() || strpos(request_uri(), $base_path .'logout') === 0) {
-        $path = '';
-      }
-      else {
-        $path = $_GET['q']; // Redirect to prevent some caching problems.
-      }
-      drupal_goto($path);
+      $path = $_GET['q']; // Redirect to prevent some caching problems.
     }
+    drupal_goto($path);
   }
-  elseif (user_access('access secured pages')) {
+  else {
+    if (empty($edit['name'])) {
+      watchdog('user', 'Log-in attempt failed for <em>anonymous</em> user.');
+    }
+    else {
+      watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
+    }
+    drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
+    _securesite_dialog();
+  }
+}
+
+/**
+ * Log in authenticated user.
+ */
+function _securesite_user_login() {
+  global $base_path;
+  if (user_access('access secured pages')) {
     unset($_SESSION['securesite_guest']); // Clear the guest session.
     $_SESSION['securesite_login'] = TRUE; // Mark the session so Secure Site will be triggered on log-out.
     // If path is front page, go to site root. Prevent a log-in/log-out loop by redirecting off the log-out page.
-    if (drupal_is_front_page() || strpos(request_uri(), $base_path .'logout') === 0) {
+    if (drupal_is_front_page() || $_GET['q'] == 'logout') {
       $path = '';
     }
     else {
@@ -101,31 +127,17 @@ function _securesite_login($edit) {
   }
   else { // Not an authorized user.
     drupal_set_message(t('Unauthorized user.'), 'error');
-    _securesite_user_authenticate();
+    _securesite_dialog();
   }
-}
-
-/**
- * Handle log-in failure.
- */
-function _securesite_login_fail($edit) {
-  if (empty($edit['name'])) {
-    watchdog('user', 'Log-in attempt failed for <em>anonymous</em> user.');
-  }
-  else {
-    watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
-  }
-  drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
-  _securesite_user_authenticate();
 }
 
 /**
  * Display authentication dialog and send password reset mails.
  */
-function _securesite_user_authenticate() {
+function _securesite_dialog() {
   if (_securesite_forced()) {
     global $base_path;
-    if (strpos(request_uri(), $base_path .'user/reset/') === 0) {
+    if (strpos($_GET['q'], 'user/reset/') === 0) {
       $args = explode('/', $_GET['q']);
       // The password reset function doesn't work well if it doesn't have all the
       // required parameters or if the UID parameter isn't valid
@@ -145,13 +157,13 @@ function _securesite_user_authenticate() {
     else {
       switch (variable_get('securesite_type', SECURESITE_BASIC)) {
         case SECURESITE_BASIC:
-          _securesite_basic_authenticate();
+          _securesite_basic_dialog();
           break;
         case SECURESITE_DIGEST:
-          _securesite_digest_authenticate();
+          _securesite_digest_dialog();
           break;
         case SECURESITE_FORM:
-          _securesite_form_authenticate();
+          _securesite_form_dialog();
           break;
       }
     }
@@ -244,21 +256,30 @@ function _securesite_password_reset($edit = array()) {
   }
 }
 
-function _securesite_basic_authenticate() {
+/**
+ * Display HTTP basic authentication dialog.
+ */
+function _securesite_basic_dialog() {
   header('WWW-Authenticate: Basic realm="'. _securesite_realm() .'"');
   header('HTTP/1.0 401 Unauthorized');
   $output = _securesite_request_form();
   _securesite_dialog_page($output);
 }
 
-function _securesite_digest_authenticate() {
+/**
+ * Display HTTP digest authentication dialog.
+ */
+function _securesite_digest_dialog() {
   $realm = _securesite_realm();
   header('WWW-Authenticate: Digest realm="'. $realm .'", qop="auth", nonce="'. uniqid() .'", opaque="'. md5($realm) .'"');
   header('HTTP/1.0 401 Unauthorized');
-  _securesite_form_authenticate();
+  _securesite_form_dialog();
 }
 
-function _securesite_form_authenticate() {
+/**
+ * Display HTML form authentication dialog.
+ */
+function _securesite_form_dialog() {
   $status_msg = theme('status_messages');
   $status_msg = empty($status_msg) ? '' : '      '. $status_msg ."\n";
   $output = '<h1>'. t('Log in') .'</h1>'."\n";

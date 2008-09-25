@@ -112,47 +112,45 @@ function securesite_boot() {
       if (isset($_SERVER['PHP_AUTH_PW'])) {
         $edit['pass'] = $_SERVER['PHP_AUTH_PW'];
       }
-      // If credentials are missing, request them.
-      if (empty($edit)) {
-        // Don't request credentials if user is logged in or if running from command line or cron.
-        if (empty($user->uid) && empty($_SESSION['securesite_guest']) && php_sapi_name() != 'cli' && request_uri() != $base_path .'cron.php') {
-          drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-          module_load_include('inc', 'securesite');
-          _securesite_user_authenticate();
-        }
-      }
       // If credentials are present, log in.
-      else {
+      if (!empty($edit)) {
         // Fix missing indexes.
         $edit += array('name' => '', 'pass' => '');
         // If this is a new user, perform log-in.
         if ($edit['name'] !== $user->name && $edit['name'] !== $_SESSION['securesite_guest']) {
           drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
           module_load_include('inc', 'securesite');
-          _securesite_login($edit);
+          _securesite_basic_auth($edit);
+        }
+      }
+      // If credentials are missing, request them.
+      else {
+        // Don't request credentials if user is logged in or if running from command line or cron.
+        if (empty($user->uid) && empty($_SESSION['securesite_guest']) && php_sapi_name() != 'cli' && request_uri() != $base_path .'cron.php') {
+          drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+          module_load_include('inc', 'securesite');
+          _securesite_dialog();
         }
       }
       break;
     case SECURESITE_DIGEST:
-      // Protect against missing data
-      $needed_parts = array_flip(array('nonce', 'nc', 'cnonce', 'qop', 'username', 'uri', 'response'));
       // Check for credentials in HTTP headers.
       $parts = explode(',', trim($_SERVER['PHP_AUTH_DIGEST']));
+      $edit = array();
       foreach ($parts as $part) {
         if (!empty($part)) {
-          list($key, $value) = explode('=', trim($part));
-          unset($needed_parts[$key]);
+          list($key, $value) = explode('=', trim($part), 2);
           $key = $key == 'username' ? 'name' : $key;
           $edit[$key] = trim($value, '"');
         }
       }
       // If credentials are present, log in.
-      if (empty($needed_parts)) {
+      if (array_diff(array('cnonce', 'name', 'nc', 'nonce', 'qop', 'response', 'uri'), array_keys($edit)) == array()) {
         // If this is a new user, perform log-in.
         if ($edit['name'] !== $user->name && $edit['name'] !== $_SESSION['securesite_guest']) {
           drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
           module_load_include('inc', 'securesite');
-          _securesite_login($edit);
+          _securesite_digest_auth($edit);
         }
         break;
       }
@@ -164,7 +162,7 @@ function securesite_boot() {
         $edit = $_POST['edit'] + array('name' => '', 'pass' => '');
         drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
         module_load_include('inc', 'securesite');
-        _securesite_login($edit);
+        _securesite_basic_auth($edit);
       }
       // If credentials are missing, request them.
       else {
@@ -172,7 +170,7 @@ function securesite_boot() {
         if (empty($user->uid) && empty($_SESSION['securesite_guest']) && php_sapi_name() != 'cli' && request_uri() != $base_path .'cron.php') {
           drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
           module_load_include('inc', 'securesite');
-          _securesite_user_authenticate();
+          _securesite_dialog();
         }
       }
       break;
@@ -215,7 +213,7 @@ function securesite_user($op, &$edit, &$user) {
         // Load the anonymous user
         $user = drupal_anonymous_user();
         // Clear stored credentials
-        _securesite_user_authenticate();
+        _securesite_dialog();
       }
       break;
   }

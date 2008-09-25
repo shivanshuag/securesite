@@ -162,18 +162,23 @@ function securesite_admin_settings() {
 }
 
 /**
- * Restore core 403 error page when not using Secure Site page.
+ * Restore core 403 error page when not using Secure Site page. Set up password
+ * storage for digest authentication.
  */
 function securesite_admin_settings_submit($form, &$form_state) {
   if ($form_state['values']['securesite_enabled'] != SECURESITE_403) {
     variable_set('site_403', variable_get('securesite_403', variable_get('site_403', '')));
     variable_del('securesite_403');
   }
-  if ($form_state['values']['securesite_type'] == SECURESITE_DIGEST) {
-    drupal_install_schema('securesite');
+  module_load_include('install', 'securesite');
+  $schema = _securesite_schema();
+  _drupal_initialize_schema('securesite', $schema);
+  $ret = array();
+  if ($form_state['values']['securesite_type'] == SECURESITE_DIGEST && variable_get('securesite_type', SECURESITE_BASIC) != SECURESITE_DIGEST) {
+    db_create_table($ret, 'securesite', $schema['securesite']);
   }
-  else {
-    drupal_uninstall_schema('securesite');
+  elseif ($form_state['values']['securesite_type'] != SECURESITE_DIGEST && variable_get('securesite_type', SECURESITE_BASIC) == SECURESITE_DIGEST) {
+    db_drop_table($ret, 'securesite');
   }
 }
 

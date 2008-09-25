@@ -29,9 +29,6 @@ function securesite_disable() {
  * Implentation of hook_uninstall().
  */
 function securesite_uninstall() {
-  if (variable_get('securesite_type', SECURESITE_BASIC) == SECURESITE_DIGEST) {
-    drupal_uninstall_schema('securesite');
-  }
   variable_del('securesite_enabled');
   variable_del('securesite_403');
   variable_del('securesite_type');
@@ -40,9 +37,10 @@ function securesite_uninstall() {
   variable_del('securesite_guest_pass');
   variable_del('securesite_login_form');
   variable_del('securesite_request_form');
+  db_query("DROP TABLE IF EXISTS {securesite}");
 }
 
-function securesite_schema() {
+function _securesite_schema() {
   $schema['securesite'] = array(
     'description' => t('Stores user passwords.'),
     'fields' => array(
