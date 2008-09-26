@@ -26,32 +26,111 @@ function _securesite_403() {
  */
 function _securesite_digest_auth($edit) {
   global $user, $base_path;
-  if (!empty($edit['name'])) {
-    $edit['pass'] = db_result(db_query("SELECT s.pass FROM {users} u INNER JOIN {securesite} s ON u.uid = s.uid WHERE u.name = '%s'", $edit['name']));
-    $ha1 = md5("$edit[name]:$edit[realm]:$edit[pass]");
-    $ha2 = md5($_SERVER['REQUEST_METHOD'] .':'. $edit['uri']);
-    if ($edit['response'] == md5("$ha1:$edit[nonce]:$edit[nc]:$edit[cnonce]:$edit[qop]:$ha2")) {
-      if (module_exists('ldapauth')) {
-        ldapauth_authenticate($edit);
-      }
-      else {
-        user_authenticate($edit);
-      }
+  if (!empty($edit['username'])) {
+    // If nonce-count has not been exceeded, validate credentials.
+    if ($edit['nc'] <= variable_get('securesite_max_nc', $edit['nc']) && _securesite_digest_validate($edit) == 'valid') {
+      $array = array('name' => $edit['username'], 'status' => 1);
+      $user = user_load($array);
+      user_authenticate_finalize($array);
       if (!empty($user->uid)) {
         _securesite_user_login();
       }
     }
   }
-  // If user log-in was unsuccessful, try guest log-in.
-  $guest_pass = variable_get('securesite_guest_pass', '');
-  if (!empty($guest_pass)) {
-    $ha1 = md5("$edit[name]:$edit[realm]:$guest_pass");
+  // If user authentication was unsuccessful, try guest log-in.
+  $edit['name'] = $edit['username'];
+  $pass = variable_get('securesite_guest_pass', '');
+  if (!empty($pass)) {
+    $ha1 = md5("$edit[name]:$edit[realm]:$pass");
     $ha2 = md5($_SERVER['REQUEST_METHOD'] .':'. $edit['uri']);
     if ($edit['response'] == md5($ha1 .':'. $edit['nonce'] .':'. $edit['nc'] .':'. $edit['cnonce'] .':'. $edit['qop'] .':'. $ha2)) {
-      $edit['pass'] = $guest_pass;
+      $edit['pass'] = $pass;
     }
   }
   _securesite_guest_login($edit);
+}
+
+/**
+ * Get the result of digest validation.
+ */
+function _securesite_digest_validate($edit = array()) {
+  static $status;
+  if (!empty($edit)) {
+    $status = _securesite_digest_manage('validate', $edit);
+  }
+  return $status;
+}
+
+/**
+ * Work with stored passwords. This is a temporary placeholder function until we
+ * can get an external program to do something similar.
+ * @param $op: A string representing the operation to be performed.
+ * - nonce: Record a nonce for validation.
+ * - save: Save a user name and password.
+ * - delete: Remove a user.
+ * - validate: Check a digest.
+ * @param $edit: An array of data on which to operate. Data required depends on
+ * operation.
+ * - nonce: nonce = string, expires = timestamp.
+ * - save: username = current name, name = new name, pass = password.
+ * - delete: username = current name.
+ * - validate: complete array of HTTP digest credentials.
+ * @return
+ * - nonce: None.
+ * - save: None.
+ * - delete: None.
+ * - validate: valid, invalid, or stale.
+ */
+function _securesite_digest_manage($op, $edit) {
+  switch ($op) {
+    case 'nonce':
+      if (isset($edit['expires'])) {
+        db_query("INSERT INTO {securesite_nonce} (nonce, expires) VALUES ('%s', %d)", $edit['nonce'], $edit['expires']);
+      }
+      else {
+        db_query("INSERT INTO {securesite_nonce} (nonce) VALUES ('%s')", $edit['nonce']);
+      }
+      break;
+    case 'save':
+      if (db_result(db_query_range("SELECT name FROM {securesite_passwords} WHERE name = '%s'", $edit['username'], 0, 1)) === FALSE) {
+        db_query("INSERT INTO {securesite_passwords} (name, pass) VALUES ('%s', '%s')", $edit['name'], $edit['pass']);
+      }
+      else {
+        db_query("UPDATE {securesite_passwords} SET name = '%s', pass = '%s' WHERE name = '%s'", $edit['name'], $edit['pass'], $edit['username']);
+      }
+      break;
+    case 'delete':
+      db_query("DELETE FORM {securesite_passwords} WHERE name = '%s'", $edit['username']);
+      break;
+    case 'validate':
+      $pass = db_result(db_query("SELECT pass FROM {securesite_passwords} WHERE name = '%s'", $edit['username']));
+      // Generate digest from password.
+      if ($pass !== FALSE) {
+        $ha1 = md5("$edit[username]:$edit[realm]:$pass");
+        $ha2 = md5($_SERVER['REQUEST_METHOD'] .':'. $edit['uri']);
+        $digest = md5($ha1 .':'. $edit['nonce'] .':'. $edit['nc'] .':'. $edit['cnonce'] .':'. $edit['qop'] .':'. $ha2);
+      }
+      // Remove expired nonce values.
+      db_query("DELETE FROM {securesite_nonce} WHERE expires <= %d", time());
+      $nc = db_result(db_query("SELECT nc FROM {securesite_nonce} WHERE nonce = '%s'", $edit['nonce']));
+      $edit['nc'] = hexdec($edit['nc']);
+      // Check for missing or incorrect password or replay attack.
+      if ($pass === FALSE || $digest != $edit['response'] || $nc !== FALSE && $edit['nc'] < $nc) {
+        $output = 'invalid';
+      }
+      else {
+        // Check for stale nonce.
+        if ($nc === FALSE) {
+          db_query("DELETE FROM {securesite_nonce} WHERE nonce = '%s'", $edit['nonce']);
+          $output = 'stale';
+        }
+        else {
+          db_query("UPDATE {securesite_nonce} SET nc = %d WHERE nonce = '%s'", $edit['nc'], $edit['nonce']);
+          $output = 'valid';
+        }
+      }
+      return $output;
+  }
 }
 
 /**
@@ -67,12 +146,11 @@ function _securesite_basic_auth($edit) {
   else {
     user_authenticate($edit);
   }
-  if (empty($user->uid)) {
-    _securesite_guest_login($edit);
-  }
-  else {
+  if (!empty($user->uid)) {
     _securesite_user_login();
   }
+  // If user authentication was unsuccessful, try guest log-in.
+  _securesite_guest_login($edit);
 }
 
 /**
@@ -271,9 +349,16 @@ function _securesite_basic_dialog() {
  */
 function _securesite_digest_dialog() {
   $realm = _securesite_realm();
-  header('WWW-Authenticate: Digest realm="'. $realm .'", qop="auth", nonce="'. uniqid() .'", opaque="'. md5($realm) .'"');
+  $nonce = uniqid();
+  if (_securesite_digest_validate() == 'stale') {
+    $stale = '", stale="true';
+  }
+  header('WWW-Authenticate: Digest realm="'. $realm .'", nonce="'. $nonce .'", opaque="'. md5($realm) . $stale .'", qop="auth"');
   header('HTTP/1.0 401 Unauthorized');
   _securesite_form_dialog();
+  $expires = variable_get('securesite_nonce_expires', 0);
+  $array = empty($expires) ? array('nonce' => $nonce) : array('nonce' => $nonce, 'expires' => time() + $expires);
+  _securesite_digest_manage('nonce', $array);
 }
 
 /**

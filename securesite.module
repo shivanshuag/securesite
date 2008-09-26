@@ -126,7 +126,7 @@ function securesite_boot() {
       // If credentials are missing, request them.
       else {
         // Don't request credentials if user is logged in or if running from command line or cron.
-        if (empty($user->uid) && empty($_SESSION['securesite_guest']) && php_sapi_name() != 'cli' && request_uri() != $base_path .'cron.php') {
+        if (empty($user->uid) && !isset($_SESSION['securesite_guest']) && php_sapi_name() != 'cli' && request_uri() != $base_path .'cron.php') {
           drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
           module_load_include('inc', 'securesite');
           _securesite_dialog();
@@ -140,14 +140,13 @@ function securesite_boot() {
       foreach ($parts as $part) {
         if (!empty($part)) {
           list($key, $value) = explode('=', trim($part), 2);
-          $key = $key == 'username' ? 'name' : $key;
           $edit[$key] = trim($value, '"');
         }
       }
       // If credentials are present, log in.
-      if (array_diff(array('cnonce', 'name', 'nc', 'nonce', 'qop', 'response', 'uri'), array_keys($edit)) == array()) {
+      if (array_diff(array('cnonce', 'username', 'nc', 'nonce', 'qop', 'response', 'uri'), array_keys($edit)) == array()) {
         // If this is a new user, perform log-in.
-        if ($edit['name'] !== $user->name && $edit['name'] !== $_SESSION['securesite_guest']) {
+        if ($edit['username'] !== $user->name && $edit['username'] !== $_SESSION['securesite_guest']) {
           drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
           module_load_include('inc', 'securesite');
           _securesite_digest_auth($edit);
@@ -167,7 +166,7 @@ function securesite_boot() {
       // If credentials are missing, request them.
       else {
         // Don't request credentials if user is logged in or if running from command line or cron.
-        if (empty($user->uid) && empty($_SESSION['securesite_guest']) && php_sapi_name() != 'cli' && request_uri() != $base_path .'cron.php') {
+        if (empty($user->uid) && !isset($_SESSION['securesite_guest']) && php_sapi_name() != 'cli' && request_uri() != $base_path .'cron.php') {
           drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
           module_load_include('inc', 'securesite');
           _securesite_dialog();
@@ -187,24 +186,19 @@ function securesite_user($op, &$edit, &$user) {
   switch ($op) {
     case 'insert':
     case 'load':
+    case 'update':
       if (variable_get('securesite_type', SECURESITE_BASIC) == SECURESITE_DIGEST && isset($edit['pass'])) {
-        if (db_result(db_query_range("SELECT uid FROM {securesite} WHERE uid = %d", $user->uid, 0, 1)) === FALSE) {
-          db_query("INSERT INTO {securesite} (uid, pass) VALUES (%d, '%s')", $user->uid, $edit['pass']);
-        }
-      }
-      break;
-    case 'after_update':
-      if (variable_get('securesite_type', SECURESITE_BASIC) == SECURESITE_DIGEST && isset($edit['pass'])) {
-        if (db_result(db_query_range("SELECT uid FROM {securesite} WHERE uid = %d", $user->uid, 0, 1)) === FALSE) {
-          db_query("UPDATE {securesite} SET pass = '%s' WHERE uid = %d", $edit['pass'], $user->uid);
-        }
-        else {
-          securesite_user('insert', $edit, $user);
-        }
+        module_load_include('inc', 'securesite');
+        $array = array('username' => $user->name, 'name' => $edit['name'], 'pass' => $edit['pass']);
+        _securesite_digest_manage('save', $array);
       }
       break;
     case 'delete':
-      db_query("DELETE FROM {securesite} WHERE uid = %d", $user->uid);
+      if (variable_get('securesite_type', SECURESITE_BASIC) == SECURESITE_DIGEST) {
+        module_load_include('inc', 'securesite');
+        $array = array('username' => $user->name);
+        _securesite_digest_manage('delete', $array);
+      }
       break;
     case 'logout':
       $securesite_type = variable_get('securesite_type', SECURESITE_BASIC);

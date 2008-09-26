@@ -175,10 +175,14 @@ function securesite_admin_settings_submit($form, &$form_state) {
   _drupal_initialize_schema('securesite', $schema);
   $ret = array();
   if ($form_state['values']['securesite_type'] == SECURESITE_DIGEST && variable_get('securesite_type', SECURESITE_BASIC) != SECURESITE_DIGEST) {
-    db_create_table($ret, 'securesite', $schema['securesite']);
+    foreach ($schema as $name => $table) {
+      db_create_table($ret, $name, $table);
+    }
   }
   elseif ($form_state['values']['securesite_type'] != SECURESITE_DIGEST && variable_get('securesite_type', SECURESITE_BASIC) == SECURESITE_DIGEST) {
-    db_drop_table($ret, 'securesite');
+    foreach ($schema as $name => $table) {
+      db_drop_table($ret, $name);
+    }
   }
 }
 

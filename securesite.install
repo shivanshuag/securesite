@@ -37,30 +37,58 @@ function securesite_uninstall() {
   variable_del('securesite_guest_pass');
   variable_del('securesite_login_form');
   variable_del('securesite_request_form');
-  db_query("DROP TABLE IF EXISTS {securesite}");
+  foreach (_securesite_schema() as $name => $table) {
+    db_query("DROP TABLE IF EXISTS {%s}", $name);
+  }
 }
 
 function _securesite_schema() {
-  $schema['securesite'] = array(
+  $schema['securesite_passwords'] = array(
     'description' => t('Stores user passwords.'),
     'fields' => array(
-      'uid' => array(
-        'type' => 'int',
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 60,
         'not null' => TRUE,
-        'default' => 0,
-        'description' => t("User's {users}.uid."),
+        'default' => '',
+        'description' => t("User's {users}.name."),
       ),
       'pass' => array(
         'type' => 'varchar',
-        'length' => 25,
+        'length' => 32,
         'not null' => TRUE,
         'default' => '',
-        'description' => t("User's password."),
+        'description' => t("User's password (plain text)."),
       ),
     ),
-    'primary key' => array('uid'),
+    'primary key' => array('name'),
     'indexes' => array(
-      'uid' => array('uid'),
+      'name' => array('name'),
+    ),
+  );
+  $schema['securesite_nonce'] = array(
+    'description' => t('Stores nonce values.'),
+    'fields' => array(
+      'nonce' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'default' => '',
+        'description' => t('Nonce value.'),
+      ),
+      'nc' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t('Number of times nonce has been used.'),
+      ),
+      'expires' => array(
+        'type' => 'int',
+        'description' => t('Timestamp for when nonce expires.'),
+      ),
+    ),
+    'primary key' => array('nonce'),
+    'indexes' => array(
+      'nonce' => array('nonce'),
     ),
   );
   return $schema;
