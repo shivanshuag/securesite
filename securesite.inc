@@ -11,7 +11,7 @@
  */
 function _securesite_403() {
   global $user, $base_path;
-  if (empty($user->uid) && empty($_SESSION['securesite_guest']) && $_GET['q'] != 'logout') {
+  if (empty($user->uid) && !isset($_SESSION['securesite_guest']) && $_GET['q'] != 'logout') {
     _securesite_dialog();
   }
   else {
