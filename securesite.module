@@ -117,7 +117,7 @@ function securesite_boot() {
         // Fix missing indexes.
         $edit += array('name' => '', 'pass' => '');
         // If this is a new user, perform log-in.
-        if ($edit['name'] !== $user->name && $edit['name'] !== $_SESSION['securesite_guest']) {
+        if ($edit['name'] !== (isset($user->name) ? $user->name : NULL) && $edit['name'] !== (isset($_SESSION['securesite_guest']) ? $_SESSION['securesite_guest'] : NULL)) {
           drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
           module_load_include('inc', 'securesite');
           _securesite_basic_auth($edit);
