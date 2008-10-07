@@ -230,6 +230,7 @@ function _securesite_plain_auth($edit) {
  * Log in authenticated user.
  */
 function _securesite_user_login() {
+  global $user;
   if (user_access('access secured pages')) {
     unset($_SESSION['securesite_guest']); // Clear the guest session.
     $_SESSION['securesite_login'] = TRUE; // Mark the session so Secure Site will be triggered on log-out.
@@ -243,6 +244,8 @@ function _securesite_user_login() {
     drupal_goto($path);
   }
   else { // Not an authorized user.
+    // Load the anonymous user.
+    $user = drupal_anonymous_user();
     drupal_set_message(t('Unauthorized user.'), 'error');
     _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
   }
