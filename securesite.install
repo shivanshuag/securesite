@@ -36,7 +36,7 @@ function securesite_uninstall() {
   variable_del('securesite_guest_name');
   variable_del('securesite_guest_pass');
   variable_del('securesite_login_form');
-  variable_del('securesite_request_form');
+  variable_del('securesite_reset_form');
   foreach (_securesite_schema() as $name => $table) {
     db_query("DROP TABLE IF EXISTS {%s}", $name);
   }
@@ -52,6 +52,10 @@ function _securesite_schema() {
         'not null' => TRUE,
         'default' => '',
         'description' => t("User's {users}.name."),
+      ),
+      'realm' => array(
+        'type' => 'text',
+        'description' => t("User's realm."),
       ),
       'pass' => array(
         'type' => 'varchar',
@@ -81,9 +85,9 @@ function _securesite_schema() {
         'default' => 0,
         'description' => t('Number of times nonce has been used.'),
       ),
-      'expires' => array(
+      'time' => array(
         'type' => 'int',
-        'description' => t('Timestamp for when nonce expires.'),
+        'description' => t('Nonce creation timestamp.'),
       ),
     ),
     'primary key' => array('nonce'),

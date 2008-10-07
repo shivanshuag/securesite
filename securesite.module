@@ -27,19 +27,19 @@ define('SECURESITE_OFFLINE', 2);
 define('SECURESITE_403', 3);
 
 /**
+ * Secure Site type: HTML log-in form
+ */
+define('SECURESITE_FORM', 1);
+
+/**
  * Secure Site type: Web browser HTTP Auth security
  */
-define('SECURESITE_BASIC', 0);
+define('SECURESITE_BASIC', 2);
 
 /**
  * Secure Site type: HTTP digest
  */
-define('SECURESITE_DIGEST', 1);
-
-/**
- * Secure Site type: HTML log-in form
- */
-define('SECURESITE_FORM', 2);
+define('SECURESITE_DIGEST', 3);
 
 /**
  * Implementation of hook_help().
@@ -95,85 +95,73 @@ function securesite_form_system_error_reporting_settings_alter(&$form, &$form_st
  * Implementation of hook_boot().
  */
 function securesite_boot() {
-  global $user, $base_path;
-  switch (variable_get('securesite_type', SECURESITE_BASIC)) {
-    case SECURESITE_BASIC:
-      // PHP in CGI mode work-arounds. Sometimes "REDIRECT_" prefixes $_SERVER variables. See http://www.php.net/reserved.variables.
-      if (empty($_SERVER['HTTP_AUTHORIZATION']) && !empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
-        $_SERVER['HTTP_AUTHORIZATION'] = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
-      }
-      if (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
-        list($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']) = explode(':', base64_decode(substr($_SERVER['HTTP_AUTHORIZATION'], 6)));
-      }
-      // Check for credentials in HTTP headers.
-      if (isset($_SERVER['PHP_AUTH_USER'])) {
-        $edit['name'] = $_SERVER['PHP_AUTH_USER'];
-      }
-      if (isset($_SERVER['PHP_AUTH_PW'])) {
-        $edit['pass'] = $_SERVER['PHP_AUTH_PW'];
-      }
-      // If credentials are present, log in.
-      if (!empty($edit)) {
-        // Fix missing indexes.
-        $edit += array('name' => '', 'pass' => '');
-        // If this is a new user, perform log-in.
-        if ($edit['name'] !== (isset($user->name) ? $user->name : NULL) && $edit['name'] !== (isset($_SESSION['securesite_guest']) ? $_SESSION['securesite_guest'] : NULL)) {
-          drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-          module_load_include('inc', 'securesite');
-          _securesite_basic_auth($edit);
-        }
-      }
-      // If credentials are missing, request them.
-      else {
-        // Don't request credentials if user is logged in or if running from command line or cron.
-        if (empty($user->uid) && !isset($_SESSION['securesite_guest']) && php_sapi_name() != 'cli' && request_uri() != $base_path .'cron.php') {
-          drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-          module_load_include('inc', 'securesite');
-          _securesite_dialog();
-        }
-      }
-      break;
-    case SECURESITE_DIGEST:
-      // Check for credentials in HTTP headers.
-      $parts = explode(',', trim($_SERVER['PHP_AUTH_DIGEST']));
-      $edit = array();
-      foreach ($parts as $part) {
-        if (!empty($part)) {
-          list($key, $value) = explode('=', trim($part), 2);
-          $edit[$key] = trim($value, '"');
-        }
-      }
-      // If credentials are present, log in.
-      if (array_diff(array('cnonce', 'username', 'nc', 'nonce', 'qop', 'response', 'uri'), array_keys($edit)) == array()) {
-        // If this is a new user, perform log-in.
-        if ($edit['username'] !== $user->name && $edit['username'] !== $_SESSION['securesite_guest']) {
-          drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-          module_load_include('inc', 'securesite');
-          _securesite_digest_auth($edit);
-        }
-        break;
-      }
-      // If credentials are missing, check for Post credentials.
-    case SECURESITE_FORM:
-      // Check for credentials in Post data. If credentials are present, log in.
-      if (isset($_POST['securesite_login_form']) && !empty($_POST['edit'])) {
-        // Fix missing indexes.
-        $edit = $_POST['edit'] + array('name' => '', 'pass' => '');
-        drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-        module_load_include('inc', 'securesite');
-        _securesite_basic_auth($edit);
-      }
-      // If credentials are missing, request them.
-      else {
-        // Don't request credentials if user is logged in or if running from command line or cron.
-        if (empty($user->uid) && !isset($_SESSION['securesite_guest']) && php_sapi_name() != 'cli' && request_uri() != $base_path .'cron.php') {
-          drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-          module_load_include('inc', 'securesite');
-          _securesite_dialog();
-        }
-      }
-      break;
+  global $user;
+  // Did the user send credentials that we accept?
+  $type = _securesite_mechanism();
+  if ($type !== FALSE) {
+    drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+    module_load_include('inc', 'securesite');
+    _securesite_boot($type);
   }
+  // If credentials are missing and user is not logged in, request new credentials.
+  elseif (empty($user->uid) && !isset($_SESSION['securesite_guest'])) {
+    $types = variable_get('securesite_type', array(SECURESITE_BASIC));
+    sort($types, SORT_NUMERIC);
+    drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+    module_load_include('inc', 'securesite');
+    _securesite_dialog(array_pop($types));
+  }
+}
+
+/**
+ * Return the authentication method used by the client, or FALSE if the client
+ * did not send credentials.
+ */
+function _securesite_mechanism() {
+  static $mechanism;
+  if (!isset($mechanism)) {
+    // PHP in CGI mode work-arounds. Sometimes "REDIRECT_" prefixes $_SERVER variables. See http://www.php.net/reserved.variables.
+    if (empty($_SERVER['HTTP_AUTHORIZATION']) && !empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+      $_SERVER['HTTP_AUTHORIZATION'] = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    }
+    if (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
+      list($type, $authorization) = explode(' ', $_SERVER['HTTP_AUTHORIZATION'], 2);
+      switch ($type) {
+        case 'Digest':
+          $_SERVER['PHP_AUTH_DIGEST'] = base64_decode($authorization);
+          break;
+        case 'Basic':
+          list($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']) = explode(':', base64_decode($authorization), 2);
+          break;
+      }
+    }
+    $mechanism = FALSE;
+    $types = variable_get('securesite_type', array(SECURESITE_BASIC));
+    rsort($types, SORT_NUMERIC);
+    foreach ($types as $type) {
+      switch ($type) {
+        case SECURESITE_DIGEST:
+          if (isset($_SERVER['PHP_AUTH_DIGEST'])) {
+            $mechanism = SECURESITE_DIGEST;
+            break 2;
+          }
+          break;
+        case SECURESITE_BASIC:
+          if ((isset($_SERVER['PHP_AUTH_USER']) || isset($_SERVER['PHP_AUTH_PW']))) {
+            $mechanism = SECURESITE_BASIC;
+            break 2;
+          }
+          break;
+        case SECURESITE_FORM:
+          if (isset($_POST['securesite_login_form'])) {
+            $mechanism = SECURESITE_FORM;
+            break 2;
+          }
+          break;
+      }
+    }
+  }
+  return $mechanism;
 }
 
 /**
@@ -187,27 +175,30 @@ function securesite_user($op, &$edit, &$user) {
     case 'insert':
     case 'load':
     case 'update':
-      if (variable_get('securesite_type', SECURESITE_BASIC) == SECURESITE_DIGEST && isset($edit['pass'])) {
+      if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC))) && isset($edit['pass'])) {
         module_load_include('inc', 'securesite');
-        $array = array('username' => $user->name, 'name' => $edit['name'], 'pass' => $edit['pass']);
-        _securesite_digest_manage('save', $array);
+        $edit = array('name' => $edit['name'], 'realm' => variable_get('securesite_realm', variable_get('site_name', 'Drupal')), 'pass' => $edit['pass']);
+        _securesite_password($edit, 'create');
+        if ($user->name != $edit['name']) {
+          securesite_user('delete', $edit, $user);
+        }
       }
       break;
     case 'delete':
-      if (variable_get('securesite_type', SECURESITE_BASIC) == SECURESITE_DIGEST) {
+      if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
         module_load_include('inc', 'securesite');
-        $array = array('username' => $user->name);
-        _securesite_digest_manage('delete', $array);
+        $edit = array('name' => $user->name, 'realm' => variable_get('securesite_realm', variable_get('site_name', 'Drupal')));
+        _securesite_password($edit, 'delete');
       }
       break;
     case 'logout':
-      $securesite_type = variable_get('securesite_type', SECURESITE_BASIC);
-      if (($securesite_type == SECURESITE_BASIC || $securesite_type == SECURESITE_DIGEST) && !empty($_SESSION['securesite_login'])) {
+      $types = variable_get('securesite_type', array(SECURESITE_BASIC));
+      if ((in_array(SECURESITE_BASIC, $types) || in_array(SECURESITE_DIGEST, $types)) && !empty($_SESSION['securesite_login'])) {
         module_load_include('inc', 'securesite');
-        // Load the anonymous user
+        // Load the anonymous user.
         $user = drupal_anonymous_user();
-        // Clear stored credentials
-        _securesite_dialog();
+        // Clear stored credentials.
+        _securesite_dialog(array_pop($types));
       }
       break;
   }

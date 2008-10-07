@@ -73,10 +73,10 @@ function _securesite_admin_help() {
  * FAPI definition for Secure Site admin settings form
  * @ingroup forms
  * @see system_settings_form()
+ * @see securesite_admin_settings_validate()
  * @see securesite_admin_settings_submit()
  */
 function securesite_admin_settings() {
-  global $base_url;
   $form['authentication'] = array(
     '#type' => 'fieldset',
     '#title' => t('Authentication'),
@@ -95,15 +95,16 @@ function securesite_admin_settings() {
     '#description' => t('Choose when to force authentication.'),
   );
   $form['authentication']['securesite_type'] = array(
-    '#type' => 'radios',
-    '#title' => t('Authentication type'),
-    '#default_value' => variable_get('securesite_type', SECURESITE_BASIC),
+    '#type' => 'checkboxes',
+    '#title' => t('Allowed authentication types'),
+    '#default_value' => variable_get('securesite_type', array(SECURESITE_BASIC)),
     '#options' => array(
-      SECURESITE_BASIC => t('Use HTTP basic authentication'),
-      SECURESITE_DIGEST => t('Use HTTP digest authentication'),
-      SECURESITE_FORM => t('Use HTML log-in form'),
+      SECURESITE_DIGEST => t('HTTP Digest'),
+      SECURESITE_BASIC => t('HTTP Basic'),
+      SECURESITE_FORM => t('HTML log-in form'),
     ),
     '#description' => t('HTTP authentication requires extra configuration if PHP is not installed as an Apache module. See the !link section of the Secure Site help for details.', array('!link' => l('Known issues', 'admin/help/securesite', array('fragment' => 'issues')))),
+    '#required' => TRUE,
   );
   $form['authentication']['securesite_realm'] = array(
     '#type' => 'textfield',
@@ -149,10 +150,10 @@ function securesite_admin_settings() {
     '#length' => 60,
     '#height' => 3,
   );
-  $form['login_form']['securesite_request_form'] = array(
+  $form['login_form']['securesite_reset_form'] = array(
     '#type' => 'textarea',
     '#title' => t('Custom message for password reset form'),
-    '#default_value' => variable_get('securesite_request_form', t('<p>Enter your user name or e-mail address:</p>')),
+    '#default_value' => variable_get('securesite_reset_form', t('<p>Enter your user name or e-mail address:</p>')),
     '#length' => 60,
     '#height' => 3,
     '#description' => t('Leave empty to disable Secure Site&rsquo;s password reset form.'),
@@ -161,12 +162,22 @@ function securesite_admin_settings() {
   return system_settings_form($form);
 }
 
+function securesite_admin_settings_validate($form, &$form_state) {
+  foreach ($form_state['values']['securesite_type'] as $type => $value) {
+    if (empty($value)) {
+      unset($form_state['values']['securesite_type'][$type]);
+    }
+  }
+  sort($form_state['values']['securesite_type']);
+}
+
 /**
  * Restore core 403 error page when not using Secure Site page. Set up password
  * storage for digest authentication.
  */
 function securesite_admin_settings_submit($form, &$form_state) {
-  if ($form_state['values']['securesite_enabled'] != SECURESITE_403) {
+  $values = $form_state['values'];
+  if ($values['securesite_enabled'] != SECURESITE_403) {
     variable_set('site_403', variable_get('securesite_403', variable_get('site_403', '')));
     variable_del('securesite_403');
   }
@@ -174,12 +185,12 @@ function securesite_admin_settings_submit($form, &$form_state) {
   $schema = _securesite_schema();
   _drupal_initialize_schema('securesite', $schema);
   $ret = array();
-  if ($form_state['values']['securesite_type'] == SECURESITE_DIGEST && variable_get('securesite_type', SECURESITE_BASIC) != SECURESITE_DIGEST) {
+  if (in_array(SECURESITE_DIGEST, $values['securesite_type']) && !in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
     foreach ($schema as $name => $table) {
       db_create_table($ret, $name, $table);
     }
   }
-  elseif ($form_state['values']['securesite_type'] != SECURESITE_DIGEST && variable_get('securesite_type', SECURESITE_BASIC) == SECURESITE_DIGEST) {
+  elseif (!in_array(SECURESITE_DIGEST, $values['securesite_type']) && in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC))) || isset($values['op']) && $values['op'] == t('Reset to defaults')) {
     foreach ($schema as $name => $table) {
       db_drop_table($ret, $name);
     }
