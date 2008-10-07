@@ -205,8 +205,8 @@ function _securesite_plain_auth($edit) {
   $account = user_load(array('name' => $edit['name'], 'status' => 1));
   // Are credentials for a registered user?
   if (!empty($account->uid)) {
-    // The LDAP auth module can't use the regular external user log-in system, so
-    // we have to call its log-in function directly.
+    // The LDAP auth module can't use the regular external user log-in system, so we
+    // have to call its log-in function directly.
     if (module_exists('ldapauth')) {
       ldapauth_authenticate($edit);
     }
@@ -243,7 +243,8 @@ function _securesite_user_login() {
     }
     drupal_goto($path);
   }
-  else { // Not an authorized user.
+  // Not an authorized user.
+  else {
     // Load the anonymous user.
     $user = drupal_anonymous_user();
     drupal_set_message(t('Unauthorized user.'), 'error');
@@ -316,9 +317,8 @@ function _securesite_dialog($type) {
       // Display log-in dialog.
       switch ($type) {
         case SECURESITE_DIGEST:
-          $realm = _securesite_realm();
           $stale = _securesite_digest_validate() == 'stale' ? 'stale="true", ' : '';
-          header('WWW-Authenticate: Digest realm="'. $realm .'", nonce="'. _securesite_digest_md5() .'", opaque="'. session_id() .'", '. $stale .'qop="auth"');
+          header('WWW-Authenticate: Digest realm="'. _securesite_realm() .'", nonce="'. _securesite_digest_md5() .'", opaque="'. session_id() .'", '. $stale .'qop="auth"');
           header('HTTP/1.0 401 Unauthorized');
           $content = _securesite_dialog_html('<p id="password">'. t('Reload the page to try logging in again.') ."</p>\n");
           break;
@@ -437,7 +437,9 @@ function _securesite_password_reset($edit) {
 }
 
 /**
- * Display fallback HTML for HTTP authentication dialogs.
+ * Display fallback HTML for HTTP authentication dialogs. Safari will not load
+ * this. Opera will not load this after log-out unless the page has been
+ * reloaded and the authentication dialog has been displayed twice.
  */
 function _securesite_dialog_html($message = NULL) {
   if (in_array(SECURESITE_FORM, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
@@ -512,15 +514,15 @@ function securesite_mail($key, &$message, $params) {
   $message['body'] = $params['body'];
 }
 
+/**
+ * Opera and Internet Explorer save credentials indefinitely and will keep
+ * attempting to use them even when they have failed multiple times. We add a
+ * random string to the realm to allow users to log out.
+ */
 function _securesite_realm() {
   $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
-  // If not on the home page of the site, Opera will not show the auth dialog
-  // the first time after logout.  It will show the page displayed before
-  // logging out.  Reloading will cause the dialog to display.  Safari
-  // doesn't seem show the log-in/password request form when cancelling the
-  // auth dialog no matter what.
   $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '');
-  if ($user_agent != str_replace(array('msie', 'opera', 'safari'), '', $user_agent)) {
+  if ($user_agent != str_replace(array('msie', 'opera'), '', $user_agent)) {
     $realm .= ' - '. mt_rand(10, 999);
   }
   return $realm;
