@@ -449,7 +449,6 @@ function _securesite_dialog_html($message = NULL) {
       $output .= $message;
     }
   }
-  }
   return $output;
 }
 
