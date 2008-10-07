@@ -440,14 +440,15 @@ function _securesite_dialog_html($message = NULL) {
   }
   else {
     $reset = variable_get('securesite_reset_form', '<p>'. t('Enter your user name or e-mail address.') .'</p>');
-    if (empty($reset)) {
+    if (!empty($reset) && _securesite_forced()) {
+      $output = _securesite_reset_form();
+    }
+    else {
       $status_msg = theme('status_messages');
       $output = empty($status_msg) ? '' : '      '. $status_msg ."\n";
       $output .= $message;
     }
-    else {
-      $output = _securesite_reset_form();
-    }
+  }
   }
   return $output;
 }
@@ -472,7 +473,7 @@ function _securesite_form_dialog() {
   $output .= '      <p><label>'. t('Password') .': <input type="password" class="form-password" maxlength="24" name="edit[pass]" id="edit-pass" value="" /></label></p>'."\n";
   $output .= '      <p><input type="hidden" name="securesite_login_form" value="1" /><input type="submit" class="form-submit" name="op" value="'. t('Log in') .'" /></p>'."\n";
   $output .= '    </form>'."\n";
-  $output .= empty($reset) ? '' : '    <hr />'."\n    ". _securesite_reset_form();
+  $output .= empty($reset) && _securesite_forced() ? '' : '    <hr />'."\n    ". _securesite_reset_form();
   return $output;
 }
 
