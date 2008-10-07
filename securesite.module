@@ -110,7 +110,9 @@ function securesite_boot() {
     sort($types, SORT_NUMERIC);
     drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
     module_load_include('inc', 'securesite');
-    _securesite_dialog(array_pop($types));
+    if (_securesite_forced()) {
+      _securesite_dialog(array_pop($types));
+    }
   }
 }
 

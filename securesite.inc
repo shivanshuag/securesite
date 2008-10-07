@@ -49,7 +49,7 @@ function _securesite_boot($type) {
 function _securesite_403() {
   global $user;
   if (empty($user->uid) && !isset($_SESSION['securesite_guest']) && $_GET['q'] != 'logout') {
-    _securesite_dialog(variable_get('securesite_type', array(SECURESITE_BASIC)));
+    _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
   }
   else {
     $path = drupal_get_normal_path(variable_get('securesite_403', ''));
@@ -288,69 +288,62 @@ function _securesite_guest_login($edit) {
  * Display authentication dialog and send password reset mails.
  */
 function _securesite_dialog($type) {
-  if (_securesite_forced()) {
-    // Has the password reset form been submitted?
-    if (isset($_POST['securesite_reset_form'])) {
-      $content = _securesite_password_reset($_POST['edit']);
-    }
-    // Are we on a password reset page?
-    elseif (strpos($_GET['q'], 'user/reset/') === 0) {
-      $args = explode('/', $_GET['q']);
-      // The password reset function doesn't work well if it doesn't have all the
-      // required parameters or if the UID parameter isn't valid
-      if (count($args) < 5 || user_load(array('uid' => $args[2], 'status' => 1)) == FALSE) {
-        $error = t('You have tried to use an invalid one-time log-in link.');
-        $reset = variable_get('securesite_reset_form', '<p>'. t('Enter your user name or e-mail address.') .'</p>');
-        if (empty($reset)) {
-          drupal_set_message('      '. $error ."\n    ", 'error');
-          $status_msg = theme('status_messages');
-          $content = empty($status_msg) ? '' : $status_msg;
-        }
-        else {
-          $error .= ' '. t('Please request a new one using the form below.');
-          drupal_set_message('        '. $error ."\n      ", 'error');
-          $content = _securesite_reset_form();
-        }
+  // Has the password reset form been submitted?
+  if (isset($_POST['securesite_reset_form'])) {
+    $content = _securesite_password_reset($_POST['edit']);
+  }
+  // Are we on a password reset page?
+  elseif (strpos($_GET['q'], 'user/reset/') === 0) {
+    $args = explode('/', $_GET['q']);
+    // The password reset function doesn't work well if it doesn't have all the
+    // required parameters or if the UID parameter isn't valid
+    if (count($args) < 5 || user_load(array('uid' => $args[2], 'status' => 1)) == FALSE) {
+      $error = t('You have tried to use an invalid one-time log-in link.');
+      $reset = variable_get('securesite_reset_form', '<p>'. t('Enter your user name or e-mail address.') .'</p>');
+      if (empty($reset)) {
+        drupal_set_message('      '. $error ."\n    ", 'error');
+        $status_msg = theme('status_messages');
+        $content = empty($status_msg) ? '' : $status_msg;
       }
+      else {
+        $error .= ' '. t('Please request a new one using the form below.');
+        drupal_set_message('        '. $error ."\n      ", 'error');
+        $content = _securesite_reset_form();
+      }
+    }
+  }
+  else {
+    // Display log-in dialog.
+    switch ($type) {
+      case SECURESITE_DIGEST:
+        $stale = _securesite_digest_validate() == 'stale' ? 'stale="true", ' : '';
+        header('WWW-Authenticate: Digest realm="'. _securesite_realm() .'", nonce="'. _securesite_digest_md5() .'", opaque="'. session_id() .'", '. $stale .'qop="auth"');
+        header('HTTP/1.0 401 Unauthorized');
+        $content = _securesite_dialog_html('<p id="password">'. t('Reload the page to try logging in again.') ."</p>\n");
+        break;
+      case SECURESITE_BASIC:
+        header('WWW-Authenticate: Basic realm="'. _securesite_realm() .'"');
+        header('HTTP/1.0 401 Unauthorized');
+        $content = _securesite_dialog_html('<p id="password">'. t('Reload the page to try logging in again.') ."</p>\n");
+        break;
+      case SECURESITE_FORM:
+        $content = _securesite_form_dialog();
+        break;
+    }
+  }
+  if (!empty($content)) {
+    global $base_path;
+    $theme_path = drupal_get_path('theme', variable_get('theme_default', 'garland'));
+    $dialog_file = '/securesite-dialog.tpl.php';
+    if (file_exists($theme_path . $dialog_file)) {
+      include_once($theme_path . $dialog_file);
     }
     else {
-      // Display log-in dialog.
-      switch ($type) {
-        case SECURESITE_DIGEST:
-          $stale = _securesite_digest_validate() == 'stale' ? 'stale="true", ' : '';
-          header('WWW-Authenticate: Digest realm="'. _securesite_realm() .'", nonce="'. _securesite_digest_md5() .'", opaque="'. session_id() .'", '. $stale .'qop="auth"');
-          header('HTTP/1.0 401 Unauthorized');
-          $content = _securesite_dialog_html('<p id="password">'. t('Reload the page to try logging in again.') ."</p>\n");
-          break;
-        case SECURESITE_BASIC:
-          header('WWW-Authenticate: Basic realm="'. _securesite_realm() .'"');
-          header('HTTP/1.0 401 Unauthorized');
-          $content = _securesite_dialog_html('<p id="password">'. t('Reload the page to try logging in again.') ."</p>\n");
-          break;
-        case SECURESITE_FORM:
-          $content = _securesite_form_dialog();
-          break;
-      }
+      include_once(drupal_get_path('module', 'securesite') . $dialog_file);
     }
-    if (!empty($content)) {
-      global $base_path;
-      $theme_path = drupal_get_path('theme', variable_get('theme_default', 'garland'));
-      $dialog_file = '/securesite-dialog.tpl.php';
-      if (file_exists($theme_path . $dialog_file)) {
-        include_once($theme_path . $dialog_file);
-      }
-      else {
-        include_once(drupal_get_path('module', 'securesite') . $dialog_file);
-      }
-      if (drupal_is_front_page()) {
-        module_invoke_all('exit');
-      }
-      else {
-        module_invoke_all('exit', $_GET['q']);
-      }
-      session_write_close();
-      exit();
-    }
+    module_invoke_all('exit');
+    session_write_close();
+    exit();
   }
 }
 

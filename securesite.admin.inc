@@ -177,7 +177,7 @@ function securesite_admin_settings_validate($form, &$form_state) {
  */
 function securesite_admin_settings_submit($form, &$form_state) {
   $values = $form_state['values'];
-  if ($values['securesite_enabled'] != SECURESITE_403) {
+  if ($values['securesite_enabled'] != SECURESITE_403 || isset($values['op']) && $values['op'] == t('Reset to defaults')) {
     variable_set('site_403', variable_get('securesite_403', variable_get('site_403', '')));
     variable_del('securesite_403');
   }
