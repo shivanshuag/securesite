@@ -79,20 +79,40 @@ function _securesite_schema() {
         'default' => '',
         'description' => t('Nonce value.'),
       ),
+      'qop' => array(
+        'type' => 'text',
+        'description' => t('Quality of protection.'),
+      ),
       'nc' => array(
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
         'description' => t('Number of times nonce has been used.'),
       ),
+      'opaque' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'default' => '',
+        'description' => t('Opaque value.'),
+      ),
+      'hash' => array(
+        'type' => 'text',
+        'description' => t('Hashed entity body to see if message was tampered with.'),
+      ),
       'time' => array(
         'type' => 'int',
-        'description' => t('Nonce creation timestamp.'),
+        'description' => t('Last use timestamp.'),
+      ),
+      'realm' => array(
+        'type' => 'text',
+        'description' => t("Nonce realm."),
       ),
     ),
-    'primary key' => array('nonce'),
+    'primary key' => array('nonce, realm'),
     'indexes' => array(
       'nonce' => array('nonce'),
+      'opaque' => array('opaque'),
+      'realm' => array('realm'),
     ),
   );
   return $schema;

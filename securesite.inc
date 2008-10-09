@@ -22,8 +22,6 @@ function _securesite_boot($type) {
           $edit[$key] = trim($value, '"');
         }
       }
-      // Fix missing indexes.
-      $edit += array('cnonce' => '', 'name' => '', 'nc' => '', 'nonce' => '', 'qop' => '', 'response' => '', 'uri' => '');
       $function = '_securesite_digest_auth';
       break;
     case SECURESITE_BASIC:
@@ -66,9 +64,10 @@ function _securesite_digest_auth($edit) {
   $account = user_load(array('name' => $edit['name'], 'status' => 1));
   // Are credentials for a registered user?
   if (!empty($account->uid)) {
-    $status = _securesite_digest_validate($_SERVER['PHP_AUTH_DIGEST']);
+    $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
+    $header = _securesite_digest_validate(array('header' => $_SERVER['PHP_AUTH_DIGEST'], 'method' => $_SERVER['REQUEST_METHOD'], 'uri' => request_uri(), 'srealm' => $realm));
     // Have we stored a password for this user?
-    if ($status == 'unknown') {
+    if ($header == 'unknown') {
       // Request credentials using next most secure authentication method.
       $mechanism = _securesite_mechanism();
       $types = variable_get('securesite_type', array(SECURESITE_BASIC));
@@ -84,9 +83,10 @@ function _securesite_digest_auth($edit) {
     }
     else {
       // Is the password correct?
-      if ($status == 'valid') {
+      if (strpos($header, 'Authentication-Info') === 0) {
         $user = $account;
         user_authenticate_finalize($edit);
+        header($header);
         _securesite_user_login();
       }
       else {
@@ -97,15 +97,47 @@ function _securesite_digest_auth($edit) {
       }
     }
   }
-  $pass = variable_get('securesite_guest_pass', '');
-  if (!empty($pass)) {
+  $uri = parse_url(request_uri());
+  $edit_uri = isset($edit['uri']) ? parse_url($edit['uri']) : NULL;
+  $required = array('name', 'realm', 'nonce', 'uri', 'response');
+  $required = isset($edit['qop']) ? $required + array('cnonce', 'opaque', 'nc') : $required;
+  if (
+    // URI matches current page.
+    $uri['path'] == $edit_uri['path'] &&
+    // Quality of protection fields are valid.
+    (isset($edit['qop']) && $edit['qop'] == 'auth' || !isset($edit['qop']) && !isset($edit['nc'])) &&
+    // Required fields are present.
+    array_diff($required, array_keys($edit)) == array()
+  ) {
+    $pass = variable_get('securesite_guest_pass', '');
     $ha1 = md5("$edit[name]:$edit[realm]:$pass");
     $ha2 = md5("$_SERVER[REQUEST_METHOD]:$edit[uri]");
-    if ($edit['response'] == md5("$ha1:$edit[nonce]:$edit[nc]:$edit[cnonce]:$edit[qop]:$ha2")) {
-      $edit['pass'] = $pass;
+    if (isset($edit['qop'])) {
+      $digest = md5("$ha1:$edit[nonce]:$edit[nc]:$edit[cnonce]:$edit[qop]:$ha2");
     }
+    else {
+      $digest = md5("$ha1:$edit[nonce]:$ha2");
+    }
+    if ($edit['response'] == $digest) {
+      $edit['pass'] = $pass;
+      if (isset($edit['qop'])) {
+        $header[] = 'qop='. $edit['qop'];
+        $header[] = 'cnonce="'. $edit['cnonce'] .'"';
+        $header[] = 'nc='. $edit['nc'];
+        $digest = md5("$ha1:$edit[nonce]:$edit[nc]:$edit[cnonce]:$edit[qop]:". md5(":$edit[uri]"));
+      }
+      else {
+        $digest = md5("$ha1:$edit[nonce]:". md5(":$edit[uri]"));
+      }
+      $header[] = 'rspauth="'. $digest .'"';
+      _securesite_digest_validate('Authentication-Info: '. implode(', ', $header), TRUE);
+    }
+    _securesite_guest_login($edit);
   }
-  _securesite_guest_login($edit);
+  else {
+    _securesite_digest_validate('HTTP/1.1 400 Bad Request', TRUE);
+    _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
+  }
 }
 
 /**
@@ -114,87 +146,18 @@ function _securesite_digest_auth($edit) {
  * @return
  * The validation status.
  */
-function _securesite_digest_validate($header = NULL) {
+function _securesite_digest_validate($edit = NULL, $guest = FALSE) {
   static $status;
-  if (isset($header)) {
-    $status = _securesite_digest_md5($header, $_SERVER['REQUEST_METHOD'], variable_get('securesite_realm', variable_get('site_name', 'Drupal')));
-  }
-  return $status;
-}
-
-/**
- * Work with stored passwords. This is a temporary placeholder function until we
- * can get an external program to do something similar.
- * Configuration variables that can be set are securesite_nonce_expires and
- * securesite_max_nc.
- * @param $header: HTTP Authorize header string or NULL to retrieve nonce.
- * @param $realm: Realm string for password to be checked, if different from
- * user's realm.
- * @param $method: Connection method string, if needed.
- * @return
- * 'valid', 'invalid', 'unknown', 'stale', 'replay', or nonce string.
- */
-function _securesite_digest_md5($header = NULL, $method = 'AUTHENTICATE', $realm = NULL) {
-  // Remove expired nonce values.
-  $time = time();
-  $expire = variable_get('securesite_nonce_expires', 60);
-  if (!empty($expire)) {
-    db_query("DELETE FROM {securesite_nonce} WHERE time < %d", $time - $expire);
-  }
-  // Validate digest response.
-  if (isset($header)) {
-    $header = explode(',', trim($header));
-    $edit = array();
-    foreach ($header as $part) {
-      if (!empty($part)) {
-        list($key, $value) = explode('=', trim($part), 2);
-        $edit[$key] = trim($value, '"');
-      }
-    }
-    // Generate digest from password.
-    $realm = isset($realm) ? $realm : $edit['realm'];
-    $pass = db_result(db_query("SELECT pass FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $realm));
-    if ($pass !== FALSE) {
-      $ha1 = md5("$edit[username]:$edit[realm]:$pass");
-      $ha2 = md5("$method:$edit[uri]");
-      $digest = md5("$ha1:$edit[nonce]:$edit[nc]:$edit[cnonce]:$edit[qop]:$ha2");
-    }
-    $nc = db_result(db_query("SELECT nc FROM {securesite_nonce} WHERE nonce = '%s'", $edit['nonce']));
-    $edit['nc'] = hexdec($edit['nc']);
-    $max_nc = variable_get('securesite_max_nc', $edit['nc'] + 1);
-    // Check for unknown password.
-    if ($pass === FALSE) {
-      $output = 'unknown';
-    }
-    // Check for invalid password.
-    elseif ($digest != $edit['response']) {
-      $output = 'invalid';
-    }
-    // Check for stale nonce.
-    elseif ($nc === FALSE || $edit['nc'] > $max_nc && $edit['nc'] == $nc + 1) {
-      db_query("DELETE FROM {securesite_nonce} WHERE nonce = '%s'", $edit['nonce']);
-      $output = 'stale';
-    }
-    // Check for replay attack.
-    elseif ($edit['nc'] != $nc + 1) {
-      $output = 'replay';
+  if (isset($edit)) {
+    if ($guest) {
+      $status = $edit;
     }
     else {
-      if ($edit['nc'] < $max_nc) {
-        db_query("UPDATE {securesite_nonce} SET nc = %d, time = %d WHERE nonce = '%s'", $edit['nc'], $time, $edit['nonce']);
-      }
-      else {
-        db_query("DELETE FROM {securesite_nonce} WHERE nonce = '%s'", $edit['nonce']);
-      }
-      $output = 'valid';
+      module_load_include('inc', 'securesite', 'securesite.digest_md5');
+      $status = _securesite_digest_md5($edit);
     }
   }
-  // Return nonce value.
-  else {
-    $output = uniqid();
-    db_query("INSERT INTO {securesite_nonce} (nonce, time) VALUES ('%s', %d)", $output, time());
-  }
-  return $output;
+  return $status;
 }
 
 /**
@@ -316,14 +279,23 @@ function _securesite_dialog($type) {
     // Display log-in dialog.
     switch ($type) {
       case SECURESITE_DIGEST:
-        $stale = _securesite_digest_validate() == 'stale' ? 'stale="true", ' : '';
-        header('WWW-Authenticate: Digest realm="'. _securesite_realm() .'", nonce="'. _securesite_digest_md5() .'", opaque="'. session_id() .'", '. $stale .'qop="auth"');
-        header('HTTP/1.0 401 Unauthorized');
+        $header = _securesite_digest_validate();
+        if (empty($header)) {
+          $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
+          $header = _securesite_digest_validate(array('srealm' => $realm, 'crealm' => _securesite_client_realm(), 'opaque' => session_id(), 'qop' => 'auth'));
+        }
+        if (strpos($header, 'WWW-Authenticate') === 0) {
+          header($header);
+          header('HTTP/1.1 401 Unauthorized');
+        }
+        else {
+          header($header);
+        }
         $content = _securesite_dialog_html('<p id="password">'. t('Reload the page to try logging in again.') ."</p>\n");
         break;
       case SECURESITE_BASIC:
-        header('WWW-Authenticate: Basic realm="'. _securesite_realm() .'"');
-        header('HTTP/1.0 401 Unauthorized');
+        header('WWW-Authenticate: Basic realm="'. _securesite_client_realm() .'"');
+        header('HTTP/1.1 401 Unauthorized');
         $content = _securesite_dialog_html('<p id="password">'. t('Reload the page to try logging in again.') ."</p>\n");
         break;
       case SECURESITE_FORM:
@@ -512,7 +484,7 @@ function securesite_mail($key, &$message, $params) {
  * attempting to use them even when they have failed multiple times. We add a
  * random string to the realm to allow users to log out.
  */
-function _securesite_realm() {
+function _securesite_client_realm() {
   $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
   $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '');
   if ($user_agent != str_replace(array('msie', 'opera'), '', $user_agent)) {
