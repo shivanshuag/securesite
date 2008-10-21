@@ -98,7 +98,7 @@ function securesite_boot() {
   global $user;
   // Did the user send credentials that we accept?
   $type = _securesite_mechanism();
-  if ($type !== FALSE && (isset($_SESSION['securesite_repeat'] ? !$_SESSION['securesite_repeat'] : TRUE)) {
+  if ($type !== FALSE && (isset($_SESSION['securesite_repeat']) ? !$_SESSION['securesite_repeat'] : TRUE)) {
     drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
     module_load_include('inc', 'securesite');
     _securesite_boot($type);
