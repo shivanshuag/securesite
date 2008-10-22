@@ -80,7 +80,7 @@ function securesite_admin_settings() {
   $form['authentication'] = array(
     '#type' => 'fieldset',
     '#title' => t('Authentication'),
-    '#description' => t('Enable Secure Site below. Users must have the <em>!access</em> permission in order to access the site once the following setting is enabled.', array('!access' => l(t('access secured pages'), 'admin/user/permissions', array('fragment' => 'module-securesite'))))
+    '#description' => t('Enable Secure Site below. Users must have the <em>!access</em> permission in order to access the site if authentication is forced.', array('!access' => l(t('access secured pages'), 'admin/user/permissions', array('fragment' => 'module-securesite'))))
   );
   $form['authentication']['securesite_enabled'] = array(
     '#type' => 'radios',
@@ -105,6 +105,25 @@ function securesite_admin_settings() {
     ),
     '#description' => t('HTTP authentication requires extra configuration if PHP is not installed as an Apache module. See the !link section of the Secure Site help for details.', array('!link' => l('Known issues', 'admin/help/securesite', array('fragment' => 'issues')))),
     '#required' => TRUE,
+  );
+  $form['authentication']['securesite_type']['#description'] .= '<p>'. t('Digest authentication provides extra security when you do not have the option of requiring an SSL connection. However, it requires users’ passwords to be stored on your server.');
+  $form['authentication']['securesite_type']['#description'] .= ' '. t('Drupal does not save passwords. You should either allow guest access or allow another authentication type so that existing users can save their passwords. Passwords will be saved when users log in.') .'</p>';
+  $form['authentication']['securesite_type']['#description'] .= '<p>'. t('If you enable digest authentication, you will need to configure scripts to save passwords and authenticate users. You should ensure that your server cannot expose stored passwords to unauthorized users.') .'</p>';
+  $form['authentication']['securesite_digest_script'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Digest authentication command'),
+    '#default_value' => variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') .'/digest_md5/digest_md5.php'),
+    '#length' => 30,
+    '#maxlength' => 300,
+    '#description' => t('For security, we use an external script to check passwords.'),
+  );
+  $form['authentication']['securesite_password_script'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Password command'),
+    '#default_value' => variable_get('securesite_password_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php'),
+    '#length' => 30,
+    '#maxlength' => 300,
+    '#description' => t('For security, we use an external script to save passwords.'),
   );
   $form['authentication']['securesite_realm'] = array(
     '#type' => 'textfield',
@@ -172,8 +191,7 @@ function securesite_admin_settings_validate($form, &$form_state) {
 }
 
 /**
- * Restore core 403 error page when not using Secure Site page. Set up password
- * storage for digest authentication.
+ * Restore core 403 error page when not using Secure Site page.
  */
 function securesite_admin_settings_submit($form, &$form_state) {
   $values = $form_state['values'];
@@ -181,19 +199,22 @@ function securesite_admin_settings_submit($form, &$form_state) {
     variable_set('site_403', variable_get('securesite_403', variable_get('site_403', '')));
     variable_del('securesite_403');
   }
-  module_load_include('install', 'securesite');
-  $schema = _securesite_schema();
-  _drupal_initialize_schema('securesite', $schema);
-  $ret = array();
-  if (in_array(SECURESITE_DIGEST, $values['securesite_type']) && !in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
-    foreach ($schema as $name => $table) {
-      db_create_table($ret, $name, $table);
-    }
+  $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php');
+  $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
+  $securesite_guest_name = variable_get('securesite_guest_name', '');
+  if ($values['securesite_guest_name'] != $securesite_guest_name) {
+    $values = array(
+      escapeshellarg("name=$securesite_guest_name"),
+      escapeshellarg("realm=$realm"),
+      escapeshellarg('op=delete'),
+    );
+    exec($script .' '. implode(' ', $values));
   }
-  elseif (!in_array(SECURESITE_DIGEST, $values['securesite_type']) && in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC))) || isset($values['op']) && $values['op'] == t('Reset to defaults')) {
-    foreach ($schema as $name => $table) {
-      db_drop_table($ret, $name);
-    }
-  }
+  $values = array(
+    escapeshellarg("name=$values[securesite_guest_name]"),
+    escapeshellarg("realm=$realm"),
+    escapeshellarg("pass=$values[securesite_guest_pass]"),
+  );
+  exec($script .' '. implode(' ', $values));
 }
 

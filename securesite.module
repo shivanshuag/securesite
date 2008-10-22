@@ -130,11 +130,11 @@ function _securesite_mechanism() {
     }
     if (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
       list($type, $authorization) = explode(' ', $_SERVER['HTTP_AUTHORIZATION'], 2);
-      switch ($type) {
-        case 'Digest':
-          $_SERVER['PHP_AUTH_DIGEST'] = base64_decode($authorization);
+      switch (strtolower($type)) {
+        case 'digest':
+          $_SERVER['PHP_AUTH_DIGEST'] = $authorization;
           break;
-        case 'Basic':
+        case 'basic':
           list($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']) = explode(':', base64_decode($authorization), 2);
           break;
       }
@@ -180,9 +180,13 @@ function securesite_user($op, &$edit, &$user) {
     case 'load':
     case 'update':
       if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC))) && isset($edit['pass'])) {
-        module_load_include('inc', 'securesite');
-        $edit = array('name' => $edit['name'], 'realm' => variable_get('securesite_realm', variable_get('site_name', 'Drupal')), 'pass' => $edit['pass']);
-        _securesite_password($edit, 'create');
+        $script = variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php');
+        $values = array(
+          escapeshellarg("name=$edit[name]"),
+          escapeshellarg('realm='. variable_get('securesite_realm', variable_get('site_name', 'Drupal'))),
+          escapeshellarg("pass=$edit[pass]"),
+        );
+        exec($script .' '. implode(' ', $values));
         if ($user->name != $edit['name']) {
           securesite_user('delete', $edit, $user);
         }
@@ -190,9 +194,13 @@ function securesite_user($op, &$edit, &$user) {
       break;
     case 'delete':
       if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
-        module_load_include('inc', 'securesite');
-        $edit = array('name' => $user->name, 'realm' => variable_get('securesite_realm', variable_get('site_name', 'Drupal')));
-        _securesite_password($edit, 'delete');
+        $script = variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php');
+        $values = array(
+          escapeshellarg("name=$edit[name]"),
+          escapeshellarg('realm='. variable_get('securesite_realm', variable_get('site_name', 'Drupal'))),
+          escapeshellarg('op=delete'),
+        );
+        exec($script .' '. implode(' ', $values));
       }
       break;
     case 'logout':

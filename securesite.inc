@@ -61,103 +61,89 @@ function _securesite_403() {
  */
 function _securesite_digest_auth($edit) {
   global $user;
+  $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
+  $header = _securesite_digest_validate($status, array('data' => $_SERVER['PHP_AUTH_DIGEST'], 'method' => $_SERVER['REQUEST_METHOD'], 'uri' => request_uri(), 'realm' => $realm));
   $account = user_load(array('name' => $edit['name'], 'status' => 1));
-  // Are credentials for a registered user?
-  if (!empty($account->uid)) {
-    $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
-    $header = _securesite_digest_validate(array('header' => $_SERVER['PHP_AUTH_DIGEST'], 'method' => $_SERVER['REQUEST_METHOD'], 'uri' => request_uri(), 'srealm' => $realm));
-    // Have we stored a password for this user?
-    if ($header == 'unknown') {
-      // Request credentials using next most secure authentication method.
-      $mechanism = _securesite_mechanism();
-      $types = variable_get('securesite_type', array(SECURESITE_BASIC));
-      rsort($types);
-      foreach ($types as $type) {
-        if ($type < $mechanism) {
-          break;
-        }
-      }
-      watchdog('user', 'Secure log-in failed for %user.', array('%user' => $edit['name']));
-      drupal_set_message(t('Secure log-in failed. Please try again.'), 'error');
-      _securesite_dialog($type);
+  if (empty($account->uid)) {
+    // Not a registered user. See if we have guest user credentials.
+    switch ($status) {
+      case 1:
+        header('HTTP/1.1 400 Bad Request');
+        _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
+        break;
+      case 0:
+        // Password is correct. Log user in.
+        header($header);
+        $edit['pass'] = variable_get('securesite_guest_pass', '');
+      default:
+        _securesite_guest_login($edit);
+        break;
     }
-    else {
-      // Is the password correct?
-      if (strpos($header, 'Authentication-Info') === 0) {
+  }
+  else {
+    switch ($status) {
+      case 0:
+        // Password is correct. Log user in.
         $user = $account;
         user_authenticate_finalize($edit);
         header($header);
         _securesite_user_login();
-      }
-      else {
-        // Request credentials using most secure authentication method.
+        break;
+      case 2:
+        // Password not stored. Request credentials using next most secure authentication method.
+        $mechanism = _securesite_mechanism();
+        $types = variable_get('securesite_type', array(SECURESITE_BASIC));
+        rsort($types);
+        foreach ($types as $type) {
+          if ($type < $mechanism) {
+            break;
+          }
+        }
+        watchdog('user', 'Secure log-in failed for %user.', array('%user' => $edit['name']));
+        drupal_set_message(t('Secure log-in failed. Please try again.'), 'error');
+        _securesite_dialog($type);
+        break;
+      case 1:
+        header('HTTP/1.1 400 Bad Request');
+      default:
+        // Authentication failed. Request credentials using most secure authentication method.
         watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
         drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
         _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
-      }
+        break;
     }
-  }
-  $uri = parse_url(request_uri());
-  $edit_uri = isset($edit['uri']) ? parse_url($edit['uri']) : NULL;
-  $required = array('name', 'realm', 'nonce', 'uri', 'response');
-  $required = isset($edit['qop']) ? $required + array('cnonce', 'opaque', 'nc') : $required;
-  if (
-    // URI matches current page.
-    $uri['path'] == $edit_uri['path'] &&
-    // Quality of protection fields are valid.
-    (isset($edit['qop']) && $edit['qop'] == 'auth' || !isset($edit['qop']) && !isset($edit['nc'])) &&
-    // Required fields are present.
-    array_diff($required, array_keys($edit)) == array()
-  ) {
-    $pass = variable_get('securesite_guest_pass', '');
-    $ha1 = md5("$edit[name]:$edit[realm]:$pass");
-    $ha2 = md5("$_SERVER[REQUEST_METHOD]:$edit[uri]");
-    if (isset($edit['qop'])) {
-      $digest = md5("$ha1:$edit[nonce]:$edit[nc]:$edit[cnonce]:$edit[qop]:$ha2");
-    }
-    else {
-      $digest = md5("$ha1:$edit[nonce]:$ha2");
-    }
-    if ($edit['response'] == $digest) {
-      $edit['pass'] = $pass;
-      if (isset($edit['qop'])) {
-        $header[] = 'qop='. $edit['qop'];
-        $header[] = 'cnonce="'. $edit['cnonce'] .'"';
-        $header[] = 'nc='. $edit['nc'];
-        $digest = md5("$ha1:$edit[nonce]:$edit[nc]:$edit[cnonce]:$edit[qop]:". md5(":$edit[uri]"));
-      }
-      else {
-        $digest = md5("$ha1:$edit[nonce]:". md5(":$edit[uri]"));
-      }
-      $header[] = 'rspauth="'. $digest .'"';
-      _securesite_digest_validate('Authentication-Info: '. implode(', ', $header), TRUE);
-    }
-    _securesite_guest_login($edit);
-  }
-  else {
-    _securesite_digest_validate('HTTP/1.1 400 Bad Request', TRUE);
-    _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
   }
 }
 
 /**
  * Get the result of digest validation.
- * @param $header: The HTTP Authorize header string.
+ * @param $status: Will be set to the return status of the validation script
+ * @param $edit: An array of parameters to pass to the validation script
  * @return
- * The validation status.
+ * An HTTP header string.
  */
-function _securesite_digest_validate($edit = NULL, $guest = FALSE) {
-  static $status;
+function _securesite_digest_validate(&$status, $edit = NULL) {
+  static $header;
   if (isset($edit)) {
-    if ($guest) {
-      $status = $edit;
+    if (is_array($edit)) {
+      $values = array();
+      foreach ($edit as $key => $value) {
+        $values[] = escapeshellarg("$key=$value");
+      }
+      $script = variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') .'/digest_md5/digest_md5.php');
+      $response = exec($script .' '. implode(' ', $values), $output, $status);
+      if (isset($edit['data']) && empty($status)) {
+        $header = "Authentication-Info: $response";
+      }
+      else {
+        $header = "WWW-Authenticate: Digest $response";
+      }
     }
     else {
-      module_load_include('inc', 'securesite', 'securesite.digest_md5');
-      $status = _securesite_digest_md5($edit);
+      $header = $edit;
     }
   }
-  return $status;
+  return $header;
 }
 
 /**
@@ -166,8 +152,11 @@ function _securesite_digest_validate($edit = NULL, $guest = FALSE) {
 function _securesite_plain_auth($edit) {
   global $user;
   $account = user_load(array('name' => $edit['name'], 'status' => 1));
-  // Are credentials for a registered user?
-  if (!empty($account->uid)) {
+  if (empty($account->uid)) {
+    // Not a registered user. See if we have guest user credentials.
+    _securesite_guest_login($edit);
+  }
+  else {
     // The LDAP auth module can't use the regular external user log-in system, so we
     // have to call its log-in function directly.
     if (module_exists('ldapauth')) {
@@ -186,7 +175,6 @@ function _securesite_plain_auth($edit) {
       _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
     }
   }
-  _securesite_guest_login($edit);
 }
 
 /**
@@ -279,10 +267,10 @@ function _securesite_dialog($type) {
     // Display log-in dialog.
     switch ($type) {
       case SECURESITE_DIGEST:
-        $header = _securesite_digest_validate();
+        $header = _securesite_digest_validate($status);
         if (empty($header)) {
           $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
-          $header = _securesite_digest_validate(array('srealm' => $realm, 'crealm' => _securesite_client_realm(), 'opaque' => session_id(), 'qop' => 'auth'));
+          $header = _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
         }
         if (strpos($header, 'WWW-Authenticate') === 0) {
           header($header);
@@ -294,7 +282,7 @@ function _securesite_dialog($type) {
         $content = _securesite_dialog_html('<p id="password">'. t('Reload the page to try logging in again.') ."</p>\n");
         break;
       case SECURESITE_BASIC:
-        header('WWW-Authenticate: Basic realm="'. _securesite_client_realm() .'"');
+        header('WWW-Authenticate: Basic realm="'. _securesite_fake_realm() .'"');
         header('HTTP/1.1 401 Unauthorized');
         $content = _securesite_dialog_html('<p id="password">'. t('Reload the page to try logging in again.') ."</p>\n");
         break;
@@ -484,49 +472,12 @@ function securesite_mail($key, &$message, $params) {
  * attempting to use them even when they have failed multiple times. We add a
  * random string to the realm to allow users to log out.
  */
-function _securesite_client_realm() {
+function _securesite_fake_realm() {
   $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
   $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '');
   if ($user_agent != str_replace(array('msie', 'opera'), '', $user_agent)) {
     $realm .= ' - '. mt_rand(10, 999);
   }
   return $realm;
-}
-
-/**
- * Work with stored passwords. This is a temporary placeholder function until we
- * can get an external program to do something similar.
- * @param $edit: An array of data with the following keys:
- * - name: User name
- * - realm: Site realm
- * - pass: User password
- * @param $op: A string representing the operation to be performed. If none is
- * given, an existing user will be updated.
- * - create: Add a user.
- * - delete: Remove a user.
- * @return
- * A status string.
- */
-function _securesite_password($edit, $op = NULL) {
-  switch ($op) {
-    case 'create':
-      if (db_result(db_query_range("SELECT name FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['name'], $edit['realm'], 0, 1)) === FALSE) {
-        $result = db_query("INSERT INTO {securesite_passwords} (name, realm, pass) VALUES ('%s', '%s', '%s')", $edit['name'], $edit['realm'], $edit['pass']);
-        $output = $result === FALSE ? t('Failed to add @user', array('@user' => $edit['name'])) : t('Added @user', array('@user' => $edit['name']));
-      }
-      else {
-        $output = _securesite_password($edit);
-      }
-      break;
-    case 'delete':
-      $result = db_query("DELETE FORM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['name'], $edit['realm']);
-      $output = $result === FALSE ? t('@user not found.', array('@user' => $edit['username'])) : t('Removed @user', array('@user' => $edit['name']));
-      break;
-    default:
-      $result = db_query("UPDATE {securesite_passwords} SET pass = '%s' WHERE name = '%s' AND realm = '%s'", $edit['pass'], $edit['name'], $edit['realm']);
-      $output = $result === FALSE ? t('Failed to update @user.', array('@user' => $edit['name'])) : t('Updated @user', array('@user' => $edit['name']));
-      break;
-  }
-  return $output;
 }
 
