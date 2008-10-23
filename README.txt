@@ -61,21 +61,57 @@ Configuration
 
   - Authentication type
 
-    Two methods of authentication are available. Please note that the HTTP Auth
-    method requires extra configuration if PHP is not installed as an Apache
-    module. See the Known issues section of this file for a work-around.
+    Three methods of authentication are available. Please note that HTTP
+    authentication requires extra configuration if PHP is not installed as an
+    Apache module. See the Known issues section of this file for details.
 
-    1. Use HTTP Auth
+    1. HTTP digest
 
-       This will enable browser-based authentication. When a protected page is
-       accessed, the user's web browser will display a user name and password
-       log-in form. This is the recommend method for secure feeds.
+       This will enable HTTP digest authentication. The user's browser will
+       prompt for the user's name and password before displaying the page.
+
+       Digest authentication protects a user's password from eavesdroppers when
+       you are not using SSL to encrypt the connection. However, it can only be
+       used when a copy of the password is stored on the server. For security
+       reasons, Drupal does not store passwords. You will need to configure
+       scripts to securely save passwords and authenticate users. See README.txt
+       in the digest_md5 directory for details.
+
+       When digest authentication is enabled, passwords will be saved when users
+       log in or set their passwords. If you use digest authentication to
+       protect your whole site, you should allow guest access or allow another
+       authentication type until users whose passwords are not yet saved have
+       logged in. Otherwise, you may lock yourself out of your own site.
+
+    1. HTTP basic
+
+       This will enable HTTP basic authentication. The user's browser will
+       prompt for the user's name and password before displaying the page.
+       Basic authentication is not secure unless you are using SSL to encrypt
+       the connection.
 
     2. Use HTML log-in form
 
        This method uses a themeable HTML log-in form for user name and password
        input. This method is the most reliable as it does not rely on the
-       browser for authentication. This method does not work for secure feeds.
+       browser for authentication. Like HTTP basic, it is insecure unless you
+       are using SSL to encrypt the connection.
+
+    HTTP authentication is recommended for secure feeds, because feed readers
+    are not likely to be able to handle forms. You can enable all three types of
+    authentication at the same time.
+
+  - Digest authentication script
+
+    For security, HTTP digest authentication uses an external script to check
+    passwords. Enter the digest authentication script exactly as it would appear
+    on the command line.
+
+  - Password storage script
+
+    For security, HTTP digest authentication uses an external script to save
+    passwords. Enter the password storage script exactly as it would appear on
+    the command line.
 
   - Authentication realm
 
