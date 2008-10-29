@@ -3,9 +3,10 @@
 // $Id$
 
 /**
- * @file
- * This file manages stored passwords. Only the root user should have access to
- * this file and the database used to store passwords.
+ * @file stored_passwords.php
+ *
+ * This script manages stored passwords. Only the root user should have access
+ * to this script and the database used to store passwords.
  *
  * Usage: stored_passwords.php [OPTIONS]...
  *

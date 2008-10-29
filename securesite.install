@@ -2,7 +2,8 @@
 // $Id$
 
 /**
- * @file
+ * @file securesite.install
+ *
  * Secure Site installation functions
  */
 
@@ -29,14 +30,10 @@ function securesite_disable() {
  * Implentation of hook_uninstall().
  */
 function securesite_uninstall() {
-  variable_del('securesite_enabled');
-  variable_del('securesite_403');
-  variable_del('securesite_type');
-  variable_del('securesite_realm');
-  variable_del('securesite_guest_name');
-  variable_del('securesite_guest_pass');
-  variable_del('securesite_login_form');
-  variable_del('securesite_reset_form');
+  $settings = db_query("SELECT name FROM {variable} WHERE name LIKE 'securesite\_%'");
+  while ($variable = db_fetch_object($settings)) {
+    variable_del($variable->name);
+  }
 }
 
 /**

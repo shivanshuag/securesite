@@ -2,25 +2,25 @@
 // $Id$
 
 /**
- * @file
- * Configuration for digest authentication. Only the root user
- * should have access to this file.
+ * @file digest_md5.conf.php
+ *
+ * Configuration for digest authentication. Only the root user should have
+ * access to this file.
  */
 
 /**
- * Path to your Drupal installation. We need this so that we can
- * reuse some Drupal code.
+ * Path to your Drupal installation. We need this so that we can reuse some
+ * Drupal code.
  */
 $drupal = '.';
 
 /**
  * Database settings:
  *
- * Note that the $db_url variable gets parsed using PHP's built-in
- * URL parser (i.e. using the "parse_url()" function) so make sure
- * not to confuse the parser. If your username, password
- * or database name contain characters used to delineate
- * $db_url parts, you can escape them via URI hex encodings:
+ * Note that the $db_url variable gets parsed using PHP's built-in URL parser
+ * (i.e. using the "parse_url()" function) so make sure not to confuse the
+ * parser. If your username, password or database name contain characters used
+ * to delineate $db_url parts, you can escape them via URI hex encodings:
  *
  *   : = %3a   / = %2f   @ = %40
  *   + = %2b   ( = %28   ) = %29
@@ -37,14 +37,14 @@ $drupal = '.';
 $db_url = 'mysql://username:password@localhost/databasename';
 
 /**
- * Nonce values will expire 60 seconds after they are last used.
- * Uncomment the line below to change the expiration period.
+ * Nonce values will expire 60 seconds after they are last used. Uncomment the
+ * line below to change the expiration period.
  */
 # $expire = 60;
 
 /**
- * Nonce values may be used an unlimited number of times. Uncomment
- * the line below if you would like to set a limit.
+ * Nonce values may be used an unlimited number of times. Uncomment the line
+ * below if you would like to set a limit.
  */
 # $max_nc = 1;
 

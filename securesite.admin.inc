@@ -2,7 +2,8 @@
 // $Id$
 
 /**
- * @file
+ * @file securesite.admin.inc
+ *
  * Secure Site admin pages
  */
 
@@ -162,7 +163,7 @@ function securesite_admin_settings() {
     '#default_value' => variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') .'/digest_md5/digest_md5.php'),
     '#length' => 30,
     '#maxlength' => 300,
-    '#description' => t('Enter the digest authentication script exactly as it would appear on the command line.'),
+    '#description' => t('Enter the digest authentication script exactly as it should appear on the command line. Use absolute paths.'),
   );
   $form['authentication']['securesite_password_script'] = array(
     '#type' => 'textfield',
@@ -170,7 +171,7 @@ function securesite_admin_settings() {
     '#default_value' => variable_get('securesite_password_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php'),
     '#length' => 30,
     '#maxlength' => 300,
-    '#description' => t('Enter the password storage script exactly as it would appear on the command line.'),
+    '#description' => t('Enter the password storage script exactly as it should appear on the command line. Use absolute paths.'),
   );
   $form['authentication']['securesite_realm'] = array(
     '#type' => 'textfield',
@@ -212,14 +213,14 @@ function securesite_admin_settings() {
   $form['login_form']['securesite_login_form'] = array(
     '#type' => 'textarea',
     '#title' => t('Custom message for HTML log-in form'),
-    '#default_value' => variable_get('securesite_login_form', t('<p>Enter your user name and password:</p>')),
+    '#default_value' => variable_get('securesite_login_form', t('Enter your user name and password:')),
     '#length' => 60,
     '#height' => 3,
   );
   $form['login_form']['securesite_reset_form'] = array(
     '#type' => 'textarea',
     '#title' => t('Custom message for password reset form'),
-    '#default_value' => variable_get('securesite_reset_form', t('<p>Enter your user name or e-mail address:</p>')),
+    '#default_value' => variable_get('securesite_reset_form', t('Enter your user name or e-mail address:')),
     '#length' => 60,
     '#height' => 3,
     '#description' => t('Leave empty to disable Secure Site&rsquo;s password reset form.'),
@@ -249,19 +250,29 @@ function securesite_admin_settings_submit($form, &$form_state) {
   $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php');
   $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
   $securesite_guest_name = variable_get('securesite_guest_name', '');
-  if ($values['securesite_guest_name'] != $securesite_guest_name) {
-    $values = array(
+  if (
+    in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC))) && ( // Digest authentication was enabled.
+      $values['securesite_guest_name'] != $securesite_guest_name || // Guest user name has changed.
+      !in_array(SECURESITE_DIGEST, $values['securesite_type']) || // Digest authentication is being disabled.
+      isset($values['op']) && $values['op'] == t('Reset to defaults') // Values are being reset to defaults.
+    )
+  ) {
+    // Delete guest user password.
+    $args = array(
       escapeshellarg("name=$securesite_guest_name"),
       escapeshellarg("realm=$realm"),
       escapeshellarg('op=delete'),
     );
-    exec($script .' '. implode(' ', $values));
+    exec($script .' '. implode(' ', $args));
   }
-  $values = array(
-    escapeshellarg("name=$values[securesite_guest_name]"),
-    escapeshellarg("realm=$realm"),
-    escapeshellarg("pass=$values[securesite_guest_pass]"),
-  );
-  exec($script .' '. implode(' ', $values));
+  elseif (in_array(SECURESITE_DIGEST, $values['securesite_type'])) {
+    // If digest authentication is enabled, update guest user password.
+    $args = array(
+      escapeshellarg("name=$values[securesite_guest_name]"),
+      escapeshellarg("realm=$realm"),
+      escapeshellarg("pass=$values[securesite_guest_pass]"),
+    );
+    exec($script .' '. implode(' ', $args));
+  }
 }
 

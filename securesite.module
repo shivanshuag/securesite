@@ -2,7 +2,8 @@
 // $Id$
 
 /**
- * @file
+ * @file securesite.module
+ *
  * Enables HTTP Auth security or an HTML form to restrict site access.
  */
 
@@ -157,7 +158,7 @@ function _securesite_mechanism() {
           }
           break;
         case SECURESITE_FORM:
-          if (isset($_POST['securesite_login_form'])) {
+          if (isset($_POST['form_id']) && $_POST['form_id'] == 'securesite_user_login') {
             $mechanism = SECURESITE_FORM;
             break 2;
           }
@@ -224,3 +225,32 @@ function securesite_user($op, &$edit, &$user) {
       break;
   }
 }
+
+/**
+ * Implementation of hook_theme().
+ */
+function securesite_theme() {
+  $themes = theme_get_registry();
+  return array(
+    'securesite_page' => array(
+      'template' => 'securesite-page',
+      'arguments' => array('content' => NULL, 'show_blocks' => FALSE, 'show_messages' => FALSE),
+      'file' => 'securesite.inc',
+    ),
+    'securesite_user_login' => array(
+      'template' => 'securesite-user-login',
+      'arguments' => array('form' => NULL),
+      'file' => 'securesite.inc',
+    ),
+    'securesite_user_pass' => array(
+      'template' => 'securesite-user-pass',
+      'arguments' => array('form' => NULL),
+      'file' => 'securesite.inc',
+    ),
+  );
+}
+
+function securesite_theme_registry_alter(&$theme_registry) {
+  $theme_registry['securesite_page']['preprocess functions'] = $theme_registry['page']['preprocess functions'];
+}
+

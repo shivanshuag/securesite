@@ -2,7 +2,8 @@
 // $Id$
 
 /**
- * @file
+ * @file securesite.inc
+ *
  * Secure Site log-in functions
  */
 
@@ -30,8 +31,10 @@ function _securesite_boot($type) {
       $function = '_securesite_plain_auth';
       break;
     case SECURESITE_FORM:
-      // Fix missing indexes.
-      $edit = $_POST['edit'] + array('name' => '', 'pass' => '');
+      if (!empty($_POST['openid_identifier'])) {
+        openid_begin($_POST['openid_identifier'], $_POST['openid.return_to']);
+      }
+      $edit = array('name' => $_POST['name'], 'pass' => $_POST['pass']);
       $function = '_securesite_plain_auth';
       break;
   }
@@ -68,12 +71,12 @@ function _securesite_digest_auth($edit) {
     // Not a registered user. See if we have guest user credentials.
     switch ($status) {
       case 1:
-        header('HTTP/1.1 400 Bad Request');
+        drupal_set_header('HTTP/1.1 400 Bad Request');
         _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
         break;
       case 0:
         // Password is correct. Log user in.
-        header($header);
+        drupal_set_header($header);
         $edit['pass'] = variable_get('securesite_guest_pass', '');
       default:
         _securesite_guest_login($edit);
@@ -86,7 +89,7 @@ function _securesite_digest_auth($edit) {
         // Password is correct. Log user in.
         $user = $account;
         user_authenticate_finalize($edit);
-        header($header);
+        drupal_set_header($header);
         _securesite_user_login();
         break;
       case 2:
@@ -104,7 +107,7 @@ function _securesite_digest_auth($edit) {
         _securesite_dialog($type);
         break;
       case 1:
-        header('HTTP/1.1 400 Bad Request');
+        drupal_set_header('HTTP/1.1 400 Bad Request');
       default:
         // Authentication failed. Request credentials using most secure authentication method.
         watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
@@ -117,6 +120,7 @@ function _securesite_digest_auth($edit) {
 
 /**
  * Get the result of digest validation.
+ *
  * @param $status: Will be set to the return status of the validation script
  * @param $edit: An array of parameters to pass to the validation script
  * @return
@@ -236,78 +240,6 @@ function _securesite_guest_login($edit) {
 }
 
 /**
- * Display authentication dialog and send password reset mails.
- */
-function _securesite_dialog($type) {
-  // Has the password reset form been submitted?
-  if (isset($_POST['securesite_reset_form'])) {
-    $content = _securesite_password_reset($_POST['edit']);
-  }
-  // Are we on a password reset page?
-  elseif (strpos($_GET['q'], 'user/reset/') === 0) {
-    $args = explode('/', $_GET['q']);
-    // The password reset function doesn't work well if it doesn't have all the
-    // required parameters or if the UID parameter isn't valid
-    if (count($args) < 5 || user_load(array('uid' => $args[2], 'status' => 1)) == FALSE) {
-      $error = t('You have tried to use an invalid one-time log-in link.');
-      $reset = variable_get('securesite_reset_form', '<p>'. t('Enter your user name or e-mail address.') .'</p>');
-      if (empty($reset)) {
-        drupal_set_message('      '. $error ."\n    ", 'error');
-        $status_msg = theme('status_messages');
-        $content = empty($status_msg) ? '' : $status_msg;
-      }
-      else {
-        $error .= ' '. t('Please request a new one using the form below.');
-        drupal_set_message('        '. $error ."\n      ", 'error');
-        $content = _securesite_reset_form();
-      }
-    }
-  }
-  else {
-    // Display log-in dialog.
-    switch ($type) {
-      case SECURESITE_DIGEST:
-        $header = _securesite_digest_validate($status);
-        if (empty($header)) {
-          $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
-          $header = _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
-        }
-        if (strpos($header, 'WWW-Authenticate') === 0) {
-          header($header);
-          header('HTTP/1.1 401 Unauthorized');
-        }
-        else {
-          header($header);
-        }
-        $content = _securesite_dialog_html('<p id="password">'. t('Reload the page to try logging in again.') ."</p>\n");
-        break;
-      case SECURESITE_BASIC:
-        header('WWW-Authenticate: Basic realm="'. _securesite_fake_realm() .'"');
-        header('HTTP/1.1 401 Unauthorized');
-        $content = _securesite_dialog_html('<p id="password">'. t('Reload the page to try logging in again.') ."</p>\n");
-        break;
-      case SECURESITE_FORM:
-        $content = _securesite_form_dialog();
-        break;
-    }
-  }
-  if (!empty($content)) {
-    global $base_path;
-    $theme_path = drupal_get_path('theme', variable_get('theme_default', 'garland'));
-    $dialog_file = '/securesite-dialog.tpl.php';
-    if (file_exists($theme_path . $dialog_file)) {
-      include_once($theme_path . $dialog_file);
-    }
-    else {
-      include_once(drupal_get_path('module', 'securesite') . $dialog_file);
-    }
-    module_invoke_all('exit');
-    session_write_close();
-    exit();
-  }
-}
-
-/**
  * Determine if Secure Site authentication should be forced.
  */
 function _securesite_forced() {
@@ -334,137 +266,66 @@ function _securesite_forced() {
 }
 
 /**
- * Check if the user attempted to submit the password request form. If so, check
- * if we have information for the name/mail they entered and send it if we do.
- * @param $edit: Array containing username or e-mail address of user requesting
- * password reset
- * @return
- * An HTML string
+ * Display authentication dialog and send password reset mails.
  */
-function _securesite_password_reset($edit) {
-  $load = array('status' => 1);
-  // Only create array keys/values if something was entered, otherwise user_load() will fail
-  if (!empty($edit['name'])) {
-    $load['name'] = $edit['name'];
+function _securesite_dialog($type) {
+  // Has the password reset form been submitted?
+  if (isset($_POST['form_id']) && $_POST['form_id'] == 'securesite_user_pass') {
+    $content = _securesite_page();
   }
-  if (!empty($edit['mail'])) {
-    $load['mail'] = $edit['mail'];
-  }
-  $account = user_load($load);
-  if (!empty($account->uid)) {
-    // Generate a new password for this user
-    $account = user_save($account, array('pass' => user_password()));
-    // Mail new password
-    $language = user_preferred_language($account);
-    $variables = array(
-      '!username' => $account->name,
-      '!site' => variable_get('site_name', 'Drupal'),
-      '!login_url' => user_pass_reset_url($account),
-      '!uri' => $base_url,
-      '!uri_brief' => preg_replace('`^https?://`i', '', $base_url),
-      '!mailto' => $account->mail,
-      '!date' => format_date(time()),
-      '!login_uri' => url('user', array('absolute' => TRUE, 'language' => $language)),
-      '!edit_uri' => url('user/'. $account->uid .'/edit', array('absolute' => TRUE, 'language' => $language)),
-    );
-    $params['subject'] = _user_mail_text('password_reset_subject', $language, $variables);
-    $params['body'] = _user_mail_text('password_reset_body', $language, $variables);
-    $message = drupal_mail('securesite', 'password', $account->mail, $language, $params);
-    if ($message['result']) {
-      watchdog('user', 'Password mailed to %name at %email.', array('%name' => $account->name, '%email' => $account->mail));
-      $output = '<p id="mail">'. t('Further instructions have been e-mailed to you.') ."</p>\n";
-    }
-    else {
-      // Note: At this point, the user's password has already been reset.
-      watchdog('mail', 'Error mailing password to %name at %email.', array('%name' => $account->name, '%email' => $account->mail), WATCHDOG_ERROR);
-      drupal_set_message('        '. t('Unable to send e-mail. Please contact the site administrator.') ."\n      ", 'error');
-      $output = _securesite_dialog_html();
+  // Are we on a password reset page?
+  elseif (strpos($_GET['q'], 'user/reset/') === 0) {
+    $args = explode('/', $_GET['q']);
+    // The password reset function doesn't work well if it doesn't have all the
+    // required parameters or if the UID parameter isn't valid
+    if (count($args) < 5 || user_load(array('uid' => $args[2], 'status' => 1)) == FALSE) {
+      $error = t('You have tried to use an invalid one-time log-in link.');
+      $reset = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
+      if (empty($reset)) {
+        drupal_set_message($error, 'error');
+        $content = '';
+      }
+      else {
+        $error .= ' '. t('Please request a new one using the form below.');
+        drupal_set_message($error, 'error');
+        $content = drupal_get_form('securesite_user_pass');
+      }
     }
   }
   else {
-    // Name or mail not valid or account disabled.
-    drupal_set_message('        '. t('Unrecognized user name or e-mail address.') ."\n      ", 'error');
-    $output = _securesite_dialog_html();
-  }
-  return $output;
-}
-
-/**
- * Display fallback HTML for HTTP authentication dialogs. Safari will not load
- * this. Opera will not load this after log-out unless the page has been
- * reloaded and the authentication dialog has been displayed twice.
- */
-function _securesite_dialog_html($message = NULL) {
-  if (in_array(SECURESITE_FORM, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
-    $output = _securesite_form_dialog();
-  }
-  else {
-    $reset = variable_get('securesite_reset_form', '<p>'. t('Enter your user name or e-mail address.') .'</p>');
-    if (!empty($reset) && _securesite_forced()) {
-      $output = _securesite_reset_form();
+    // Display log-in dialog.
+    switch ($type) {
+      case SECURESITE_DIGEST:
+        $header = _securesite_digest_validate($status);
+        if (empty($header)) {
+          $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
+          $header = _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
+        }
+        if (strpos($header, 'WWW-Authenticate') === 0) {
+          drupal_set_header($header);
+          drupal_set_header('HTTP/1.1 401 Unauthorized');
+        }
+        else {
+          drupal_set_header($header);
+        }
+        $content = _securesite_page('<p>'. t('Reload the page to try logging in again.') .'</p>');
+        break;
+      case SECURESITE_BASIC:
+        drupal_set_header('WWW-Authenticate: Basic realm="'. _securesite_fake_realm() .'"');
+        drupal_set_header('HTTP/1.1 401 Unauthorized');
+        $content = _securesite_page('<p>'. t('Reload the page to try logging in again.') .'</p>');
+        break;
+      case SECURESITE_FORM:
+        $content = _securesite_page();
+        break;
     }
-    else {
-      $status_msg = theme('status_messages');
-      $output = empty($status_msg) ? '' : '      '. $status_msg ."\n";
-      $output .= $message;
-    }
   }
-  return $output;
-}
-
-/**
- * Display HTML form authentication dialog.
- */
-function _securesite_form_dialog() {
-  // If the reset form exists and was submitted, status messages should be displayed there.
-  $reset = variable_get('securesite_reset_form', '<p>'. t('Enter your user name or e-mail address.') .'</p>');
-  if (empty($reset) || empty($_POST['securesite_reset_form'])) {
-    $status_msg = theme('status_messages');
+  if (isset($content)) {
+    drupal_add_css(drupal_get_path('module', 'securesite') .'/securesite.css');
+    print theme('securesite_page', $content);
+    module_invoke_all('exit');
+    exit();
   }
-  $form_msg = variable_get('securesite_login_form', '<p>'. t('Enter your user name and password.') .'</p>');
-  $output = '<h1>'. t('Log in') .'</h1>'."\n";
-  $output .= '    <div id="login">'."\n";
-  $output .= empty($form_msg) ? '' : '      '. $form_msg ."\n";
-  $output .= empty($status_msg) ? '' : '      '. $status_msg;
-  $output .= '    </div>'."\n";
-  $output .= '    <form action="'. request_uri() .'" method="post">'."\n";
-  $output .= '      <p><label>'. t('Username') .': <input type="text" maxlength="55" class="form-text" name="edit[name]" id="edit-name" value="" /></label></p>'."\n";
-  $output .= '      <p><label>'. t('Password') .': <input type="password" class="form-password" maxlength="24" name="edit[pass]" id="edit-pass" value="" /></label></p>'."\n";
-  $output .= '      <p><input type="hidden" name="securesite_login_form" value="1" /><input type="submit" class="form-submit" name="op" value="'. t('Log in') .'" /></p>'."\n";
-  $output .= '    </form>'."\n";
-  $output .= empty($reset) && _securesite_forced() ? '' : '    <hr />'."\n    ". _securesite_reset_form();
-  return $output;
-}
-
-/**
- * Return password reset form (if enabled) or log-in message.
- *
- * @return HTML string.
- */
-function _securesite_reset_form() {
-  $status_msg = theme('status_messages');
-  $form_msg = variable_get('securesite_reset_form', '<p>'. t('Enter your user name or e-mail address.') .'</p>');
-  $output = '';
-  $output .= '<h1>'. t('Password reset') .'</h1>'."\n";
-  $output .= '    <div id="reset">'."\n";
-  $output .= empty($form_msg) ? '' : '      '. $form_msg ."\n";
-  $output .= empty($status_msg) ? '' : '      '. $status_msg;
-  $output .= '    </div>'."\n";
-  $output .= '    <form action="'. request_uri() .'" method="post">'."\n";
-  $output .= '      <p><label>'. t('Username') .': <input type="text" maxlength="55" class="form-text" name="edit[name]" id="edit-name" value="" /></label></p>'."\n";
-  $output .= '      <p><label>'. t('E-mail address') .': <input type="text" maxlength="64" class="form-text" name="edit[mail]" id="edit-mail" value="" /></label></p>'."\n";
-  $output .= '      <p><input type="hidden" name="securesite_reset_form" value="1" /><input type="submit" class="form-submit" name="op" value="'. t('Reset password') .'" /></p>'."\n";
-  $output .= '    </form>'."\n";
-  return $output;
-}
-
-/**
- * Implementation of hook_mail().
- */
-function securesite_mail($key, &$message, $params) {
-  // Ignoring $key for now, since there's only one type of mail sent by Secure Site
-  $message['subject'] = $params['subject'];
-  $message['body'] = $params['body'];
 }
 
 /**
@@ -479,5 +340,127 @@ function _securesite_fake_realm() {
     $realm .= ' - '. mt_rand(10, 999);
   }
   return $realm;
+}
+
+/**
+ * Display fallback HTML for HTTP authentication dialogs. Safari will not load
+ * this. Opera will not load this after log-out unless the page has been
+ * reloaded and the authentication dialog has been displayed twice.
+ */
+function _securesite_page($message = NULL) {
+  $reset = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
+  if (in_array(SECURESITE_FORM, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
+    $output = drupal_get_form('securesite_user_login');
+    $output .= empty($reset) ? '' : "<hr />\n". drupal_get_form('securesite_user_pass');
+  }
+  else {
+    if (!empty($reset) && _securesite_forced()) {
+      $output = drupal_get_form('securesite_user_pass');
+    }
+    else {
+      $output = $message;
+    }
+  }
+  return $output;
+}
+
+/**
+ * Process variables for securesite-page.tpl.php
+ *
+ * The $variables array contains the following arguments:
+ * - $messages
+ *
+ * @see securesite-page.tpl.php
+ */
+function template_preprocess_securesite_page(&$variables) {
+  $variables['messages'] = theme('status_messages');
+}
+
+/**
+ * We use our own version of the log-in form for theming. We do not use the
+ * default validate and submit functions because we may allow anonymous users.
+ *
+ * @ingroup forms
+ * @see user_login()
+ */
+function securesite_user_login() {
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('User name'),
+    '#maxlength' => USERNAME_MAX_LENGTH,
+    '#size' => 15,
+  );
+  $form['pass'] = array(
+    '#type' => 'password',
+    '#title' => t('Password'),
+    '#maxlength' => 60,
+    '#size' => 15,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Log in'),
+  );
+  if (module_exists('openid')) {
+    global $base_path;
+    $style = '<style type="text/css" media="all">'."\n".
+             '#securesite-user-login li.openid-link {'."\n".
+             '  background:transparent url('. $base_path . drupal_get_path('module', 'openid') .'/login-bg.png) no-repeat scroll 1px 0.35em;'."\n".
+             '}'."\n".
+             '</style>';
+    drupal_set_html_head($style);
+  }
+  drupal_alter('form', $form, NULL, 'user_login');
+  return $form;
+}
+
+/**
+ * Process variables for securesite-user-login.tpl.php
+ *
+ * The $variables array contains the following arguments:
+ * - $title
+ * - $messages
+ *
+ * @see securesite-user-login.tpl.php
+ */
+function template_preprocess_securesite_user_login(&$variables) {
+  $variables['title'] = variable_get('securesite_login_form', t('Enter your user name and password.'));
+  $variables['messages'] = '';
+  // If the reset form exists and was submitted, status messages should be displayed there.
+  $reset = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
+  if (empty($reset) || !isset($_POST['form_id']) || isset($_POST['form_id']) && $_POST['form_id'] != 'securesite_user_pass') {
+    $variables['messages'] = theme('status_messages');
+  }
+}
+
+/**
+ * We use our own version of the password reset form for theming.
+ *
+ * @ingroup forms
+ * @see user_pass_validate
+ * @see user_pass_submit
+ */
+function securesite_user_pass() {
+  module_load_include('inc', 'user', 'user.pages');
+  $form = user_pass();
+  drupal_alter('form', $form, NULL, 'user_pass');
+  $form['#redirect'] = FALSE;
+  $form['#validate'][] = 'user_pass_validate';
+  $form['#submit'][] = 'user_pass_submit';
+  return $form;
+}
+
+/**
+ * Process variables for securesite-user-pass.tpl.php
+ *
+ * The $variables array contains the following arguments:
+ * - $title
+ * - $messages
+ *
+ * @see securesite-user-pass.tpl.php
+ */
+function template_preprocess_securesite_user_pass(&$variables) {
+  $variables['title'] = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
+  $variables['messages'] = theme('status_messages');
+  $variables['form']['name']['#required'] = FALSE;
 }
 
