@@ -42,8 +42,12 @@ function securesite_uninstall() {
  */
 function securesite_update_6200() {
   switch (variable_get('securesite_enabled', SECURESITE_DISABLED)) {
-    case 2:
+    case 0:
       variable_del('securesite_enabled');
+    case 1:
+    case 2:
+      variable_set('securesite_enabled', SECURESITE_ALWAYS);
+      variable_set('securesite_type', SECURESITE_BASIC);
       break;
     case 3:
       variable_set('securesite_enabled', SECURESITE_ALWAYS);
