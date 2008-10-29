@@ -266,8 +266,12 @@ function _securesite_dialog($type) {
     $content = _securesite_page();
   }
   // Are we on a password reset page?
-  elseif (strpos($_GET['q'], 'user/reset/') === 0) {
+  elseif (strpos($_GET['q'], 'user/reset/') === 0 || module_exists('i18n') && i18n_selection_mode() != 'off' && strpos($_GET['q'], i18n_selection_mode('params') .'/user/reset/') === 0) {
     $args = explode('/', $_GET['q']);
+    if (module_exists('i18n') && i18n_selection_mode() != 'off' && i18n_selection_mode('params') != '') {
+      // Remove the language argument.
+      array_shift($args);
+    }
     // The password reset function doesn't work well if it doesn't have all the
     // required parameters or if the UID parameter isn't valid
     if (count($args) < 5 || user_load(array('uid' => $args[2], 'status' => 1)) == FALSE) {
