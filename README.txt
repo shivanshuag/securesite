@@ -135,14 +135,33 @@ Configuration
 Theming
 -------
 
-You can theme the HTML output of the Secure Site module using the file
-securesite-dialog.tpl.php found in the securesite directory. Copy
-securesite-dialog.tpl.php to your default theme. Now securesite-dialog.tpl.php
-will be used as a template for all Secure Site HTML output.
-securesite-dialog.tpl.php works in the same way as page.tpl.php.
+Secure Site's HTML output is controlled by three files:
+
+- securesite-page.tpl.php: Template for Secure Site pages. Works in the same way
+  as page.tpl.php.
+
+- securesite-user-login.tpl.php: Template for the user log-in form.
+
+- securesite-user-pass.tpl.php: Template for the password reset form.
+
+You can theme Secure Site's HTML output by copying these files to your theme's
+directory. The files in your theme's directory will become the templates for all
+Secure Site HTML output.
 
 
-Known Issues
+Configuring cron jobs
+---------------------
+
+If HTTP authentication is forced, cron jobs will need to authenticate
+themselves. See http://drupal.org/cron for more details on configuring cron
+jobs. These examples show how to add a user name and password:
+
+45 * * * * /usr/bin/lynx -auth=username:password -source http://example.com/cron.php
+45 * * * * /usr/bin/wget --user=username --password=password -O - -q http://example.com/cron.php
+45 * * * * /usr/bin/curl --user username:password --silent --compressed http://example.com/cron.php
+
+
+Known issues
 ------------
 
   - Authentication on PHP/CGI installations

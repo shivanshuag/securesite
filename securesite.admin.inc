@@ -96,7 +96,18 @@ function _securesite_admin_help() {
   '  </li>'."\n".
   '</ol>'."\n".
   '<h3>'. t('Theming') .'</h3>'."\n".
-  '<p>'. t('You can theme the HTML output of the Secure Site module using the file <em>securesite-dialog.tpl.php</em> found in the securesite directory. Copy <em>securesite-dialog.tpl.php</em> to your default theme. Now <em>securesite-dialog.tpl.php</em> will be used as a template for all Secure Site HTML output. <em>securesite-dialog.tpl.php</em> works in the same way as <em>page.tpl.php</em>.') .'</p>'."\n".
+  '<p>'. t('Secure Site&rsquo;s HTML output is controlled by three files:') .'</p>'."\n".
+  '<dl>'."\n".
+  '  <dt>securesite-page.tpl.php<dt><dd>'. t('Template for Secure Site pages. Works in the same way as page.tpl.php.') .'</dd>'."\n".
+  '  <dt>securesite-user-login.tpl.php<dt><dd>'. t('Template for the user log-in form.') .'</dd>'."\n".
+  '  <dt>securesite-user-pass.tpl.php<dt><dd>'. t('Template for the password reset form.') .'</dd>'."\n".
+  '</dl>'."\n".
+  '<p>'. t('You can theme Secure Site&rsquo;s HTML output by copying these files to your theme&rsquo;s directory. The files in your theme&rsquo;s directory will become the templates for all Secure Site HTML output.') .'</p>'."\n".
+  '<h3>'. t('Configuring cron jobs') .'</h3>'."\n".
+  '<p>'. t('If HTTP authentication is forced, cron jobs will need to authenticate themselves. See !link for more details on configuring cron jobs. These examples show how to add a user name and password:', array('!link' => l(t('Configuring cron jobs'), 'http://drupal.org/cron'))) .'</p>'."\n".
+  '<pre>45 * * * * /usr/bin/lynx -auth=<em>username</em>:<em>password</em> -source http://example.com/cron.php'."\n".
+       '45 * * * * /usr/bin/wget --user=<em>username</em> --password=<em>password</em> -O - -q http://example.com/cron.php'."\n".
+       '45 * * * * /usr/bin/curl --user <em>username</em>:<em>password</em> --silent --compressed http://example.com/cron.php</pre>'."\n".
   '<h3><a name="issues">'. t('Known issues') .'</a></h3>'."\n".
   '<ul>'."\n".
   '  <li>'. t('Authentication on PHP/CGI installations') ."\n".

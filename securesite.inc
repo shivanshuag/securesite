@@ -237,7 +237,7 @@ function _securesite_guest_login($edit) {
 function _securesite_forced() {
   global $base_path;
   // Do we require credentials to display this page?
-  if (php_sapi_name() == 'cli' || request_uri() == $base_path .'cron.php') {
+  if (php_sapi_name() == 'cli') {
     return FALSE;
   }
   else {
@@ -261,6 +261,7 @@ function _securesite_forced() {
  * Display authentication dialog and send password reset mails.
  */
 function _securesite_dialog($type) {
+  global $base_path;
   // Has the password reset form been submitted?
   if (isset($_POST['form_id']) && $_POST['form_id'] == 'securesite_user_pass') {
     $content = _securesite_page();
@@ -312,7 +313,10 @@ function _securesite_dialog($type) {
         $content = _securesite_page('<p>'. t('Reload the page to try logging in again.') .'</p>');
         break;
       case SECURESITE_FORM:
-        $content = _securesite_page();
+        // Form authentication doesn't work for cron.
+        if (request_uri() != $base_path .'cron.php') {
+          $content = _securesite_page();
+        }
         break;
     }
   }
