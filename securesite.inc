@@ -189,14 +189,10 @@ function _securesite_user_login() {
   if (user_access('access secured pages')) {
     unset($_SESSION['securesite_guest']); // Clear the guest session.
     $_SESSION['securesite_login'] = TRUE; // Mark the session so Secure Site will be triggered on log-out.
-    // If path is front page, go to site root. Prevent a log-in/log-out loop by redirecting off the log-out page.
-    if (drupal_is_front_page() || $_GET['q'] == 'logout') {
-      $path = '';
+    // Prevent a log-in/log-out loop by redirecting off the log-out page.
+    if ($_GET['q'] == 'logout') {
+      drupal_goto();
     }
-    else {
-      $path = $_GET['q']; // Redirect to prevent some caching problems.
-    }
-    drupal_goto($path);
   }
   // Not an authorized user.
   else {
@@ -218,14 +214,10 @@ function _securesite_guest_login($edit) {
     // Mark this session to prevent re-login (note: guests can't log out).
     $_SESSION['securesite_guest'] = $edit['name'];
     $_SESSION['securesite_login'] = TRUE;
-    // If path is front page, go to site root. Prevent a 403 error by redirecting off the logout page.
-    if (drupal_is_front_page() || $_GET['q'] == 'logout') {
-      $path = '';
+    // Prevent a 403 error by redirecting off the logout page.
+    if ($_GET['q'] == 'logout') {
+      drupal_goto();
     }
-    else {
-      $path = $_GET['q']; // Redirect to prevent some caching problems.
-    }
-    drupal_goto($path);
   }
   else {
     if (empty($edit['name'])) {
