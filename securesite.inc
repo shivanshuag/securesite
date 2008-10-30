@@ -289,7 +289,8 @@ function _securesite_dialog($type) {
       }
     }
   }
-  else {
+  // Allow OpenID log-in page to bypass dialog.
+  elseif (!module_exists('openid') || $_GET['q'] != 'openid/authenticate') {
     // Display log-in dialog.
     switch ($type) {
       case SECURESITE_DIGEST:
