@@ -36,7 +36,7 @@ function _securesite_admin_help() {
   '    <p>'. t('Three methods of authentication are available. Please note that HTTP authentication requires extra configuration if PHP is not installed as an Apache module. See the <a href="#issues">Known issues</a> section for details.') ."\n".
   '    <ol>'."\n".
   '      <li>'. t('HTTP digest') ."\n".
-	'        <p>'. t('This will enable HTTP digest authentication. The user&rsquo;s browser will prompt for the user&rsquo;s name and password before displaying the page.') .'</p>'."\n".
+  '        <p>'. t('This will enable HTTP digest authentication. The user&rsquo;s browser will prompt for the user&rsquo;s name and password before displaying the page.') .'</p>'."\n".
   '        <p>'. t('Digest authentication protects a user&rsquo;s password from eavesdroppers when you are not using SSL to encrypt the connection. However, it can only be used when a copy of the password is stored on the server. For security reasons, Drupal does not store passwords. You will need to configure scripts to securely save passwords and authenticate users. See the <a href="#passwords">Secure password storage</a> section for details.') .'</p>'."\n".
   '        <p>'. t('When digest authentication is enabled, passwords will be saved when users log in or set their passwords. If you use digest authentication to protect your whole site, you should allow guest access or allow another authentication type until users whose passwords are not yet saved have logged in. Otherwise, you may lock yourself out of your own site.') .'</p>'."\n".
   '      </li>'."\n".
@@ -47,14 +47,14 @@ function _securesite_admin_help() {
   '        <p>'. t('This method uses a themeable HTML log-in form for user name and password input. This method is the most reliable as it does not rely on the browser for authentication. Like HTTP basic, it is insecure unless you are using SSL to encrypt the connection.') .'</p>'."\n".
   '      </li>'."\n".
   '    </ol>'."\n".
-	'    <p>'. t('HTTP authentication is recommended for secure feeds, because feed readers are not likely to be able to handle forms. You can enable all three types of authentication at the same time.') .'</p>'."\n".
+  '    <p>'. t('HTTP authentication is recommended for secure feeds, because feed readers are not likely to be able to handle forms. You can enable all three types of authentication at the same time.') .'</p>'."\n".
   '  </li>'."\n".
-	'  <li>'. t('Digest authentication script') ."\n".
-	'    <p>'. t('For security, HTTP digest authentication uses an external script to check passwords. Enter the digest authentication script exactly as it would appear on the command line.') .'</p>'."\n".
-	'  </li>'."\n".
-	'  <li>'. t('Password storage script') ."\n".
-	'    <p>'. t('For security, HTTP digest authentication uses an external script to save passwords. Enter the password storage script exactly as it would appear on the command line.') .'</p>'."\n".
-	'  </li>'."\n".
+  '  <li>'. t('Digest authentication script') ."\n".
+  '    <p>'. t('For security, HTTP digest authentication uses an external script to check passwords. Enter the digest authentication script exactly as it would appear on the command line.') .'</p>'."\n".
+  '  </li>'."\n".
+  '  <li>'. t('Password storage script') ."\n".
+  '    <p>'. t('For security, HTTP digest authentication uses an external script to save passwords. Enter the password storage script exactly as it would appear on the command line.') .'</p>'."\n".
+  '  </li>'."\n".
   '  <li>'. t('Authentication realm') ."\n".
   '    <p>'. t('You can use this field to name your log-in area. This is primarily used with HTTP Auth.') .'</p>'."\n".
   '  </li>'."\n".
@@ -66,33 +66,33 @@ function _securesite_admin_help() {
   '  </li>'."\n".
   '</ul>'."\n".
   '<h3><a name="passwords">'. t('Secure password storage') .'</a></h3>'."\n".
-  '<p>'. t('Digest authentication avoids transmitting passwords by exchanging character strings (digests) that prove both the user and the Web server know the password. This requires passwords for all users to be stored on the server. It is very important to ensure that these passwords cannot be exposed to unauthorized users. Drupal must be able to store passwords but should not be able to retrieve them.') .'</p>'."\n".
+  '<p>'. t('Digest authentication avoids transmitting passwords by exchanging character strings (digests) that prove both the user and the Web server know the password. This requires passwords for all users to be stored on the server. It is very important to ensure that these passwords cannot be exposed to unauthorized users. Drupal should be able to store passwords without being able to retrieve them.') .'</p>'."\n".
   '<p>'. t('Secure Site provides scripts that can handle stored passwords securely when properly set up. These scripts are contained in the <em>digest_md5</em> directory. There are two scripts in this directory:') .'</p>'."\n".
-	'<dl>'."\n".
-	'  <dt>stored_passwords.php</dt><dd>'. t('Add, delete, and update user passwords.') .'</dd>'."\n".
-	'  <dt>digest_md5.php</dt><dd>'. t('Perform digest authentication') .'</dd>'."\n".
-	'</dl>'."\n".
-	'<p>'. t('You can get help for these scripts by typing the script name followed by <em>--help</em> on the command line. You must be able to run PHP from the command line. Some configuration is required to make the scripts work properly:') .'</p>'."\n".
-	'<ol>'."\n".
+  '<dl>'."\n".
+  '  <dt>stored_passwords.php</dt><dd>'. t('Add, delete, and update user passwords.') .'</dd>'."\n".
+  '  <dt>digest_md5.php</dt><dd>'. t('Perform digest authentication.') .'</dd>'."\n".
+  '</dl>'."\n".
+  '<p>'. t('You can get help for these scripts by typing the script name followed by <em>--help</em> on the command line. You must be able to run PHP from the command line. Some configuration is required to make the scripts work properly:') .'</p>'."\n".
+  '<ol>'."\n".
   '  <li>'. t('Set up a secure database') ."\n".
-  '    <p>'. t('You can set up a password database in the same way you create a Drupal database. However, you should create a special database user for your password database. No other database users should have access to the password database.') .'</p>'."\n".
+  '    <p>'. t('You can set up a password database in the same way you create a Drupal database. Your password database should have its own user. No other database users should have access to the password database.') .'</p>'."\n".
   '  </li>'."\n".
   '  <li>'. t('Edit the configuration file') ."\n".
-  '    <p>'. t('Configuration settings for the scripts are in <em>digest_md5.conf.php</em>, in the <em>digest_md5</em> directory. You must set <em>$db_url</em> to point to your password database. If you want to be able to use the scripts from the command-line, you must set <em>$drupal</em> to the absolute path to your Drupal installation. When you are done editing the configuration file, make it read-only.') .'</p>'."\n".
+  '    <p>'. t('Configuration settings for the scripts are in the <em>digest_md5.conf.php</em> file in the <em>digest_md5</em> directory. You must set <em>$db_url</em> to point to your password database. If you want to be able to use the scripts from the command-line, you must set <em>$drupal</em> to the absolute path of your Drupal installation. When you are done editing the configuration file, make it read-only.') .'</p>'."\n".
   '  </li>'."\n".
   '  <li>'. t('Control access to the scripts') ."\n".
-  '    <p>'. t('The first thing you can do secure the scripts is to move the <em>digest_md5</em> directory to a location that is not accessible from the Internet. The configuration file especially needs protection, because it contains information that allows access to the password database. On the Secure Site settings page, change the digest authentication script and password storage script to point to the new location. For example, if you moved the <em>digest_md5</em> directory to <em>/usr/local</em>, you would use') .'</p>'."\n".
-	'    <pre>/usr/local/digest_md5/digest_md5.php'."\n".
-	         '/usr/local/digest_md5/stored_passwords.php</pre>'."\n".
-  '    <p>'. t('If the <em>sudo</em> command is available on your system, you can change the file system permissions on the all the files in the <em>digest_md5</em> directory so that only adminstrators have access to them. You would then add the user your Web server runs as to the sudoers file. A sample sudoers file is provided in the <em>digest_md5</em> directory for comparison. The important lines are') .'</p>'."\n".
+  '    <p>'. t('The first thing you can do to secure the scripts is to move the <em>digest_md5</em> directory to a location that is not accessible from the Internet. The configuration file especially needs protection, because it contains information that allows access to the password database. On the Secure Site settings page, change the digest authentication script and password storage script to point to the new location. For example, if you moved the <em>digest_md5</em> directory to <em>/usr/local</em>, you would use') .'</p>'."\n".
+  '    <pre>/usr/local/digest_md5/digest_md5.php'."\n".
+           '/usr/local/digest_md5/stored_passwords.php</pre>'."\n".
+  '    <p>'. t('If the <em>sudo</em> command is available on your system, you can change the file system permissions on the all the files in the <em>digest_md5</em> directory so that only adminstrators have access to them. You would then add the user your Web server runs as to the <em>sudoers</em> file. A sample <em>sudoers</em> file is provided in the <em>digest_md5</em> directory for comparison. The important lines are') .'</p>'."\n".
   '    <pre>Defaults:apache	!authenticate'."\n".
-	         'Defaults:apache	!lecture'."\n".
-					 'apache	ALL=/usr/local/digest_md5/stored_passwords.php [A-z]*'."\n".
-					 'apache	ALL=/usr/local/digest_md5/digest_md5.php [A-z]*</pre>'."\n".
-	'    <p>'. t('This allows <em>apache</em> to use sudo only to run <em>stored_passwords.php</em> and <em>digest_md5.php</em>. Replace <em>apache</em> with the name of the Web server user on your system, and replace <em>/usr/local</em> with the directory in which you placed the <em>digest_md5</em> directory. On the Secure Site settings page, add <em>sudo</em> at the beginning of the line for the digest authentication script and the password storage script:') .'</p>'."\n".
-	'    <pre>sudo /usr/local/digest_md5/digest_md5.php'."\n".
-	         'sudo /usr/local/digest_md5/stored_passwords.php</pre>'."\n".
-	'    <p>'. t('If the rest of your system is secure, Drupal can now store passwords without being able to retrieve them.') .'</p>'."\n".
+           'Defaults:apache	!lecture'."\n".
+           'apache	ALL=/usr/local/digest_md5/stored_passwords.php [A-z]*'."\n".
+           'apache	ALL=/usr/local/digest_md5/digest_md5.php [A-z]*</pre>'."\n".
+  '    <p>'. t('This allows <em>apache</em> to use <em>sudo</em> only to run <em>stored_passwords.php</em> and <em>digest_md5.php</em>. Replace <em>apache</em> with the name of the Web server user on your system, and replace <em>/usr/local</em> with the directory in which you placed the <em>digest_md5</em> directory. On the Secure Site settings page, add <em>sudo</em> at the beginning of the line for the digest authentication script and the password storage script:') .'</p>'."\n".
+  '    <pre>sudo /usr/local/digest_md5/digest_md5.php'."\n".
+           'sudo /usr/local/digest_md5/stored_passwords.php</pre>'."\n".
+  '    <p>'. t('If the rest of your system is secure, Drupal can now store passwords without having the ability to retrieve them.') .'</p>'."\n".
   '  </li>'."\n".
   '</ol>'."\n".
   '<h3>'. t('Theming') .'</h3>'."\n".
@@ -111,7 +111,7 @@ function _securesite_admin_help() {
   '<h3><a name="issues">'. t('Known issues') .'</a></h3>'."\n".
   '<ul>'."\n".
   '  <li>'. t('Authentication on PHP/CGI installations') ."\n".
-  '    <p>'. t('If you are using HTTP Auth and are unable to log-in, PHP could be running in CGI mode. When run in CGI mode, the normal HTTP Auth log-in variables are not available to PHP. To work-around this issue, add the following rewrite rule at the end of the .htaccess file in Drupal&rsquo;s root installation directory:') .'</p>'."\n".
+  '    <p>'. t('If you are using HTTP authentication and are unable to log in, PHP could be running in CGI mode. When run in CGI mode, the normal HTTP authentication variables are not available to PHP. To work around this issue, add the following rewrite rule at the end of the .htaccess file in Drupal&rsquo;s installation directory:') .'</p>'."\n".
   '    <pre>RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization},L]</pre>'."\n".
   '    <p>'. t('After making the suggested change in Drupal 6, the rewrite rules would look like this:') .'</p>'."\n".
   '    <pre># Rewrite URLs of the form \'x\' to the form \'index.php?q=x\'.'."\n".
@@ -122,7 +122,7 @@ function _securesite_admin_help() {
            'RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization},L]</pre>'."\n".
   '  </li>'."\n".
   '  <li>'. t('Authentication when running Drupal via IIS') ."\n".
-  '    <p>'. t('If you are using HTTP Auth and are unable to log-in when Drupal is running on an IIS server, make sure that the PHP directive <em>cgi.rfc2616_headers</em> is set to <em>0</em> (the default value).') .'</p>'."\n".
+  '    <p>'. t('If you are using HTTP authentication and are unable to log in when Drupal is running on an IIS server, make sure that the PHP directive <em>cgi.rfc2616_headers</em> is set to <em>0</em> (the default value).') .'</p>'."\n".
   '  </li>'."\n".
   '</ul>'."\n";
 }

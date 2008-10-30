@@ -226,7 +226,7 @@ function _securesite_guest_login($edit) {
     else {
       watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
     }
-    drupal_set_message('        '. t('Unrecognized user name and/or password.') ."\n      ", 'error');
+    drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
     _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
   }
 }
