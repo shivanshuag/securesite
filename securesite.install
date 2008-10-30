@@ -2,8 +2,7 @@
 // $Id$
 
 /**
- * @file securesite.install
- *
+ * @file
  * Secure Site installation functions
  */
 
@@ -27,7 +26,7 @@ function securesite_disable() {
 }
 
 /**
- * Implentation of hook_uninstall().
+ * Implementation of hook_uninstall().
  */
 function securesite_uninstall() {
   $settings = db_query("SELECT name FROM {variable} WHERE name LIKE 'securesite\_%'");

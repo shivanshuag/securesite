@@ -2,7 +2,8 @@
 // $Id$
 
 /**
- * @file securesite-user-pass.tpl.php
+ * @file
+ * Template for password reset form
  */
 ?>
 <h1><?php print t('Password reset') ?></h1>

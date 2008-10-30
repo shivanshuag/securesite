@@ -4,7 +4,7 @@ Digest authentication avoids transmitting passwords by exchanging character
 strings (digests) that prove both the user and the Web server know the password.
 This requires passwords for all users to be stored on the server. It is very
 important to ensure that these passwords cannot be exposed to unauthorized
-users. Web pages must be able to store passwords but should not be able to
+users. Web pages should be able to store passwords without being able to
 retrieve them.
 
 The scripts in this directory can handle stored passwords securely when properly
@@ -21,8 +21,8 @@ Some configuration is required to make the scripts work properly:
 ---------------------------
 
 You can set up a password database in the same way you create a Drupal database.
-However, you should create a special database user for your password database.
-No other database users should have access to the password database.
+Your password database should have its own user. No other database users should
+have access to the password database.
 
 2. Edit the configuration file
 ------------------------------
@@ -30,7 +30,7 @@ No other database users should have access to the password database.
 Configuration settings for the scripts are in digest_md5.conf.php. You must set
 $db_url to point to your password database. If you want to be able to use the
 scripts from the command-line or non-Drupal Web pages, you must set $drupal to
-the absolute path to your Drupal installation. When you are done editing the
+the absolute path of your Drupal installation. When you are done editing the
 configuration file, make it read-only.
 
 3. Control access to the scripts
@@ -58,5 +58,5 @@ system, and replace /usr/local/digest_md5 with the directory in which this file
 is located.
 
 If the rest of your system is secure, Web pages can now store passwords without
-being able to retrieve them.
+having the ability to retrieve them.
 

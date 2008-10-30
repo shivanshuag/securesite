@@ -2,9 +2,8 @@
 // $Id$
 
 /**
- * @file securesite.admin.inc
- *
- * Secure Site admin pages
+ * @file
+ * Secure Site administration pages
  */
 
 /**

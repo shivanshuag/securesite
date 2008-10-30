@@ -2,9 +2,9 @@
 // $Id$
 
 /**
- * @file securesite-page.tpl.php
- *
- * Template for the Secure Site log-in page.
+ * @file
+ * Template for pages
+ * @see page.tpl.php
  */
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"

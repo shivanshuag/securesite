@@ -2,8 +2,7 @@
 // $Id$
 
 /**
- * @file securesite.module
- *
+ * @file
  * Enables HTTP Auth security or an HTML form to restrict site access.
  */
 

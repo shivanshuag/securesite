@@ -2,8 +2,7 @@
 // $Id$
 
 /**
- * @file digest_md5.conf.php
- *
+ * @file
  * Configuration for digest authentication. Only the root user should have
  * access to this file.
  */

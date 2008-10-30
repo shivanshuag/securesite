@@ -2,7 +2,8 @@
 // $Id$
 
 /**
- * @file securesite-user-login.tpl.php
+ * @file
+ * Template for log-in form
  */
 ?>
 <h1><?php print t('Log in') ?></h1>

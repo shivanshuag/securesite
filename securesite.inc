@@ -2,8 +2,7 @@
 // $Id$
 
 /**
- * @file securesite.inc
- *
+ * @file
  * Secure Site log-in functions
  */
 

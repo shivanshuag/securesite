@@ -3,8 +3,7 @@
 // $Id$
 
 /**
- * @file digest_md5.php
- *
+ * @file
  * This script implements the DIGEST-MD5 mechanism for all protocols. Only the
  * root user should have access to this script and the database used to store
  * passwords and nonce values.
