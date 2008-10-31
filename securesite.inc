@@ -3,7 +3,7 @@
 
 /**
  * @file
- * Secure Site log-in functions
+ * Secure Site log-in functions.
  */
 
 /**
@@ -86,10 +86,8 @@ function _securesite_digest_auth($edit) {
     switch ($status) {
       case 0:
         // Password is correct. Log user in.
-        $user = $account;
-        user_authenticate_finalize($edit);
         drupal_set_header($header);
-        _securesite_user_login();
+        _securesite_user_login($edit, $account);
         break;
       case 2:
         // Password not stored. Request credentials using next most secure authentication method.
@@ -153,23 +151,15 @@ function _securesite_digest_validate(&$status, $edit = NULL) {
  * Perform plain authentication.
  */
 function _securesite_plain_auth($edit) {
-  global $user;
   $account = user_load(array('name' => $edit['name'], 'status' => 1));
   if (empty($account->uid)) {
     // Not a registered user. See if we have guest user credentials.
     _securesite_guest_login($edit);
   }
   else {
-    // The LDAP auth module can't use the regular external user log-in system, so we
-    // have to call its log-in function directly.
-    if (module_exists('ldapauth')) {
-      ldapauth_authenticate($edit);
-    }
-    else {
-      user_authenticate($edit);
-    }
-    if (!empty($user->uid)) {
-      _securesite_user_login();
+    if (user_load(array('name' => $edit['name'], 'pass' => $edit['pass'], 'status' => 1)) !== FALSE || module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
+      // Password is correct. Perform log-in.
+      _securesite_user_login($edit, $account);
     }
     else {
       // Request credentials using most secure authentication method.
@@ -183,9 +173,13 @@ function _securesite_plain_auth($edit) {
 /**
  * Log in authenticated user.
  */
-function _securesite_user_login() {
-  global $user;
-  if (user_access('access secured pages')) {
+function _securesite_user_login($edit, $account) {
+  if (user_access('access secured pages', $account)) {
+    global $user;
+    $user = $account;
+    // Unset messages from previous log-in attempts.
+    unset($_SESSION['messages']);
+    user_authenticate_finalize($edit);
     unset($_SESSION['securesite_guest']); // Clear the guest session.
     $_SESSION['securesite_login'] = TRUE; // Mark the session so Secure Site will be triggered on log-out.
     // Prevent a log-in/log-out loop by redirecting off the log-out page.
@@ -193,12 +187,36 @@ function _securesite_user_login() {
       drupal_goto();
     }
   }
-  // Not an authorized user.
   else {
-    // Load the anonymous user.
-    $user = drupal_anonymous_user();
-    drupal_set_message(t('Unauthorized user.'), 'error');
-    _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
+    // Not an authorized user.
+    if (empty($_SESSION['securesite_denied'])) {
+      // Unset messages from previous log-in attempts.
+      unset($_SESSION['messages']);
+      // Set a session variable so that the log-in dialog will be displayed when the page is reloaded.
+      $_SESSION['securesite_denied'] = TRUE;
+      drupal_set_message(t('You have not been authorized to log in to secured pages.'), 'error');
+      drupal_add_css(drupal_get_path('module', 'securesite') .'/securesite.css');
+      print theme('securesite_page');
+      module_invoke_all('exit');
+      exit();
+    }
+    else {
+      unset($_SESSION['securesite_denied']);
+      // Safari will attempt to use old credentials before requesting new credentials
+      // from the user. Logging out requires that the WWW-Authenticate header be sent
+      // twice.
+      $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '');
+      if ($user_agent != str_replace('safari', '', $user_agent)) {
+        $_SESSION['securesite_repeat'] = TRUE;
+      }
+      $types = variable_get('securesite_type', array(SECURESITE_BASIC));
+      if (in_array(SECURESITE_DIGEST, $types)) {
+        // Reset the digest header.
+        $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
+        _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
+      }
+      _securesite_dialog(array_pop($types));
+    }
   }
 }
 
@@ -305,12 +323,12 @@ function _securesite_dialog($type) {
         else {
           drupal_set_header($header);
         }
-        $content = _securesite_page('<p>'. t('Reload the page to try logging in again.') .'</p>');
+        $content = _securesite_page();
         break;
       case SECURESITE_BASIC:
         drupal_set_header('WWW-Authenticate: Basic realm="'. _securesite_fake_realm() .'"');
         drupal_set_header('HTTP/1.1 401 Unauthorized');
-        $content = _securesite_page('<p>'. t('Reload the page to try logging in again.') .'</p>');
+        $content = _securesite_page();
         break;
       case SECURESITE_FORM:
         // Form authentication doesn't work for cron.
@@ -358,22 +376,10 @@ function _securesite_page($message = NULL) {
       $output = drupal_get_form('securesite_user_pass');
     }
     else {
-      $output = $message;
+      $output = '<p>'. t('Reload the page to try logging in again.') .'</p>';
     }
   }
   return $output;
-}
-
-/**
- * Process variables for securesite-page.tpl.php
- *
- * The $variables array contains the following arguments:
- * - $messages
- *
- * @see securesite-page.tpl.php
- */
-function template_preprocess_securesite_page(&$variables) {
-  $variables['messages'] = theme('status_messages');
 }
 
 /**

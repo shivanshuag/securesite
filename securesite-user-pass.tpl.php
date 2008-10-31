@@ -3,7 +3,7 @@
 
 /**
  * @file
- * Template for password reset form
+ * Template for Secure Site password reset form.
  */
 ?>
 <h1><?php print t('Password reset') ?></h1>

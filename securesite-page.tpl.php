@@ -3,7 +3,7 @@
 
 /**
  * @file
- * Template for pages
+ * Template for Secure Site pages.
  * @see page.tpl.php
  */
 ?>

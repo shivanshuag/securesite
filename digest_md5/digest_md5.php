@@ -282,7 +282,7 @@ function _digest_md5_response($edit) {
     case STALE_NONCE:
       if (isset($sn) && $sn !== FALSE) {
         $fields['opaque'] = $sn['opaque'];
-        $fields['qop'] = $sn['opaque'];
+        $fields['qop'] = $sn['qop'];
       }
       else {
         $fields['opaque'] = isset($fields['opaque']) ? $fields['opaque'] : base64_encode($fields['nonce']);

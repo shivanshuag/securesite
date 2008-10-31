@@ -3,7 +3,7 @@
 
 /**
  * @file
- * Template for log-in form
+ * Template for Secure Site log-in form.
  */
 ?>
 <h1><?php print t('Log in') ?></h1>

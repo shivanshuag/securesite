@@ -3,7 +3,7 @@
 
 /**
  * @file
- * Secure Site administration pages
+ * Secure Site administration pages.
  */
 
 /**
