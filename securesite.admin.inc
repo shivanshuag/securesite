@@ -203,7 +203,7 @@ function securesite_admin_settings() {
     '#default_value' => variable_get('securesite_guest_name', ''),
     '#length' => 30,
     '#maxlength' => 40,
-    '#description' => t('Leave empty to accept any name.'),
+    '#description' => t('Do not use the name of a registered user. Leave empty to accept any name.'),
     '#disabled' => $guest_access,
   );
   $form['guest']['securesite_guest_pass'] = array(
@@ -246,6 +246,9 @@ function securesite_admin_settings_validate($form, &$form_state) {
     }
   }
   sort($form_state['values']['securesite_type']);
+  if (db_result(db_query_range("SELECT uid FROM {users} WHERE name = '%s'", $form_state['values']['securesite_guest_name'], 0, 1)) != 0) {
+    form_set_error('securesite_guest_name', t('The name %name belongs to a registered user.', array('%name' => $form_state['values']['securesite_guest_name'])));
+  }
 }
 
 /**

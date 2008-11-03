@@ -176,6 +176,11 @@ function _securesite_mechanism() {
  */
 function securesite_user($op, &$edit, &$user) {
   switch ($op) {
+    case 'validate':
+      if (!array_key_exists('name', form_set_error()) && $edit['name'] == variable_get('securesite_guest_name', '')) {
+        form_set_error('name', t('The name %name is being used as the Secure Site guest name.', array('%name' => $edit['name'])));
+      }
+      break;
     case 'insert':
     case 'load':
     case 'update':
