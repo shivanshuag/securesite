@@ -103,10 +103,10 @@ function _securesite_admin_help() {
   '</dl>'."\n".
   '<p>'. t('You can theme Secure Site&rsquo;s HTML output by copying these files to your theme&rsquo;s directory. The files in your theme&rsquo;s directory will become the templates for all Secure Site HTML output.') .'</p>'."\n".
   '<h3>'. t('Configuring cron jobs') .'</h3>'."\n".
-  '<p>'. t('If HTTP authentication is forced, cron jobs will need to authenticate themselves. See !link for more details on configuring cron jobs. These examples show how to add a user name and password:', array('!link' => l(t('Configuring cron jobs'), 'http://drupal.org/cron'))) .'</p>'."\n".
+  '<p>'. t('If HTTP authentication is forced, cron jobs will need to authenticate themselves. See !link for more details on configuring cron jobs. These examples show how to add a user name and password (note: Lynx does not support digest authentication):', array('!link' => l(t('Configuring cron jobs'), 'http://drupal.org/cron'))) .'</p>'."\n".
   '<pre>45 * * * * /usr/bin/lynx -auth=<em>username</em>:<em>password</em> -source http://example.com/cron.php'."\n".
        '45 * * * * /usr/bin/wget --user=<em>username</em> --password=<em>password</em> -O - -q http://example.com/cron.php'."\n".
-       '45 * * * * /usr/bin/curl --user <em>username</em>:<em>password</em> --silent --compressed http://example.com/cron.php</pre>'."\n".
+       '45 * * * * /usr/bin/curl --anyauth --user <em>username</em>:<em>password</em> --silent --compressed http://example.com/cron.php</pre>'."\n".
   '<h3><a name="issues">'. t('Known issues') .'</a></h3>'."\n".
   '<ul>'."\n".
   '  <li>'. t('Authentication on PHP/CGI installations') ."\n".

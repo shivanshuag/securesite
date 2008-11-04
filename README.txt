@@ -154,11 +154,12 @@ Configuring cron jobs
 
 If HTTP authentication is forced, cron jobs will need to authenticate
 themselves. See http://drupal.org/cron for more details on configuring cron
-jobs. These examples show how to add a user name and password:
+jobs. These examples show how to add a user name and password (note: Lynx does
+not support digest authentication):
 
 45 * * * * /usr/bin/lynx -auth=username:password -source http://example.com/cron.php
 45 * * * * /usr/bin/wget --user=username --password=password -O - -q http://example.com/cron.php
-45 * * * * /usr/bin/curl --user username:password --silent --compressed http://example.com/cron.php
+45 * * * * /usr/bin/curl --anyauth --user username:password --silent --compressed http://example.com/cron.php
 
 
 Known issues
