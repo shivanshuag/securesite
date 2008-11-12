@@ -168,20 +168,18 @@ function securesite_admin_settings() {
     t('For security reasons, Drupal does not store passwords. You will need to configure scripts to securely save passwords and authenticate users. See the !link section of the Secure Site help for details.', array('!link' => l(t('Secure password storage'), 'admin/help/securesite', array('fragment' => 'passwords')))) .'</p>'."\n".'<p>'.
     t('When digest authentication is enabled, passwords will be saved when users log in or set their passwords. If you use digest authentication to protect your whole site, you should allow guest access or allow another authentication type until users whose passwords are not yet saved have logged in. Otherwise, <strong>you may lock yourself out of your own site.</strong>') .'</p>'."\n";
   $form['authentication']['securesite_digest_script'] = array(
-    '#type' => 'textfield',
+    '#type' => 'textarea',
     '#title' => t('Digest authentication script'),
     '#default_value' => variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') .'/digest_md5/digest_md5.php'),
-    '#length' => 30,
-    '#maxlength' => 300,
     '#description' => t('Enter the digest authentication script exactly as it should appear on the command line. Use absolute paths.'),
+    '#rows' => 2,
   );
   $form['authentication']['securesite_password_script'] = array(
-    '#type' => 'textfield',
+    '#type' => 'textarea',
     '#title' => t('Password storage script'),
     '#default_value' => variable_get('securesite_password_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php'),
-    '#length' => 30,
-    '#maxlength' => 300,
     '#description' => t('Enter the password storage script exactly as it should appear on the command line. Use absolute paths.'),
+    '#rows' => 2,
   );
   $form['authentication']['securesite_realm'] = array(
     '#type' => 'textfield',

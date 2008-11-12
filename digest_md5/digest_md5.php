@@ -14,6 +14,8 @@
  *   data=STRING         The contents of the Authentication header. A challenge
  *                       will be issued if this is missing.
  *   method=STRING       HTTP connection method. Defaults to AUTHENTICATE.
+ *   uri=STRING          URI of requested resource. If this is given, the URI
+ *                       value in the Authentication header must match it.
  *   realm=STRING        Realm. Defaults to hostname.
  *   fakerealm=STRING    Fake realm. Used to force browsers to clear
  *                       credentials.
@@ -33,6 +35,8 @@ foreach (array('-h', '--help', '-help', '-?', '/?', '?') as $arg) {
     $output .= '  data=STRING         The contents of the Authentication header. A challenge'."\n";
     $output .= '                      will be issued if this is missing.'."\n";
     $output .= '  method=STRING       HTTP connection method. Defaults to AUTHENTICATE.'."\n";
+    $output .= '  uri=STRING          URI of requested resource. If this is given, the URI'."\n";
+    $output .= '                      value in the Authentication header must match it.'."\n";
     $output .= '  realm=STRING        Realm. Defaults to hostname.'."\n";
     $output .= '  fakerealm=STRING    Fake realm. Used to force browsers to clear'."\n";
     $output .= '                      credentials.'."\n";
@@ -100,16 +104,18 @@ if (isset($edit['data'])) {
 }
 else {
   $nonce = uniqid();
-  if ($method != 'AUTHENTICATE') {
-    $opaque = isset($edit['opaque']) ? $edit['opaque'] : base64_encode($nonce);
-  }
   $uname = posix_uname();
   $edit['realm'] = isset($edit['realm']) ? $edit['realm'] : $uname['nodename'];
   $edit['fakerealm'] = isset($edit['fakerealm']) ? $edit['fakerealm'] : $edit['realm'];
   $qop = isset($edit['qop']) ? $edit['qop'] : 'auth';
-  $values = array('nonce' => $nonce, 'opaque' => $opaque, 'time' => $time, 'realm' => $edit['realm'], 'qop' => $qop);
+  $values = array('nonce' => $nonce, 'time' => $time, 'realm' => $edit['realm'], 'qop' => $qop);
   $values += isset($edit['entity-body']) ? array('hash' => md5($edit['entity-body'])) : array();
-  $challenge = array('realm="'. $edit['fakerealm'] .'"', 'nonce="'. $nonce .'"', 'opaque="'. $opaque .'"', 'qop="'. $qop .'"');
+  $challenge = array('realm="'. $edit['fakerealm'] .'"', 'nonce="'. $nonce .'"', 'qop="'. $qop .'"');
+  if ($method != 'AUTHENTICATE') {
+    $opaque = isset($edit['opaque']) ? $edit['opaque'] : base64_encode($nonce);
+    $values['opaque'] = $opaque;
+    $challenge[] = 'opaque="'. $opaque .'"';
+  }
   print _digest_md5_challenge(array('values' => $values, 'challenge' => $challenge, 'new' => TRUE)) ."\n";
   exit;
 }
@@ -117,15 +123,15 @@ else {
 /**
  * Prepare a challenge.
  * @param $edit
- * - values
- * - fields
- * - new
+ *   - values
+ *   - fields
+ *   - new
  * @return
- * Digest challenge string.
+ *   Digest challenge string.
  */
 function _digest_md5_challenge($edit) {
   if (isset($edit['values'])) {
-    $types = array('nonce' => "'%s'", 'opaque' => "'%s'", 'time' => '%d', 'realm' => "'%s'", 'qop' => "'%s'", 'hash' => "'%s'");
+    $types = array('qop' => "'%s'", 'nc' => '%d', 'opaque' => "'%s'", 'hash' => "'%s'", 'time' => '%d', 'nonce' => "'%s'", 'realm' => "'%s'");
     foreach ($types as $field => $type) {
       if (!isset($edit['values'][$field])) {
         unset($types[$field]);
@@ -139,10 +145,12 @@ function _digest_md5_challenge($edit) {
       db_query("INSERT INTO {securesite_nonce} (". implode(', ', array_keys($values)) .") VALUES (". implode(', ', $types) .")", $values);
     }
     else {
-      $nonce = $values['nonce'];
-      $realm = $values['realm'];
-      unset($types['nonce'], $values['nonce'], $types['realm'], $values['realm']);
-      db_query("UPDATE {securesite_nonce} SET ". implode(', ', $types) ." WHERE nonce = '%s' AND realm = '%s'", $values);
+      unset($types['nonce'], $types['realm']);
+      $fields = array();
+      foreach ($types as $field => $type) {
+        $fields[] = "$field = $type";
+      }
+      db_query("UPDATE {securesite_nonce} SET ". implode(', ', $fields) ." WHERE nonce = '%s' AND realm = '%s'", $values);
     }
   }
   if (isset($edit['challenge'])) {
@@ -153,15 +161,16 @@ function _digest_md5_challenge($edit) {
 /**
  * Process an authentication string.
  * @param $edit
- * - data*
- * - method*
- * - uri
- * - realm (defaults to machine name if not in data)
- * - entity-body
+ *   - data*
+ *   - method*
+ *   - uri
+ *   - realm (defaults to machine name if not in data)
+ *   - entity-body
  * @return
- * Authentication info string or new challenge if authentication failed.
+ *   Authentication info string or new challenge if authentication failed.
  */
 function _digest_md5_response($edit) {
+  global $time, $max_nc;
   // Get status.
   $fields = array();
   foreach (explode(',', trim($edit['data'])) as $part) {
@@ -178,13 +187,13 @@ function _digest_md5_response($edit) {
     }
     $required[] = 'nc';
   }
-  $uri = parse_url($edit['uri']);
+  $uri = isset($edit['uri']) ? parse_url($edit['uri']) : NULL;
   $field_uri = isset($fields['uri']) ? parse_url($fields['uri']) : NULL;
-  if (array_diff($required, array_keys($fields)) == array() && $uri['path'] == $field_uri['path']) {
+  if (array_diff($required, array_keys($fields)) == array() && (!isset($edit['uri']) || $uri['path'] == $field_uri['path'])) {
     // Required fields are present and URI matches.
-    $realm = isset($edit['realm']) ? $edit['realm'] : $fields['realm'];
-    $sn = db_fetch_array(db_query("SELECT qop, nc, opaque, hash FROM {securesite_nonce} WHERE nonce = '%s' AND realm = '%s'", $fields['nonce'], $realm));
-    $pass = db_result(db_query("SELECT pass FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $fields['username'], $realm));
+    $edit['realm'] = isset($edit['realm']) ? $edit['realm'] : $fields['realm'];
+    $sn = db_fetch_array(db_query("SELECT qop, nc, opaque, hash FROM {securesite_nonce} WHERE nonce = '%s' AND realm = '%s'", $fields['nonce'], $edit['realm']));
+    $pass = db_result(db_query("SELECT pass FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $fields['username'], $edit['realm']));
     if ($pass !== FALSE) {
       // Password exists for this user.
       $ha1 = md5("$fields[username]:$fields[realm]:$pass");
@@ -208,15 +217,9 @@ function _digest_md5_response($edit) {
       if ($digest == $fields['response']) {
         // Response is valid.
         if ($sn === FALSE) {
-          if (!isset($fields['qop']) && !isset($fields['nc'])) {
-            // Stale nonce; send new challenge with stale notice.
-            $status = STALE_NONCE;
-            $fields['nonce'] = uniqid();
-          }
-          else {
-            // Bad request; send new challenge.
-            $status = BAD_REQUEST;
-          }
+          // Stale nonce; send new challenge with stale notice.
+          $status = STALE_NONCE;
+          $fields['nonce'] = uniqid();
         }
         else {
           if (isset($fields['qop']) && in_array($fields['qop'], explode(',', $sn['qop'])) && $fields['opaque'] == $sn['opaque'] || !isset($fields['qop']) && !isset($fields['nc'])) {
@@ -229,7 +232,7 @@ function _digest_md5_response($edit) {
             elseif ($dec_nc > $max_nc) {
               // Stale nonce; send new challenge with stale notice.
               $status = STALE_NONCE;
-              db_query("DELETE FROM {securesite_nonce} WHERE nonce = '%s' AND realm = '%s'", $fields['nonce'], $realm);
+              db_query("DELETE FROM {securesite_nonce} WHERE nonce = '%s' AND realm = '%s'", $fields['nonce'], $edit['realm']);
               $fields['nonce'] = uniqid();
             }
             else {
@@ -306,8 +309,9 @@ function _digest_md5_response($edit) {
     case AUTHENTICATED:
       $response = array();
       if ($dec_nc < $max_nc) {
-        $values = array('nonce' => $fields['nonce'], 'nc' => $dec_nc, 'time' => $time, 'realm' => $edit['realm']);
+        $values = array('nonce' => $fields['nonce'], 'time' => $time, 'realm' => $edit['realm']);
         $values += isset($edit['entity-body']) ? array('hash' => md5($edit['entity-body'])) : array();
+        $values += isset($fields['qop']) ? array('nc' => $dec_nc) : array();
         _digest_md5_challenge(array('values' => $values, 'new' => FALSE));
       }
       else {

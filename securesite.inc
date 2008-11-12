@@ -13,11 +13,10 @@ function _securesite_boot($type) {
   global $user;
   switch ($type) {
     case SECURESITE_DIGEST:
-      $parts = explode(',', trim($_SERVER['PHP_AUTH_DIGEST']));
       $edit = array();
-      foreach ($parts as $part) {
-        if (!empty($part)) {
-          list($key, $value) = explode('=', trim($part), 2);
+      foreach (explode(',', trim($_SERVER['PHP_AUTH_DIGEST'])) as $field) {
+        if (!empty($field)) {
+          list($key, $value) = explode('=', trim($field), 2);
           $key = $key == 'username' ? 'name' : $key;
           $edit[$key] = trim($value, '"');
         }
@@ -118,10 +117,12 @@ function _securesite_digest_auth($edit) {
 /**
  * Get the result of digest validation.
  *
- * @param $status: Will be set to the return status of the validation script
- * @param $edit: An array of parameters to pass to the validation script
+ * @param $status
+ *   Will be set to the return status of the validation script
+ * @param $edit
+ *   An array of parameters to pass to the validation script
  * @return
- * An HTTP header string.
+ *   An HTTP header string.
  */
 function _securesite_digest_validate(&$status, $edit = NULL) {
   static $header;
@@ -276,12 +277,15 @@ function _securesite_forced() {
 
 /**
  * Display authentication dialog and send password reset mails.
+ *
+ * @param $type
+ *   The type of authentication dialog to display.
  */
 function _securesite_dialog($type) {
   global $base_path;
   // Has the password reset form been submitted?
   if (isset($_POST['form_id']) && $_POST['form_id'] == 'securesite_user_pass') {
-    $content = _securesite_page();
+    $content = _securesite_dialog_page();
   }
   // Are we on a password reset page?
   elseif (strpos($_GET['q'], 'user/reset/') === 0 || module_exists('i18n') && i18n_selection_mode() != 'off' && strpos($_GET['q'], i18n_selection_mode('params') .'/user/reset/') === 0) {
@@ -323,19 +327,15 @@ function _securesite_dialog($type) {
         else {
           drupal_set_header($header);
         }
-        $content = _securesite_page();
         break;
       case SECURESITE_BASIC:
         drupal_set_header('WWW-Authenticate: Basic realm="'. _securesite_fake_realm() .'"');
         drupal_set_header('HTTP/1.1 401 Unauthorized');
-        $content = _securesite_page();
         break;
-      case SECURESITE_FORM:
-        // Form authentication doesn't work for cron.
-        if (request_uri() != $base_path .'cron.php') {
-          $content = _securesite_page();
-        }
-        break;
+    }
+    // Form authentication doesn't work for cron.
+    if (request_uri() != $base_path .'cron.php') {
+      $content = _securesite_dialog_page();
     }
   }
   if (isset($content)) {
@@ -365,14 +365,14 @@ function _securesite_fake_realm() {
  * this. Opera will not load this after log-out unless the page has been
  * reloaded and the authentication dialog has been displayed twice.
  */
-function _securesite_page($message = NULL) {
+function _securesite_dialog_page() {
   $reset = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
   if (in_array(SECURESITE_FORM, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
     $output = drupal_get_form('securesite_user_login');
     $output .= empty($reset) ? '' : "<hr />\n". drupal_get_form('securesite_user_pass');
   }
   else {
-    if (!empty($reset) && _securesite_forced()) {
+    if (!empty($reset)) {
       $output = drupal_get_form('securesite_user_pass');
     }
     else {
