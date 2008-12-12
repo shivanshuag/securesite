@@ -29,7 +29,7 @@ $edit = array();
 array_shift($argv);
 foreach ($argv as $arg) {
   list($key, $value) = explode('=', $arg, 2);
-  $edit[$key] = $value;
+  $edit[$key] = trim($value, '"');
 }
 $uname = posix_uname();
 $edit['realm'] = isset($edit['realm']) ? $edit['realm'] : $uname['nodename'];

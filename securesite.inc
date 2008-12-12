@@ -13,14 +13,8 @@ function _securesite_boot($type) {
   global $user;
   switch ($type) {
     case SECURESITE_DIGEST:
-      $edit = array();
-      foreach (explode(',', trim($_SERVER['PHP_AUTH_DIGEST'])) as $field) {
-        if (!empty($field)) {
-          list($key, $value) = explode('=', trim($field), 2);
-          $key = $key == 'username' ? 'name' : $key;
-          $edit[$key] = trim($value, '"');
-        }
-      }
+      $edit = _securesite_parse_directives($_SERVER['PHP_AUTH_DIGEST']);
+      $edit['name'] = $edit['username'];
       $function = '_securesite_digest_auth';
       break;
     case SECURESITE_BASIC:
@@ -40,6 +34,18 @@ function _securesite_boot($type) {
   if ((!isset($user->name) || $edit['name'] !== $user->name) && (!isset($_SESSION['securesite_guest']) || $edit['name'] !== $_SESSION['securesite_guest'])) {
     $function($edit);
   }
+}
+
+/**
+ * Parse digest header into an array of directives.
+ */
+function _securesite_parse_directives($field_value) {
+  $directives = array();
+  foreach (explode(',', trim($field_value)) as $directive) {
+    list($directive, $value) = explode('=', trim($directive), 2);
+    $directives[$directive] = trim($value, '"');
+  }
+  return $directives;
 }
 
 /**
@@ -189,35 +195,7 @@ function _securesite_user_login($edit, $account) {
     }
   }
   else {
-    // Not an authorized user.
-    if (empty($_SESSION['securesite_denied'])) {
-      // Unset messages from previous log-in attempts.
-      unset($_SESSION['messages']);
-      // Set a session variable so that the log-in dialog will be displayed when the page is reloaded.
-      $_SESSION['securesite_denied'] = TRUE;
-      drupal_set_message(t('You have not been authorized to log in to secured pages.'), 'error');
-      drupal_add_css(drupal_get_path('module', 'securesite') .'/securesite.css');
-      print theme('securesite_page');
-      module_invoke_all('exit');
-      exit();
-    }
-    else {
-      unset($_SESSION['securesite_denied']);
-      // Safari will attempt to use old credentials before requesting new credentials
-      // from the user. Logging out requires that the WWW-Authenticate header be sent
-      // twice.
-      $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '');
-      if ($user_agent != str_replace('safari', '', $user_agent)) {
-        $_SESSION['securesite_repeat'] = TRUE;
-      }
-      $types = variable_get('securesite_type', array(SECURESITE_BASIC));
-      if (in_array(SECURESITE_DIGEST, $types)) {
-        // Reset the digest header.
-        $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
-        _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
-      }
-      _securesite_dialog(array_pop($types));
-    }
+    _securesite_denied(t('You have not been authorized to log in to secured pages.'));
   }
 }
 
@@ -240,12 +218,49 @@ function _securesite_guest_login($edit) {
   else {
     if (empty($edit['name'])) {
       watchdog('user', 'Log-in attempt failed for <em>anonymous</em> user.');
+      _securesite_denied(t('Anonymous users are not allowed to log in to secured pages.'));
     }
     else {
       watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
+      drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
+      _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
     }
-    drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
-    _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
+  }
+}
+
+/**
+ * Deny access to users who are not authorized to access secured pages.
+ */
+function _securesite_denied($message) {
+  if (empty($_SESSION['securesite_denied'])) {
+    // Unset messages from previous log-in attempts.
+    unset($_SESSION['messages']);
+    // Set a session variable so that the log-in dialog will be displayed when the page is reloaded.
+    $_SESSION['securesite_denied'] = TRUE;
+    drupal_set_header('HTTP/1.1 403 Forbidden');
+    drupal_set_title(t('Access denied'));
+    drupal_set_message($message, 'error');
+    drupal_add_css(drupal_get_path('module', 'securesite') .'/securesite.css');
+    print theme('securesite_page');
+    module_invoke_all('exit');
+    exit();
+  }
+  else {
+    unset($_SESSION['securesite_denied']);
+    // Safari will attempt to use old credentials before requesting new credentials
+    // from the user. Logging out requires that the WWW-Authenticate header be sent
+    // twice.
+    $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '');
+    if ($user_agent != str_replace('safari', '', $user_agent)) {
+      $_SESSION['securesite_repeat'] = TRUE;
+    }
+    $types = variable_get('securesite_type', array(SECURESITE_BASIC));
+    if (in_array(SECURESITE_DIGEST, $types)) {
+      // Reset the digest header.
+      $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
+      _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
+    }
+    _securesite_dialog(array_pop($types));
   }
 }
 
@@ -255,7 +270,7 @@ function _securesite_guest_login($edit) {
 function _securesite_forced() {
   global $base_path;
   // Do we require credentials to display this page?
-  if (php_sapi_name() == 'cli') {
+  if (php_sapi_name() == 'cli' || $_GET['q'] == 'admin/reports/request-test') {
     return FALSE;
   }
   else {
@@ -331,6 +346,9 @@ function _securesite_dialog($type) {
       case SECURESITE_BASIC:
         drupal_set_header('WWW-Authenticate: Basic realm="'. _securesite_fake_realm() .'"');
         drupal_set_header('HTTP/1.1 401 Unauthorized');
+        break;
+      case SECURESITE_FORM:
+        drupal_set_header('HTTP/1.1 200 OK');
         break;
     }
     // Form authentication doesn't work for cron.

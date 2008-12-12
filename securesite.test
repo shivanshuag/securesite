@@ -1,0 +1,375 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Tests for Secure Site module.
+ */
+
+/**
+ * Functional test for Secure Site forced authentication.
+ */
+class SecureSiteForceFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Forced authentication functionality.'),
+      'description' => t('Test Secure Site forced authentication.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+  }
+
+  /**
+   * Test page request with forced authentication disabled.
+   */
+  function testSecureSiteForceNever() {
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Testing page request with forced authentication disabled.'));
+  }
+
+  /**
+   * Test page request with forced authentication enabled.
+   */
+  function testSecureSiteForceAlways() {
+    $this->drupalLogin($this->drupalCreateUser());
+    variable_set('securesite_enabled', SECURESITE_ALWAYS);
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Testing forced authentication with logged-in user.'));
+    $this->drupalHead('logout');
+    $this->assertResponse(401, t('Testing log-out page with forced authentication.'));
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Testing forced authentication with logged out user.'));
+  }
+
+  /**
+   * Test page request with forced authentication enabled when offline.
+   */
+  function testSecureSiteForceOffline() {
+    variable_set('securesite_enabled', SECURESITE_OFFLINE);
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Testing online page request with forced authentication enabled when offline.'));
+    variable_set('site_offline', TRUE);
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Testing offline page request with forced authentication enabled when offline.'));
+  }
+
+  /**
+   * Test page request with forced authentication enabled on restricted pages.
+   */
+  function testSecureSiteForce403() {
+    variable_set('securesite_enabled', SECURESITE_403);
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Requesting public page with forced authentication enabled on restricted pages.'));
+    $this->drupalHead('admin');
+    $this->assertResponse(401, t('Requesting restricted page with forced authentication enabled on restricted pages.'));
+  }
+
+  /**
+   * Implementation of tearDown().
+   */
+  function tearDown() {
+    variable_del('securesite_enabled');
+    variable_del('site_offline');
+    parent::tearDown();
+  }
+}
+
+/**
+ * Functional test for Secure Site boot with basic authentication.
+ */
+class SecureSiteBootBasicFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Basic authentication functionality'),
+      'description' => t('Test Secure Site HTTP basic authentication.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    variable_set('securesite_enabled', SECURESITE_ALWAYS);
+  }
+
+  /**
+   * Test page request without credentials.
+   */
+  function testSecureSiteBootBasicEmpty() {
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Requesting page without credentials.'));
+    $found_scheme = FALSE;
+    if (stripos($this->drupalGetHeader('WWW-Authenticate'), 'Basic') === 0) {
+      $found_scheme = TRUE;
+    }
+    $this->assertTrue($found_scheme, t('Checking for basic authentication scheme.'));
+  }
+
+  /**
+   * Test page request with wrong password.
+   */
+  function testSecureSiteBootBasicWrong() {
+    $user = $this->drupalCreateUser(array('access secured pages'));
+    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass";
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Trying wrong password.'));
+  }
+
+  /**
+   * Test page request with correct password but no access.
+   */
+  function testSecureSiteBootBasicNoAccess() {
+    $user = $this->drupalCreateUser();
+    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
+    $this->drupalGet(NULL);
+    $this->assertResponse(403, t('Trying correct password for unauthorized user.'));
+    $this->assertText('You have not been authorized to log in to secured pages.', t('Checking for access denied message when password is correct for unauthorized user.'));
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Checking for authentication challenge to clear credentials.'));
+  }
+
+  /**
+   * Test page request with correct password and access.
+   */
+  function testSecureSiteBootBasicAccess() {
+    // Should work with all authentication methods enabled.
+    variable_set('securesite_type', array(SECURESITE_DIGEST, SECURESITE_BASIC, SECURESITE_FORM));
+    // Should work without forced authentication.
+    variable_del('securesite_enabled');
+    $user = $this->drupalCreateUser(array('access secured pages'));
+    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
+    $this->drupalGet(NULL);
+    $this->assertResponse(200, t('Trying correct password for authorized user.'));
+    $this->assertText($user->name, t('Checking for user name when password is correct for authorized user.'));
+    $this->assertText('My account', t('Checking for account link when password is correct for authorized user.'));
+    $this->assertText('Log out', t('Checking for log-out link when password is correct for authorized user.'));
+  }
+
+  /**
+   * Implementation of tearDown().
+   */
+  function tearDown() {
+    variable_del('securesite_enabled');
+    $this->curl_options = array();
+    parent::tearDown();
+  }
+}
+
+/**
+ * Functional test for Secure Site boot with form authentication.
+ */
+class SecureSiteBootFormFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Form authentication functionality'),
+      'description' => t('Test Secure Site HTML form authentication.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    variable_set('securesite_enabled', SECURESITE_ALWAYS);
+    variable_set('securesite_type', array(SECURESITE_FORM));
+  }
+
+  /**
+   * Test page request without credentials.
+   */
+  function testSecureSiteBootFormEmpty() {
+    $this->drupalGet(NULL);
+    $this->assertFieldByXPath('//form[@id="securesite-user-login"]', '', t('Checking for log-in form when page is requested without credentials.'));
+  }
+
+  /**
+   * Test page request with wrong password.
+   */
+  function testSecureSiteBootFormWrong() {
+    $user = $this->drupalCreateUser(array('access secured pages'));
+    $this->drupalPost(NULL, array('name' => $user->name, 'pass' => $user->pass), 'Log in');
+    $this->assertText('Unrecognized user name and/or password.', t('Checking for error message when password is wrong.'));
+    $this->assertFieldByXPath('//form[@id="securesite-user-login"]', '', t('Checking for log-in form when password is wrong.'));
+  }
+
+  /**
+   * Test page request with correct password.
+   */
+  function testSecureSiteBootFormCorrect() {
+    // Should work with all authentication methods enabled.
+    variable_set('securesite_type', array(SECURESITE_DIGEST, SECURESITE_BASIC, SECURESITE_FORM));
+    // Should work without forced authentication.
+    variable_del('securesite_enabled');
+    $user = $this->drupalCreateUser(array('access secured pages'));
+    $this->drupalPost(NULL, array('name' => $user->name, 'pass' => $user->pass_raw), 'Log in');
+    $this->assertText($this->user->name, t('Checking for user name when password is correct.'));
+    $this->assertText('My account', t('Checking for account link when password is correct.'));
+    $this->assertText('Log out', t('Checking for log-out link when password is correct.'));
+  }
+
+  /**
+   * Implementation of tearDown().
+   */
+  function tearDown() {
+    variable_del('securesite_enabled');
+    variable_del('securesite_type');
+    parent::tearDown();
+  }
+}
+
+/**
+ * Functional test for Secure Site boot with digest authentication.
+ */
+class SecureSiteBootDigestFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Digest authentication functionality'),
+      'description' => t('Test Secure Site HTTP digest authentication. Digest scripts should be working on the live site before this test is run.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    _securesite_copy_script_config($this);
+    variable_set('securesite_enabled', SECURESITE_ALWAYS);
+  }
+
+  /**
+   * Test page request without credentials.
+   */
+  function testSecureSiteBootDigestEmpty() {
+    variable_set('securesite_type', array(SECURESITE_DIGEST));
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Requesting page without credentials.'));
+    $challenge = array();
+    list($scheme, $value) = explode(' ', $this->drupalGetHeader('WWW-Authenticate'), 2);
+    if ($scheme == 'Digest') {
+      $challenge = _securesite_parse_directives($value);
+    }
+    $this->assertTrue(isset($challenge['realm']) && isset($challenge['nonce']), t('Checking for digest authentication scheme.'));
+  }
+
+  /**
+   * Test page request with unstored password and basic fallback.
+   */
+  function testSecureSiteBootDigestUnstoredBasic() {
+    $user = $this->drupalCreateUser(array('access secured pages'));
+    variable_set('securesite_type', array(SECURESITE_DIGEST, SECURESITE_BASIC));
+    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST | CURLAUTH_BASIC;
+    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Trying unstored password with basic fallback.'));
+    $found_scheme = FALSE;
+    if (stripos($this->drupalGetHeader('WWW-Authenticate', TRUE), 'Basic') === 0) {
+      $found_scheme = TRUE;
+    }
+    $this->assertTrue($found_scheme, t('Checking for basic authentication fall-back.'));
+  }
+
+  /**
+   * Test page request with unstored password and form fallback.
+   */
+  function testSecureSiteBootDigestUnstoredForm() {
+    $user = $this->drupalCreateUser(array('access secured pages'));
+    variable_set('securesite_type', array(SECURESITE_DIGEST, SECURESITE_FORM));
+    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST;
+    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
+    $this->drupalGet(NULL);
+    $this->assertResponse(200, t('Trying unstored password with form fallback.'));
+    $this->assertFieldByXPath('//form[@id="securesite-user-login"]', '', t('Checking for form authentication fall-back.'), 'Other');
+  }
+
+  /**
+   * Test page request with wrong password.
+   */
+  function testSecureSiteBootDigestWrong() {
+    variable_set('securesite_type', array(SECURESITE_DIGEST));
+    $user = $this->drupalCreateUser(array('access secured pages'));
+    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST;
+    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass";
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Trying wrong password.'));
+    $challenge = array();
+    list($scheme, $value) = explode(' ', $this->drupalGetHeader('WWW-Authenticate'), 2);
+    if ($scheme == 'Digest') {
+      $challenge = _securesite_parse_directives($value);
+    }
+    $this->assertTrue(isset($challenge['realm']) && isset($challenge['nonce']), t('Checking for challenge to wrong password.'));
+  }
+
+  /**
+   * Test page request with correct password.
+   */
+  function testSecureSiteBootDigestCorrect() {
+    // Should work with all authentication methods enabled.
+    variable_set('securesite_type', array(SECURESITE_DIGEST, SECURESITE_BASIC, SECURESITE_FORM));
+    $user = $this->drupalCreateUser(array('access secured pages'));
+    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST;
+    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Trying correct password.'));
+    $directives = _securesite_parse_directives($this->drupalGetHeader('Authentication-Info'));
+    $this->assertTrue(isset($directives['rspauth']), t('Checking authentication info for correct password.'));
+  }
+
+  /**
+   * Implementation of tearDown().
+   */
+  function tearDown() {
+    variable_del('securesite_digest_script');
+    variable_del('securesite_password_script');
+    variable_del('securesite_enabled');
+    variable_del('securesite_type');
+    $this->curl_options = array();
+    parent::tearDown();
+  }
+}
+
+/**
+ * Copy script configuration from live site to test site.
+ *
+ * @param $object
+ *   Object to which scripts should be copied.
+ */
+function _securesite_copy_script_config($object) {
+  global $conf, $db_prefix;
+  $conf = array();
+  $_db_prefix = $db_prefix;
+  @include './'. conf_path() .'/settings.php';
+  $conf = variable_init($conf);
+  $object->digest_md5 = variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') .'/digest_md5/digest_md5.php');
+  $object->stored_passwords = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php');
+  $conf = array();
+  @include './'. conf_path() .'/settings.php';
+  $db_prefix = $_db_prefix;
+  $conf = variable_init($conf);
+  variable_set('securesite_digest_script', $object->digest_md5);
+  variable_set('securesite_password_script', $object->stored_passwords);
+}
+

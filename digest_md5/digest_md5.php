@@ -70,7 +70,7 @@ $edit = array();
 array_shift($argv);
 foreach ($argv as $arg) {
   list($key, $value) = explode('=', $arg, 2);
-  $edit[$key] = $value;
+  $edit[$key] = trim($value, '"');
 }
 $edit['method'] = isset($edit['method']) ? $edit['method'] : 'AUTHENTICATE';
 
