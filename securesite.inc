@@ -15,6 +15,7 @@ function _securesite_boot($type) {
     case SECURESITE_DIGEST:
       $edit = _securesite_parse_directives($_SERVER['PHP_AUTH_DIGEST']);
       $edit['name'] = $edit['username'];
+      $edit['pass'] = NULL;
       $function = '_securesite_digest_auth';
       break;
     case SECURESITE_BASIC:
@@ -184,11 +185,15 @@ function _securesite_user_login($edit, $account) {
   if (user_access('access secured pages', $account)) {
     global $user;
     $user = $account;
+    // Unset the session variable set by securesite_denied().
+    unset($_SESSION['securesite_denied']);
     // Unset messages from previous log-in attempts.
     unset($_SESSION['messages']);
     user_authenticate_finalize($edit);
-    unset($_SESSION['securesite_guest']); // Clear the guest session.
-    $_SESSION['securesite_login'] = TRUE; // Mark the session so Secure Site will be triggered on log-out.
+    // Clear the guest session.
+    unset($_SESSION['securesite_guest']);
+    // Mark the session so Secure Site will be triggered on log-out.
+    $_SESSION['securesite_login'] = TRUE;
     // Prevent a log-in/log-out loop by redirecting off the log-out page.
     if ($_GET['q'] == 'logout') {
       drupal_goto();
@@ -207,6 +212,8 @@ function _securesite_guest_login($edit) {
   $guest_pass = variable_get('securesite_guest_pass', '');
   // Check anonymous user permission and credentials.
   if (user_access('access secured pages') && (empty($guest_name) || $edit['name'] == $guest_name) && (empty($guest_pass) || $edit['pass'] == $guest_pass)) {
+    // Unset the session variable set by securesite_denied().
+    unset($_SESSION['securesite_denied']);
     // Mark this session to prevent re-login (note: guests can't log out).
     $_SESSION['securesite_guest'] = $edit['name'];
     $_SESSION['securesite_login'] = TRUE;

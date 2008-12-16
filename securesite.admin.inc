@@ -270,7 +270,7 @@ function securesite_admin_settings_submit($form, &$form_state) {
   ) {
     // Delete guest user password.
     $args = array(
-      escapeshellarg("name=$securesite_guest_name"),
+      escapeshellarg("username=$securesite_guest_name"),
       escapeshellarg("realm=$realm"),
       escapeshellarg('op=delete'),
     );
@@ -279,9 +279,10 @@ function securesite_admin_settings_submit($form, &$form_state) {
   elseif (in_array(SECURESITE_DIGEST, $values['securesite_type'])) {
     // If digest authentication is enabled, update guest user password.
     $args = array(
-      escapeshellarg("name=$values[securesite_guest_name]"),
+      escapeshellarg("username=$values[securesite_guest_name]"),
       escapeshellarg("realm=$realm"),
       escapeshellarg("pass=$values[securesite_guest_pass]"),
+      escapeshellarg('op=create'),
     );
     exec($script .' '. implode(' ', $args));
   }

@@ -202,7 +202,7 @@ function securesite_user($op, &$edit, &$user) {
       if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
         $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php');
         $values = array(
-          escapeshellarg("username=$edit[name]"),
+          escapeshellarg("username=$user->name"),
           escapeshellarg('realm='. variable_get('securesite_realm', variable_get('site_name', 'Drupal'))),
           escapeshellarg('op=delete'),
         );
