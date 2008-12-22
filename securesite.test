@@ -4,19 +4,121 @@
 /**
  * @file
  * Tests for Secure Site module.
+ *
+ * 1 Unit tests
+ *   1.1 Scripts
+ *       1.1.1 stored_passwords.php
+ *             1.1.1.1 Try adding new user.
+ *             1.1.1.2 Try updating existing user.
+ *             1.1.1.3 Try removing existing user.
+ *             1.1.1.4 Try removing nonexistent user.
+ *             1.1.1.5 Try updating nonexistent user.
+ *       1.1.2 digest_md5.php
+ *             1.1.2.1 Try stored password without quality of protection.
+ *             1.1.2.2 Auth quality of protection
+ *                     1.1.2.2.1 Try stored password.
+ *                     1.1.2.2.2 Try replay attack.
+ *                     1.1.2.2.3 Try expired challenge.
+ *                     1.1.2.2.4 Try wrong password.
+ *                     1.1.2.2.5 Try unstored password.
+ *   1.2 Functions
+ *       1.2.1 user_register_validate(): Try registering user with guest name.
+ *       1.2.2 user_save()
+ *             1.2.2.1 Try storing digest password for new user.
+ *             1.2.2.2 Try changing user name.
+ *       1.2.3 user_load(): Try storing digest password for existing user.
+ *       1.2.4 user_delete(): Try removing digest password.
+ *       1.2.5 drupal_get_form('system_error_reporting_settings'): Try with 403 protection enabled.
+ *       1.2.6 _securesite_forced(): Try with 403 protection disabled.
+ *       1.2.7 _securesite_digest_validate()
+ *       1.2.8 _securesite_fake_realm(): Try with msie or opera.
+ *       1.2.9 _securesite_dialog_page()
+ *             1.2.9.1 Try with log-in and password reset disabled.
+ *             1.2.9.2 Try with log-in enabled and password reset disabled.
+ *             1.2.9.3 Try with log-in disabled and password reset enabled.
+ *             1.2.9.4 Try with log-in and password reset enabled.
+ * 2 Functional tests
+ *   2.1 Name conflict prevention
+ *       2.1.1 Try setting user name to guest name.
+ *       2.1.2 Try setting guest name to user name.
+ *   2.2 Forced authentication
+ *       2.2.1 Request home page without forced authentication.
+ *       2.2.2 Always
+ *             2.2.2.1 Request home page.
+ *             2.2.2.2 Request home page with logged in user.
+ *             2.2.2.3 Request home page with logged in guest.
+ *             2.2.2.4 Try valid reset page URL.
+ *             2.2.2.5 Try invalid reset page URL.
+ *             2.2.2.6 Try submitting password reset form.
+ *       2.2.3 Offline
+ *             2.2.3.1 Request on-line home page.
+ *             2.2.3.2 Request off-line home page.
+ *       2.2.4 403
+ *             2.2.4.1 Logged out
+ *                     2.2.4.1.1 Request home page.
+ *                     2.2.4.1.2 Request admin page.
+ *             2.2.4.2 Non-admin user: Request admin page.
+ *   2.3 Basic authentication
+ *       2.3.1 Request home page without credentials.
+ *       2.3.2 Registered user
+ *             2.3.2.1 Request home page with wrong password.
+ *             2.3.2.2 Request home page with correct password and access disabled.
+ *             2.3.2.3 Request home page with correct password and access enabled.
+ *             2.3.2.4 Try log-out.
+ *             2.3.2.5 Request home page with credentials for new user.
+ *       2.3.3 Guest user
+ *             2.3.3.1 Password not set
+ *                     2.3.3.1.1 Request home page with empty credentials and access disabled.
+ *                     2.3.3.1.2 Request home page with empty credentials and access enabled.
+ *                     2.3.3.1.3 Request home page with random credentials and access disabled.
+ *                     2.3.3.1.4 Request home page with random credentials and access enabled.
+ *                     2.3.3.1.5 Request home page with credentials for new user.
+ *             2.3.3.2 Password set and access enabled
+ *                     2.3.3.2.1 Request home page with empty credentials.
+ *                     2.3.3.2.2 Request home page with random credentials.
+ *                     2.3.3.2.3 Request home page with guest credentials.
+ *   2.4 Form authentication for registered user with access enabled
+ *       2.4.1 Request home page without password.
+ *       2.4.2 Registered user
+ *             2.4.2.1 Request home page with wrong password.
+ *             2.4.2.2 Request home page with correct password and access disabled.
+ *             2.4.2.3 Request home page with correct password and access enabled.
+ *       2.4.3 Guest user
+ *             2.4.3.1 Request home page with empty credentials and access disabled.
+ *             2.4.3.2 Request home page with random credentials and access disabled.
+ *             2.4.3.3 Request home page with random credentials and access enabled.
+ *   2.5 Digest authentication
+ *       2.5.1 Request home page without credentials.
+ *       2.5.2 Registered user with access enabled
+ *             2.5.2.1 Unstored password
+ *                     2.5.2.1.1 Request home page with basic fall-back.
+ *                     2.5.2.1.2 Request home page with form fall-back.
+ *                     2.5.2.1.3 Try storing password with fall-back authentication method.
+ *             2.5.2.2 Stored password
+ *                     2.5.2.2.1 Request home page with wrong password.
+ *                     2.5.2.2.2 Request home page with correct password.
+ *                     2.5.2.2.3 Try log-out.
+ *       2.5.3 Guest user with access enabled
+ *             2.5.3.1 Password not set
+ *                     2.5.3.1.1 Request home page with empty credentials.
+ *                     2.5.3.1.2 Request home page with random credentials.
+ *             2.5.3.2 Password set
+ *                     2.5.3.2.1 Request home page with empty credentials.
+ *                     2.5.3.2.2 Request home page with random credentials.
+ *                     2.5.3.2.3 Request home page with correct credentials.
  */
 
 /**
- * Functional test for Secure Site forced authentication.
+ * Functional tests for conflicts between guest name and user names.
  */
-class SecureSiteForceFunctionalTest extends DrupalWebTestCase {
+class SecureSiteNameConflictFunctionalTest extends DrupalWebTestCase {
   /**
    * Implementation of getInfo().
    */
   function getInfo() {
     return array(
-      'name' => t('Forced authentication functionality'),
-      'description' => t('Test Secure Site forced authentication.'),
+      'name' => t('Name conflict prevention'),
+      'description' => t('Test prevention of conflicts between guest name and user names.'),
       'group' => t('Secure Site'),
     );
   }
@@ -26,74 +128,44 @@ class SecureSiteForceFunctionalTest extends DrupalWebTestCase {
    */
   function setUp() {
     parent::setUp('securesite');
+    $perm = db_result(db_query_range("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID, 0, 1));
+    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $perm .', access secured pages', DRUPAL_ANONYMOUS_RID);
+    $this->guest = $this->randomName();
+    variable_set('securesite_guest_name', $this->guest);
+    $this->user = $this->drupalCreateUser(array('administer site configuration', 'change own username'));
+    $this->drupalLogin($this->user);
   }
 
   /**
-   * Test page request with forced authentication disabled.
+   * Try setting user name to guest name.
    */
-  function testSecureSiteForceNever() {
-    $this->drupalHead(NULL);
-    $this->assertResponse(200, t('Testing page request with forced authentication disabled.'));
+  function testSecureSiteNameConflictUser() {
+    $this->drupalPost('user/'. $this->user->uid .'/edit', array('name' => $this->guest), 'Save');
+    $this->assertText("The name $this->guest is being used as the ". variable_get('site_name', 'Drupal') ." guest name.", t('Trying to set user name to guest name.'));
+    $this->assertTrue(db_result(db_query_range("SELECT uid FROM {users} WHERE name = '%s'", $this->guest, 0, 1)) === FALSE, t('Checking for user with guest name.'));
   }
 
   /**
-   * Test page request with forced authentication enabled.
+   * Try setting guest name to user name.
    */
-  function testSecureSiteForceAlways() {
-    $this->drupalLogin($this->drupalCreateUser());
-    variable_set('securesite_enabled', SECURESITE_ALWAYS);
-    $this->drupalHead(NULL);
-    $this->assertResponse(200, t('Testing forced authentication with logged-in user.'));
-    $this->drupalHead('logout');
-    $this->assertResponse(401, t('Testing log-out page with forced authentication.'));
-    $this->drupalHead(NULL);
-    $this->assertResponse(401, t('Testing forced authentication with logged out user.'));
-  }
-
-  /**
-   * Test page request with forced authentication enabled when offline.
-   */
-  function testSecureSiteForceOffline() {
-    variable_set('securesite_enabled', SECURESITE_OFFLINE);
-    $this->drupalHead(NULL);
-    $this->assertResponse(200, t('Testing online page request with forced authentication enabled when offline.'));
-    variable_set('site_offline', TRUE);
-    $this->drupalHead(NULL);
-    $this->assertResponse(401, t('Testing offline page request with forced authentication enabled when offline.'));
-  }
-
-  /**
-   * Test page request with forced authentication enabled on restricted pages.
-   */
-  function testSecureSiteForce403() {
-    variable_set('securesite_enabled', SECURESITE_403);
-    $this->drupalHead(NULL);
-    $this->assertResponse(200, t('Requesting public page with forced authentication enabled on restricted pages.'));
-    $this->drupalHead('admin');
-    $this->assertResponse(401, t('Requesting restricted page with forced authentication enabled on restricted pages.'));
-  }
-
-  /**
-   * Implementation of tearDown().
-   */
-  function tearDown() {
-    variable_del('securesite_enabled');
-    variable_del('site_offline');
-    parent::tearDown();
+  function testSecureSiteNameConflictGuest() {
+    $this->drupalPost('admin/settings/securesite', array('securesite_guest_name' => $this->user->name), 'Save configuration');
+    $this->assertText('The name '. $this->user->name .' belongs to a registered user.', t('Trying to set guest name to user name.'));
+    $this->assertNotEqual(variable_get('securesite_guest_name', ''), $this->user->name, t('Checking for guest with user name.'));
   }
 }
 
 /**
- * Functional test for Secure Site boot with basic authentication.
+ * Functional test for page request without forced authentication.
  */
-class SecureSiteBootBasicFunctionalTest extends DrupalWebTestCase {
+class SecureSiteForceDisabledFunctionalTest extends DrupalWebTestCase {
   /**
    * Implementation of getInfo().
    */
   function getInfo() {
     return array(
-      'name' => t('Basic authentication functionality'),
-      'description' => t('Test Secure Site HTTP basic authentication.'),
+      'name' => t('Forced authentication: Disabled'),
+      'description' => t('Test page request without forced authentication.'),
       'group' => t('Secure Site'),
     );
   }
@@ -103,83 +175,217 @@ class SecureSiteBootBasicFunctionalTest extends DrupalWebTestCase {
    */
   function setUp() {
     parent::setUp('securesite');
+  }
+
+  /**
+   * Request home page without forced authentication.
+   */
+  function testSecureSiteForceDisabled() {
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Requesting home page.'));
+  }
+}
+
+/**
+ * Functional tests for page requests with authentication always forced.
+ */
+class SecureSiteForceAlwaysFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Forced authentication: Always'),
+      'description' => t('Test page requests with authentication always forced.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    $this->user = $this->drupalCreateUser();
+    $perm = db_result(db_query_range("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID, 0, 1));
+    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $perm .', access secured pages', DRUPAL_ANONYMOUS_RID);
     variable_set('securesite_enabled', SECURESITE_ALWAYS);
   }
 
   /**
-   * Test page request without credentials.
+   * Request home page.
    */
-  function testSecureSiteBootBasicEmpty() {
+  function testSecureSiteForceAlwaysNobody() {
     $this->drupalHead(NULL);
-    $this->assertResponse(401, t('Requesting page without credentials.'));
-    $found_scheme = FALSE;
-    if (stripos($this->drupalGetHeader('WWW-Authenticate'), 'Basic') === 0) {
-      $found_scheme = TRUE;
-    }
-    $this->assertTrue($found_scheme, t('Checking for basic authentication scheme.'));
+    $this->assertResponse(401, t('Requesting home page.'));
   }
 
   /**
-   * Test page request with wrong password.
+   * Request home page for logged in user.
    */
-  function testSecureSiteBootBasicWrong() {
-    $user = $this->drupalCreateUser(array('access secured pages'));
-    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass";
-    $this->drupalHead(NULL);
-    $this->assertResponse(401, t('Trying wrong password.'));
-  }
-
-  /**
-   * Test page request with correct password but no access.
-   */
-  function testSecureSiteBootBasicNoAccess() {
-    $user = $this->drupalCreateUser();
-    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
-    $this->drupalGet(NULL);
-    $this->assertResponse(403, t('Trying correct password for unauthorized user.'));
-    $this->assertText('You have not been authorized to log in to secured pages.', t('Checking for access denied message when password is correct for unauthorized user.'));
-    $this->drupalHead(NULL);
-    $this->assertResponse(401, t('Checking for authentication challenge to clear credentials.'));
-  }
-
-  /**
-   * Test page request with correct password and access.
-   */
-  function testSecureSiteBootBasicAccess() {
-    $user = $this->drupalCreateUser(array('access secured pages'));
-    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
-    // Should work with all authentication methods enabled.
-    variable_set('securesite_type', array(SECURESITE_DIGEST, SECURESITE_BASIC, SECURESITE_FORM));
-    // Should work without forced authentication.
+  function testSecureSiteForceAlwaysUser() {
     variable_del('securesite_enabled');
-    $this->drupalGet(NULL);
-    $this->assertResponse(200, t('Trying correct password for authorized user.'));
-    $this->assertText($user->name, t('Checking for user name when password is correct for authorized user.'));
-    $this->assertText('My account', t('Checking for account link when password is correct for authorized user.'));
-    $this->assertText('Log out', t('Checking for log-out link when password is correct for authorized user.'));
+    $this->drupalLogin($this->user);
+    variable_set('securesite_enabled', SECURESITE_ALWAYS);
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Requesting home page for logged-in user.'));
+  }
+
+  /**
+   * Request home page for logged in guest.
+   */
+  function testSecureSiteForceAlwaysGuest() {
+    $this->curl_options[CURLOPT_USERPWD] = ':';
+    $this->drupalHead(NULL);
+    unset($this->curl_options[CURLOPT_USERPWD]);
+    $this->curlClose();
+    $this->curl_options[CURLOPT_COOKIE] = $this->drupalGetHeader('Set-Cookie');
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Requesting home page for logged-in guest.'));
+  }
+
+  /**
+   * Try valid password reset URL.
+   */
+  function testSecureSiteForceAlwaysResetValid() {
+    sleep(1); // Password reset URL must be created at least one second after last log-in.
+    $reset = user_pass_reset_url(user_load(array('uid' => $this->user->uid)));
+    sleep(1); // Password reset URL must be used at least one second after it is created.
+    $this->drupalGet($reset);
+    $this->assertResponse(200, t('Trying valid password reset URL.'));
+    $this->assertText('This is a one-time login for '. $this->user->name .' and will expire on', t('Checking for one-time log-in link at valid password reset URL.'));
+  }
+
+  /**
+   * Try invalid password reset URL.
+   */
+  function testSecureSiteForceAlwaysResetInvalid() {
+    $this->drupalGet('user/reset/'. $this->user->uid);
+    $this->assertResponse(200, t('Trying invalid password reset URL.'));
+    $this->assertText('You have tried to use an invalid one-time log-in link.', t('Checking for error message at invalid password reset URL.'));
+  }
+
+  /**
+   * Try submitting password reset form.
+   */
+  function testSecureSiteForceAlwaysResetSubmit() {
+    $this->drupalPost(NULL, array('name' => $this->user->name), 'E-mail new password');
+    $this->assertResponse(200, t('Trying to submit password reset form.'));
+    $this->assertText('Further instructions have been sent to your e-mail address.', t('Checking for password reset message after submitting password reset form.'));
   }
 
   /**
    * Implementation of tearDown().
    */
   function tearDown() {
-    variable_del('securesite_enabled');
     $this->curl_options = array();
     parent::tearDown();
   }
 }
 
 /**
- * Functional test for Secure Site boot with form authentication.
+ * Functional tests for page requests with authentication forced when site is
+ * off line.
  */
-class SecureSiteBootFormFunctionalTest extends DrupalWebTestCase {
+class SecureSiteForceOfflineFunctionalTest extends DrupalWebTestCase {
   /**
    * Implementation of getInfo().
    */
   function getInfo() {
     return array(
-      'name' => t('Form authentication functionality'),
-      'description' => t('Test Secure Site HTML form authentication.'),
+      'name' => t('Forced authentication: Site off line'),
+      'description' => t('Test page requests with authentication forced when site is off line.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    variable_set('securesite_enabled', SECURESITE_OFFLINE);
+  }
+
+  /**
+   * Request on-line home page.
+   */
+  function testSecureSiteForceOfflineNormal() {
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Requesting on-line home page.'));
+  }
+
+  /**
+   * Request off-line home page.
+   */
+  function testSecureSiteForceOfflineMaintenance() {
+    variable_set('site_offline', TRUE);
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Requesting off-line home page.'));
+  }
+}
+
+/**
+ * Functional tests for page requests with authentication forced on restricted
+ * pages.
+ */
+class SecureSiteForce403FunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Forced authentication: Restricted pages'),
+      'description' => t('Test page requests with authentication forced on restricted pages.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    variable_set('securesite_enabled', SECURESITE_403);
+  }
+
+  /**
+   * Request home page.
+   */
+  function testSecureSiteForce403Normal() {
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Requesting home page.'));
+  }
+
+  /**
+   * Request admin page.
+   */
+  function testSecureSiteForce403Restricted() {
+    $this->drupalHead('admin');
+    $this->assertResponse(401, t('Requesting admin page.'));
+  }
+
+  /**
+   * Request admin page for non-admin user.
+   */
+  function testSecureSiteForce403User() {
+    $this->drupalLogin($this->drupalCreateUser());
+    $this->drupalHead('admin');
+    $this->assertResponse(403, t('Requesting admin page for non-admin user.'));
+  }
+}
+
+/**
+ * Functional test for basic authentication without credentials.
+ */
+class SecureSiteTypeBasicNoneFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Basic authentication: No credentials'),
+      'description' => t('Test HTTP basic authentication without credentials.'),
       'group' => t('Secure Site'),
     );
   }
@@ -190,63 +396,416 @@ class SecureSiteBootFormFunctionalTest extends DrupalWebTestCase {
   function setUp() {
     parent::setUp('securesite');
     variable_set('securesite_enabled', SECURESITE_ALWAYS);
-    variable_set('securesite_type', array(SECURESITE_FORM));
   }
 
   /**
-   * Test page request without credentials.
+   * Request home page without credentials.
    */
-  function testSecureSiteBootFormEmpty() {
-    $this->drupalGet(NULL);
-    $this->assertFieldByXPath('//form[@id="securesite-user-login"]', '', t('Checking for log-in form when page is requested without credentials.'));
+  function testSecureSiteTypeBasicNone() {
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Requesting home page.'));
+    $found_scheme = FALSE;
+    if (stripos($this->drupalGetHeader('WWW-Authenticate'), 'Basic') === 0) {
+      $found_scheme = TRUE;
+    }
+    $this->assertTrue($found_scheme, t('Checking for basic authentication scheme.'));
+  }
+}
+
+/**
+ * Functional tests for basic authentication with user credentials.
+ */
+class SecureSiteTypeBasicUserFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Basic authentication: User credentials'),
+      'description' => t('Test HTTP basic authentication with user credentials.'),
+      'group' => t('Secure Site'),
+    );
   }
 
   /**
-   * Test page request with wrong password.
+   * Implementation of setUp().
    */
-  function testSecureSiteBootFormWrong() {
-    $user = $this->drupalCreateUser(array('access secured pages'));
-    $this->drupalPost(NULL, array('name' => $user->name, 'pass' => $user->pass), 'Log in');
-    $this->assertText('Unrecognized user name and/or password.', t('Checking for error message when password is wrong.'));
-    $this->assertFieldByXPath('//form[@id="securesite-user-login"]', '', t('Checking for log-in form when password is wrong.'));
-  }
-
-  /**
-   * Test page request with correct password.
-   */
-  function testSecureSiteBootFormCorrect() {
-    $user = $this->drupalCreateUser(array('access secured pages'));
+  function setUp() {
+    parent::setUp('securesite');
+    $perm = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID));
+    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $perm .', access secured pages', DRUPAL_ANONYMOUS_RID);
+    $this->normal_user = $this->drupalCreateUser();
+    $this->access_user = $this->drupalCreateUser(array('access secured pages'));
     // Should work with all authentication methods enabled.
-    variable_set('securesite_type', array(SECURESITE_DIGEST, SECURESITE_BASIC, SECURESITE_FORM));
-    // Should work without forced authentication.
-    variable_del('securesite_enabled');
-    $this->drupalPost(NULL, array('name' => $user->name, 'pass' => $user->pass_raw), 'Log in');
-    $this->assertText($user->name, t('Checking for user name when password is correct.'));
-    $this->assertText('My account', t('Checking for account link when password is correct.'));
-    $this->assertText('Log out', t('Checking for log-out link when password is correct.'));
+    variable_set('securesite_type', array(SECURESITE_FORM, SECURESITE_BASIC, SECURESITE_DIGEST));
+  }
+
+  /**
+   * Request home page with wrong password.
+   */
+  function testSecureSiteTypeBasicUserWrong() {
+    $this->curl_options[CURLOPT_USERPWD] = $this->access_user->name .':'. $this->access_user->pass;
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Requesting home page with wrong password.'));
+  }
+
+  /**
+   * Request home page with correct password and access disabled.
+   */
+  function testSecureSiteTypeBasicUserNoAccess() {
+    $this->curl_options[CURLOPT_USERPWD] = $this->normal_user->name .':'. $this->normal_user->pass_raw;
+    $this->drupalGet(NULL);
+    $this->assertResponse(403, t('Requesting home page with correct password and access disabled.'));
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Trying to clear credentials by repeating request.'));
+  }
+
+  /**
+   * Request home page with correct password and access enabled.
+   */
+  function testSecureSiteTypeBasicUserAccess() {
+    $this->curl_options[CURLOPT_USERPWD] = $this->access_user->name .':'. $this->access_user->pass_raw;
+    $this->drupalGet(NULL);
+    $this->assertResponse(200, t('Requesting home page with correct password and access enabled.'));
+    $this->assertText($this->access_user->name, t('Checking for user name when password is correct and access is enabled.'));
+    $this->assertText('My account', t('Checking for account link when password is correct and access is enabled.'));
+    $this->assertText('Log out', t('Checking for log-out link when password is correct and access is enabled.'));
+    $this->drupalHead('logout');
+    $this->assertResponse(401, t('Requesting log-out page.'));
+  }
+
+  /**
+   * Request home page with credentials for new user.
+   */
+  function testSecureSiteTypeBasicUserChange() {
+    $this->drupalLogin($this->drupalCreateUser());
+    $this->curl_options[CURLOPT_USERPWD] = $this->access_user->name .':'. $this->access_user->pass_raw;
+    $this->drupalGet(NULL);
+    $this->assertResponse(200, t('Requesting home page with credentials for new user.'));
+    $this->assertText($this->access_user->name, t('Checking for new user name on page.'));
   }
 
   /**
    * Implementation of tearDown().
    */
   function tearDown() {
-    variable_del('securesite_enabled');
-    variable_del('securesite_type');
+    $this->curl_options = array();
     parent::tearDown();
   }
 }
 
 /**
- * Functional test for Secure Site boot with digest authentication.
+ * Functional tests for basic authentication with guest credentials unset.
  */
-class SecureSiteBootDigestFunctionalTest extends DrupalWebTestCase {
+class SecureSiteTypeBasicGuestUnsetFunctionalTest extends DrupalWebTestCase {
   /**
    * Implementation of getInfo().
    */
   function getInfo() {
     return array(
-      'name' => t('Digest authentication functionality'),
-      'description' => t('Test Secure Site HTTP digest authentication. Digest scripts should be working on the live site before this test is run.'),
+      'name' => t('Basic authentication: Guest credentials unset'),
+      'description' => t('Test HTTP basic authentication with guest credentials unset.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    $this->perm = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID));
+    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $this->perm .', access secured pages', DRUPAL_ANONYMOUS_RID);
+    // Should work with all authentication methods enabled.
+    variable_set('securesite_type', array(SECURESITE_FORM, SECURESITE_BASIC, SECURESITE_DIGEST));
+    $this->curl_options[CURLOPT_USERPWD] = ':';
+  }
+
+  /**
+   * Request home page with empty credentials and access disabled.
+   */
+  function testSecureSiteTypeBasicGuestUnsetEmptyNoAccess() {
+    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $this->perm, DRUPAL_ANONYMOUS_RID);
+    $this->drupalGet(NULL);
+    $this->assertResponse(403, t('Requesting home page with empty credentials and guest access disabled.'));
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Trying to clear credentials by repeating request.'));
+  }
+
+  /**
+   * Request home page with empty credentials and access enabled.
+   */
+  function testSecureSiteTypeBasicGuestUnsetEmptyAccess() {
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Requesting home page with empty credentials and guest access enabled.'));
+  }
+
+  /**
+   * Request home page with random credentials and access disabled.
+   */
+  function testSecureSiteTypeBasicGuestUnsetRandomNoAccess() {
+    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $this->perm, DRUPAL_ANONYMOUS_RID);
+    $this->curl_options[CURLOPT_USERPWD] = $this->randomName() .':'. user_password();
+    $this->drupalGet(NULL);
+    $this->assertResponse(401, t('Requesting home page with random credentials and guest access disabled.'));
+  }
+
+  /**
+   * Request home page with random credentials and access enabled.
+   */
+  function testSecureSiteTypeBasicGuestUnsetRandomAccess() {
+    $this->curl_options[CURLOPT_USERPWD] = $this->randomName() .':'. user_password();
+    $this->drupalGet(NULL);
+    $this->assertResponse(200, t('Requesting home page with random credentials and guest access enabled.'));
+  }
+
+  /**
+   * Request home page with credentials for new user.
+   */
+  function testSecureSiteTypeBasicGuestUnsetChange() {
+    $user = $this->drupalCreateUser();
+    $this->drupalHead(NULL);
+    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
+    $this->drupalHead(NULL);
+    $this->assertResponse(403, t('Requesting home page with new user credentials.'));
+  }
+
+  /**
+   * Implementation of tearDown().
+   */
+  function tearDown() {
+    $this->curl_options = array();
+    parent::tearDown();
+  }
+}
+
+/**
+ * Functional tests for basic authentication with guest credentials set.
+ */
+class SecureSiteTypeBasicGuestSetFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Basic authentication: Guest credentials set'),
+      'description' => t('Test HTTP basic authentication with guest credentials set.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    $perm = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID));
+    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $perm .', access secured pages', DRUPAL_ANONYMOUS_RID);
+    $this->name = $this->randomName();
+    $this->pass = user_password();
+    variable_set('securesite_guest_name', $this->name);
+    variable_set('securesite_guest_pass', $this->pass);
+    // Should work with all authentication methods enabled.
+    variable_set('securesite_type', array(SECURESITE_FORM, SECURESITE_BASIC, SECURESITE_DIGEST));
+  }
+
+  /**
+   * Request home page with empty credentials.
+   */
+  function testSecureSiteTypeBasicGuestSetEmpty() {
+    $this->curl_options[CURLOPT_USERPWD] = ':';
+    $this->drupalHead(NULL);
+    $this->assertResponse(403, t('Requesting home page with empty credentials.'));
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Trying to clear credentials by repeating request.'));
+  }
+
+  /**
+   * Request home page with random credentials.
+   */
+  function testSecureSiteTypeBasicGuestSetWrong() {
+    $this->curl_options[CURLOPT_USERPWD] = $this->randomName() .':'. user_password();     
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Requesting home page with random credentials.'));
+  }
+
+  /**
+   * Request home page with guest credentials.
+   */
+  function testSecureSiteTypeBasicGuestSetCorrect() {
+    $this->curl_options[CURLOPT_USERPWD] = $this->name .':'. $this->pass;
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Requesting home page with guest credentials.'));
+  }
+
+  /**
+   * Implementation of tearDown().
+   */
+  function tearDown() {
+    $this->curl_options = array();
+    parent::tearDown();
+  }
+}
+
+/**
+ * Functional test for form authentication without credentials.
+ */
+class SecureSiteTypeFormNoneFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Form authentication: No credentials'),
+      'description' => t('Test HTML form authentication without credentials.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    variable_set('securesite_enabled', SECURESITE_ALWAYS);
+    // Should work with all authentication methods enabled.
+    variable_set('securesite_type', array(SECURESITE_FORM, SECURESITE_BASIC, SECURESITE_DIGEST));
+  }
+
+  /**
+   * Request home page without credentials.
+   */
+  function testSecureSiteTypeFormNone() {
+    $this->drupalGet(NULL);
+    $this->assertFieldByXPath('//form[@id="securesite-user-login"]', '', t('Requesting home page without credentials.'));
+  }
+}
+
+/**
+ * Functional tests for form authentication with user credentials.
+ */
+class SecureSiteTypeFormUserFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Form authentication: User credentials'),
+      'description' => t('Test HTML form authentication with user credentials.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    $perm = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID));
+    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $perm .', access secured pages', DRUPAL_ANONYMOUS_RID);
+    $this->normal_user = $this->drupalCreateUser();
+    $this->access_user = $this->drupalCreateUser(array('access secured pages'));
+    variable_set('securesite_enabled', SECURESITE_ALWAYS);
+    // Should work with all authentication methods enabled.
+    variable_set('securesite_type', array(SECURESITE_FORM, SECURESITE_BASIC, SECURESITE_DIGEST));
+  }
+
+  /**
+   * Request home page with wrong password.
+   */
+  function testSecureSiteTypeFormUserWrong() {
+    $this->drupalPost('', array('name' => $this->access_user->name, 'pass' => $this->access_user->pass), 'Log in');
+    $this->assertFieldByXPath('//form[@id="securesite-user-login"]', '', t('Requesting home page with wrong password.'));
+    $this->assertText('Unrecognized user name and/or password.', t('Checking for error message when password is wrong.'));
+  }
+
+  /**
+   * Request home page with correct password and access disabled.
+   */
+  function testSecureSiteTypeFormUserNoAccess() {
+    $this->drupalPost('', array('name' => $this->normal_user->name, 'pass' => $this->normal_user->pass_raw), 'Log in');
+    $this->assertNoFieldByXPath('//form[@id="securesite-user-login"]', '', t('Requesting home page with correct password and access disabled.'));
+    $this->assertText('You have not been authorized to log in to secured pages.', t('Checking for access denied message when password is correct and access is disabled.'));
+  }
+
+  /**
+   * Request home page with correct password and access enabled.
+   */
+  function testSecureSiteTypeFormUserAccess() {
+    $this->drupalPost('', array('name' => $this->access_user->name, 'pass' => $this->access_user->pass_raw), 'Log in');
+    $this->assertNoFieldByXPath('//form[@id="securesite-user-login"]', '', t('Requesting home page with correct password and access enabled.'));
+    $this->assertText($this->access_user->name, t('Checking for user name when password is correct and access is enabled.'));
+    $this->assertText('My account', t('Checking for account link when password is correct and access is enabled.'));
+    $this->assertText('Log out', t('Checking for log-out link when password is correct and access is enabled.'));
+  }
+}
+
+/**
+ * Functional tests for form authentication with guest credentials.
+ */
+class SecureSiteTypeFormGuestFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Form authentication: Guest credentials'),
+      'description' => t('Test HTML form authentication with guest credentials.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    variable_set('securesite_enabled', SECURESITE_ALWAYS);
+    // Should work with all authentication methods enabled.
+    variable_set('securesite_type', array(SECURESITE_FORM, SECURESITE_BASIC, SECURESITE_DIGEST));
+  }
+
+  /**
+   * Request home page with empty credentials and access disabled.
+   */
+  function testSecureSiteTypeFormGuestUnsetEmptyNoAccess() {
+    $this->drupalPost('', array('name' => '', 'pass' => ''), 'Log in');
+    $this->assertNoFieldByXPath('//form[@id="securesite-user-login"]', '', t('Requesting home page with empty credentials and guest access disabled.'));
+    $this->assertText('Anonymous users are not allowed to log in to secured pages.', t('Checking for access denied message when guest access is disabled and credentials are empty.'));
+  }
+
+  /**
+   * Request home page with random credentials and access disabled.
+   */
+  function testSecureSiteTypeFormGuestUnsetRandomNoAccess() {
+    $this->drupalPost('', array('name' => $this->randomName(), 'pass' => user_password()), 'Log in');
+    $this->assertFieldByXPath('//form[@id="securesite-user-login"]', '', t('Requesting home page with random credentials and guest access disabled.'));
+    $this->assertText('Unrecognized user name and/or password.', t('Checking for error message when guest access is disabled and random password is given.'));
+  }
+
+  /**
+   * Request home page with random credentials and access enabled.
+   */
+  function testSecureSiteTypeFormGuestUnsetRandomAccess() {
+    $perm = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID));
+    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $perm .', access secured pages', DRUPAL_ANONYMOUS_RID);
+    $this->drupalPost('', array('name' => $this->randomName(), 'pass' => user_password()), 'Log in');
+    $this->assertNoFieldByXPath('//form[@id="securesite-user-login"]', '', t('Requesting home page with random credentials and guest access enabled.'));
+    $this->assertFieldByXPath('//form[@id="user-login-form"]', '', t('Checking for user log-in form when guest access is enabled and random password is given.'));
+  }
+}
+
+/**
+ * Functional test for digest authentication without credentials.
+ */
+class SecureSiteTypeDigestNoneFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Digest authentication: No credentials'),
+      'description' => t('Test HTTP digest authentication without credentials.'),
       'group' => t('Secure Site'),
     );
   }
@@ -258,15 +817,16 @@ class SecureSiteBootDigestFunctionalTest extends DrupalWebTestCase {
     parent::setUp('securesite');
     _securesite_copy_script_config($this);
     variable_set('securesite_enabled', SECURESITE_ALWAYS);
+    // Should work with all authentication methods enabled.
+    variable_set('securesite_type', array(SECURESITE_FORM, SECURESITE_BASIC, SECURESITE_DIGEST));
   }
 
   /**
-   * Test page request without credentials.
+   * Request home page without credentials.
    */
-  function testSecureSiteBootDigestEmpty() {
-    variable_set('securesite_type', array(SECURESITE_DIGEST));
+  function testSecureSiteTypeDigestNone() {
     $this->drupalHead(NULL);
-    $this->assertResponse(401, t('Requesting page without credentials.'));
+    $this->assertResponse(401, t('Requesting home page without credentials.'));
     $challenge = array();
     list($scheme, $value) = explode(' ', $this->drupalGetHeader('WWW-Authenticate'), 2);
     if ($scheme == 'Digest') {
@@ -274,261 +834,265 @@ class SecureSiteBootDigestFunctionalTest extends DrupalWebTestCase {
     }
     $this->assertTrue(isset($challenge['realm']) && isset($challenge['nonce']), t('Checking for digest authentication scheme.'));
   }
+}
+
+/**
+ * Functional tests for digest authentication with user credentials.
+ */
+class SecureSiteTypeDigestUserUnstoredFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Digest authentication: User credentials unstored'),
+      'description' => t('Test HTTP digest authentication with unstored user credentials.'),
+      'group' => t('Secure Site'),
+    );
+  }
 
   /**
-   * Test page request with unstored password and basic fallback.
+   * Implementation of setUp().
    */
-  function testSecureSiteBootDigestUnstoredBasic() {
-    $user = $this->drupalCreateUser(array('access secured pages'));
-    variable_set('securesite_type', array(SECURESITE_DIGEST, SECURESITE_BASIC));
-    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST | CURLAUTH_BASIC;
-    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
+  function setUp() {
+    parent::setUp('securesite');
+    _securesite_copy_script_config($this);
+    $this->user = $this->drupalCreateUser(array('access secured pages'));
+    variable_set('securesite_enabled', SECURESITE_ALWAYS);
+    // Should work with all authentication methods enabled.
+    variable_set('securesite_type', array(SECURESITE_FORM, SECURESITE_BASIC, SECURESITE_DIGEST));
+    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST;
+    $this->curl_options[CURLOPT_USERPWD] = $this->user->name .':'. $this->user->pass_raw;
+  }
+
+  /**
+   * Request home page with basic fall-back.
+   */
+  function testSecureSiteTypeDigestUserUnstoredBasic() {
     $this->drupalHead(NULL);
-    $this->assertResponse(200, t('Trying unstored password with basic fallback.'));
+    $this->assertResponse(401, t('Requesting home page with basic fall-back.'));
     $found_scheme = FALSE;
-    if (stripos($this->drupalGetHeader('WWW-Authenticate', TRUE), 'Basic') === 0) {
+    if (stripos($this->drupalGetHeader('WWW-Authenticate'), 'Basic') === 0) {
       $found_scheme = TRUE;
     }
     $this->assertTrue($found_scheme, t('Checking for basic authentication fall-back.'));
-    user_delete(array(), $user->uid);
   }
 
   /**
-   * Test page request with unstored password and form fallback.
+   * Request home page with form fall-back.
    */
-  function testSecureSiteBootDigestUnstoredForm() {
-    $user = $this->drupalCreateUser(array('access secured pages'));
-    variable_set('securesite_type', array(SECURESITE_DIGEST, SECURESITE_FORM));
-    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST;
-    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
+  function testSecureSiteTypeDigestUserUnstoredForm() {
+    variable_set('securesite_type', array(SECURESITE_FORM, SECURESITE_DIGEST));
     $this->drupalGet(NULL);
-    $this->assertResponse(200, t('Trying unstored password with form fallback.'));
-    $this->assertFieldByXPath('//form[@id="securesite-user-login"]', '', t('Checking for form authentication fall-back.'), 'Other');
+    $this->assertResponse(200, t('Requesting home page with form fall-back.'));
+    $this->assertFieldByXPath('//form[@id="securesite-user-login"]', '', t('Checking for authentication form fall-back.'), 'Other');
   }
 
   /**
-   * Test page request with wrong password.
+   * Try storing password with fall-back authentication method.
    */
-  function testSecureSiteBootDigestWrong() {
-    variable_set('securesite_type', array(SECURESITE_DIGEST));
-    $user = $this->drupalCreateUser(array('access secured pages'));
-    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST;
-    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass";
+  function testSecureSiteTypeDigestUserUnstoredStore() {
+    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST | CURLAUTH_BASIC;
     $this->drupalHead(NULL);
-    $this->assertResponse(401, t('Trying wrong password.'));
-    $challenge = array();
-    list($scheme, $value) = explode(' ', $this->drupalGetHeader('WWW-Authenticate'), 2);
-    if ($scheme == 'Digest') {
-      $challenge = _securesite_parse_directives($value);
-    }
-    $this->assertTrue(isset($challenge['realm']) && isset($challenge['nonce']), t('Checking for challenge to wrong password.'));
-    user_delete(array(), $user->uid);
-  }
-
-  /**
-   * Test page request with correct password.
-   */
-  function testSecureSiteBootDigestCorrect() {
-    // Should work with all authentication methods enabled.
-    variable_set('securesite_type', array(SECURESITE_DIGEST, SECURESITE_BASIC, SECURESITE_FORM));
-    $user = $this->drupalCreateUser(array('access secured pages'));
-    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST;
-    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
-    $this->drupalHead(NULL);
-    $this->assertResponse(200, t('Trying correct password.'));
-    $directives = _securesite_parse_directives($this->drupalGetHeader('Authentication-Info'));
-    $this->assertTrue(isset($directives['rspauth']), t('Checking authentication info for correct password.'));
-    user_delete(array(), $user->uid);
-  }
-
-  /**
-   * Implementation of tearDown().
-   */
-  function tearDown() {
-    variable_del('securesite_digest_script');
-    variable_del('securesite_password_script');
-    variable_del('securesite_enabled');
-    variable_del('securesite_type');
-    $this->curl_options = array();
-    parent::tearDown();
-  }
-}
-
-/**
- * Functional test for Secure Site guest basic authentication.
- */
-class SecureSiteGuestBasicFunctionalTest extends DrupalWebTestCase {
-  /**
-   * Implementation of getInfo().
-   */
-  function getInfo() {
-    return array(
-      'name' => t('Guest basic authentication functionality'),
-      'description' => t('Test Secure Site guest basic authentication.'),
-      'group' => t('Secure Site'),
-    );
-  }
-
-  /**
-   * Implementation of setUp().
-   */
-  function setUp() {
-    parent::setUp('securesite');
-    variable_set('securesite_enabled', SECURESITE_ALWAYS);
-    variable_set('securesite_type', array(SECURESITE_BASIC));
-  }
-
-  /**
-   * Test guest log-in with guest name and password not set.
-   */
-  function testSecureSiteGuestBasicEmpty() {
-    $perm = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID));
-    $name = $this->randomName();
-    $pass = user_password();
-    // Try no password without access.
-    $this->curl_options[CURLOPT_USERPWD] = ':';
-    $this->drupalGet(NULL);
-    $this->assertResponse(403, t('Trying no password with guest access disabled.'));
-    $this->assertText('Anonymous users are not allowed to log in to secured pages.', t('Checking for access denied message when guest access is disabled and no password is given.'));
-    $this->drupalHead(NULL);
-    $this->assertResponse(401, t('Repeating no password with guest access disabled.'));
-    // Try no password with access.
-    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $perm .', access secured pages', DRUPAL_ANONYMOUS_RID);
-    $this->curl_options[CURLOPT_USERPWD] = ':';
-    $this->drupalHead(NULL);
-    $this->assertResponse(200, t('Trying no password with guest access enabled.'));
-    // Try random password without access.
-    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $perm, DRUPAL_ANONYMOUS_RID);
-    $this->curl_options[CURLOPT_USERPWD] = "$name:$pass";
-    $this->drupalGet(NULL);
-    $this->assertResponse(401, t('Trying random password with guest access disabled.'));
-    $this->assertText('Unrecognized user name and/or password.', t('Checking for error message when guest access is disabled and random password is given.'));
-    // Try random password with access.
-    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $perm .', access secured pages', DRUPAL_ANONYMOUS_RID);
-    $this->curl_options[CURLOPT_USERPWD] = "$name:$pass";
-    $this->drupalHead(NULL);
-    $this->assertResponse(200, t('Trying random password with guest access enabled.'));
-    // Try registered user.
-    $user = $this->drupalCreateUser();
-    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
-    $this->drupalHead(NULL);
-    $this->assertResponse(403, t('Trying to log in registered user.'));
-  }
-
-  /**
-   * Test guest log-in with guest name and password set.
-   */
-  function testSecureSiteGuestBasicFull() {
-    $perm = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID));
-    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $perm .', access secured pages', DRUPAL_ANONYMOUS_RID);
-    $name = $this->randomName();
-    $pass = user_password();
-    variable_set('securesite_guest_name', $name);
-    variable_set('securesite_guest_pass', $pass);
-    // Try no password.
-    $this->curl_options[CURLOPT_USERPWD] = ':';
-    $this->drupalHead(NULL);
-    $this->assertResponse(403, t('Trying no password'));
-    $this->drupalHead(NULL);
-    $this->assertResponse(401, t('Repeating no password'));
-    // Try wrong password.
-    $this->curl_options[CURLOPT_USERPWD] = "$name:";
-    $this->drupalHead(NULL);
-    $this->assertResponse(401, t('Trying wrong password'));
-    // Try correct password.
-    $this->curl_options[CURLOPT_USERPWD] = "$name:$pass";
-    $this->drupalHead(NULL);
-    $this->assertResponse(200, t('Trying correct password'));
-  }
-
-  /**
-   * Implementation of tearDown().
-   */
-  function tearDown() {
-    variable_del('securesite_enabled');
-    variable_del('securesite_type');
-    variable_del('securesite_guest_name');
-    variable_del('securesite_guest_pass');
-    parent::tearDown();
-  }
-}
-
-/**
- * Functional test for Secure Site guest digest authentication.
- */
-class SecureSiteGuestDigestFunctionalTest extends DrupalWebTestCase {
-  /**
-   * Implementation of getInfo().
-   */
-  function getInfo() {
-    return array(
-      'name' => t('Guest digest authentication functionality'),
-      'description' => t('Test Secure Site guest digest authentication.'),
-      'group' => t('Secure Site'),
-    );
-  }
-
-  /**
-   * Implementation of setUp().
-   */
-  function setUp() {
-    parent::setUp('securesite');
-    _securesite_copy_script_config($this);
-    variable_set('securesite_enabled', SECURESITE_ALWAYS);
-    variable_set('securesite_type', array(SECURESITE_DIGEST));
-  }
-
-  function testSecureSiteGuestDigest() {
-    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST;
-    $user = $this->drupalCreateUser(array('administer site configuration', 'access secured pages'));
-    $perm = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID));
-    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $perm .', access secured pages', DRUPAL_ANONYMOUS_RID);
-    // Try empty password.
-    $this->curl_options[CURLOPT_USERPWD] = ':';
-    $this->drupalHead(NULL);
-    $this->assertResponse(200, t('Trying no password.'));
-    $this->assertFalse($this->drupalGetHeader('Authentication-Info'), t('Checking digest authentication bypass when guest name and password are not set.'));
-    // Try unstored password.
-    $name = $this->randomName();
-    $pass = user_password();
-    variable_set('securesite_guest_name', $name);
-    variable_set('securesite_guest_pass', $pass);
-    $this->curl_options[CURLOPT_USERPWD] = "$name:$pass";
-    $this->drupalHead(NULL);
-    $this->assertResponse(401, t('Trying unstored password.'));
-    // Prevent previous authentication header from being re-used when name and
-    // password are repeated.
     $this->curlClose();
-    // Store guest password.
-    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
-    $this->drupalPost('admin/settings/securesite', array('securesite_guest_name' => $name, 'securesite_guest_pass' => $pass, 'securesite_type['. SECURESITE_DIGEST .']' => TRUE), 'Save configuration');
-    $this->drupalHead('logout');
-    // Try wrong password.
-    $this->curl_options[CURLOPT_USERPWD] = "$name:";
     $this->drupalHead(NULL);
-    $this->assertResponse(401, t('Trying wrong password.'));
-    // Try stored password.
-    $this->curl_options[CURLOPT_USERPWD] = "$name:$pass";
-    $this->drupalHead(NULL);
-    $this->assertResponse(200, t('Trying stored password.'));
+    $this->assertResponse(200, t('Trying to store password with fall-back authentication method.'));
     $directives = _securesite_parse_directives($this->drupalGetHeader('Authentication-Info'));
-    $this->assertTrue(isset($directives['rspauth']), t('Checking authentication info for correct password.'));
-    // Delete guest password.
-    $this->curl_options[CURLOPT_USERPWD] = "$user->name:$user->pass_raw";
-    $this->drupalPost('admin/settings/securesite', array(), 'Reset to defaults');
-    variable_set('securesite_type', array(SECURESITE_DIGEST));
-    _securesite_copy_script_config($this);
-    user_delete(array(), $user->uid);
+    $this->assertTrue(isset($directives['rspauth']), t('Checking stored password authentication info.'));
   }
 
   /**
    * Implementation of tearDown().
    */
   function tearDown() {
-    variable_del('securesite_digest_script');
-    variable_del('securesite_password_script');
-    variable_del('securesite_enabled');
-    variable_del('securesite_type');
+    user_delete(array(), $this->user->uid);
+    parent::tearDown();
+  }
+}
+
+/**
+ * Functional tests for digest authentication with user credentials.
+ */
+class SecureSiteTypeDigestUserStoredFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Digest authentication: User credentials stored'),
+      'description' => t('Test HTTP digest authentication with stored user credentials.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    _securesite_copy_script_config($this);
+    variable_set('securesite_enabled', SECURESITE_ALWAYS);
+    // Should work with all authentication methods enabled.
+    variable_set('securesite_type', array(SECURESITE_FORM, SECURESITE_BASIC, SECURESITE_DIGEST));
+    $this->user = $this->drupalCreateUser(array('access secured pages'));
+    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST;
+  }
+
+  /**
+   * Request home page with wrong password.
+   */
+  function testSecureSiteTypeDigestUserStoredWrong() {
+    $this->curl_options[CURLOPT_USERPWD] = $this->user->name .':'. $this->user->pass;
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Requesting home page with wrong password.'));
+  }
+
+  /**
+   * Request home page with correct password.
+   */
+  function testSecureSiteTypeDigestUserStoredCorrect() {
+    $this->curl_options[CURLOPT_USERPWD] = $this->user->name .':'. $this->user->pass_raw;
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Requesting home page with correct password.'));
+    $directives = _securesite_parse_directives($this->drupalGetHeader('Authentication-Info'));
+    $this->assertTrue(isset($directives['rspauth']), t('Checking correct password authentication info.'));
+    $this->drupalHead('logout');
+    $this->assertResponse(401, t('Requesting log-out page'));
+  }
+
+  /**
+   * Implementation of tearDown().
+   */
+  function tearDown() {
+    user_delete(array(), $this->user->uid);
+    parent::tearDown();
+  }
+}
+
+/**
+ * Functional tests for digest authentication with guest credentials unset.
+ */
+class SecureSiteTypeDigestGuestUnsetFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Digest authentication: Guest credentials unset'),
+      'description' => t('Test HTTP digest authentication with guest credentials unset.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    _securesite_copy_script_config($this);
+    $perm = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID));
+    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $perm .', access secured pages', DRUPAL_ANONYMOUS_RID);
+    variable_set('securesite_enabled', SECURESITE_ALWAYS);
+    // Should work with all authentication methods enabled.
+    variable_set('securesite_type', array(SECURESITE_FORM, SECURESITE_BASIC, SECURESITE_DIGEST));
+    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST;
+  }
+
+  /**
+   * Request home page with empty credentials.
+   */
+  function testSecureSiteTypeDigestGuestUnsetEmpty() {
+    $this->curl_options[CURLOPT_USERPWD] = ':';
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Requesting home page with empty credentials.'));
+    $this->assertFalse($this->drupalGetHeader('Authentication-Info'), t('Checking digest authentication bypass for empty guest credentials.'));
+  }
+
+  /**
+   * Request home page with random credentials.
+   */
+  function testSecureSiteTypeDigestGuestUnsetRandom() {
+    $this->curl_options[CURLOPT_USERPWD] = $this->randomName() .':'. user_password();
+    $this->drupalHead(NULL);
+    $this->assertResponse(200, t('Requesting home page with random credentials.'));
+    $this->assertFalse($this->drupalGetHeader('Authentication-Info'), t('Checking digest authentication bypass for random guest credentials.'));
+  }
+}
+
+/**
+ * Functional tests for digest authentication with guest credentials set.
+ */
+class SecureSiteTypeDigestGuestSetFunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Digest authentication: Guest credentials set'),
+      'description' => t('Test HTTP digest authentication with guest credentials set.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    _securesite_copy_script_config($this);
+    $perm = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID));
+    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $perm .', access secured pages', DRUPAL_ANONYMOUS_RID);
+    variable_set('securesite_enabled', SECURESITE_ALWAYS);
+    // Should work with all authentication methods enabled.
+    variable_set('securesite_type', array(SECURESITE_FORM, SECURESITE_BASIC, SECURESITE_DIGEST));
+    $this->curl_options[CURLOPT_HTTPAUTH] = CURLAUTH_DIGEST;
+    // Store guest credentials.
+    $this->user = $this->drupalCreateUser(array('administer site configuration', 'access secured pages'));
+    $this->curl_options[CURLOPT_USERPWD] = $this->user->name .':'. $this->user->pass_raw;
+    $this->guest_name = $this->randomName();
+    $this->guest_pass = user_password();
+    $this->drupalPost('admin/settings/securesite', array('securesite_guest_name' => $this->guest_name, 'securesite_guest_pass' => $this->guest_pass, 'securesite_type['. SECURESITE_DIGEST .']' => TRUE), 'Save configuration');
+    $this->curlClose();
+  }
+
+  /**
+   * Request home page with empty credentials.
+   */
+  function testSecureSiteDigestGuestSetEmpty() {
+    $this->curl_options[CURLOPT_USERPWD] = ':';
+    $this->drupalHead(NULL);
+    $this->assertResponse(403, t('Requesting home page with empty credentials.'));
+  }
+
+  /**
+   * Request home page with random credentials.
+   */
+  function testSecureSiteDigestGuestSetRandom() {
+    $this->curl_options[CURLOPT_USERPWD] = $this->randomName() .':'. user_password();
+    $this->drupalHead(NULL);
+    $this->assertResponse(401, t('Requesting home page with random credentials.'));
+  }
+
+  /**
+   * Request home page with guest credentials.
+   */
+  function testSecureSiteDigestGuestSetCorrect() {
+    $this->curl_options[CURLOPT_USERPWD] = $this->guest_name .':'. $this->guest_pass;
+    $this->drupalGet(NULL);
+    $this->assertResponse(200, t('Requesting home page with guest credentials.'));
+    $directives = _securesite_parse_directives($this->drupalGetHeader('Authentication-Info'));
+    $this->assertTrue(isset($directives['rspauth']), t('Checking guest credentials authentication info.'));
+  }
+
+  /**
+   * Implementation of tearDown().
+   */
+  function tearDown() {
+    $this->curl_options[CURLOPT_USERPWD] = $this->user->name .':'. $this->user->pass_raw;
+    $this->drupalPost('admin/settings/securesite', array(), 'Reset to defaults');
+    _securesite_copy_script_config($this);
+    variable_set('securesite_type', array(SECURESITE_DIGEST));
+    user_delete(array(), $this->user->uid);
     parent::tearDown();
   }
 }

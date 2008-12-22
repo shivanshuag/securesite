@@ -276,7 +276,7 @@ function securesite_admin_settings_submit($form, &$form_state) {
     );
     exec($script .' '. implode(' ', $args));
   }
-  elseif (in_array(SECURESITE_DIGEST, $values['securesite_type'])) {
+  if (in_array(SECURESITE_DIGEST, $values['securesite_type']) && (!isset($values['op']) || $values['op'] != t('Reset to defaults'))) {
     // If digest authentication is enabled, update guest user password.
     $args = array(
       escapeshellarg("username=$values[securesite_guest_name]"),

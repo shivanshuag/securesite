@@ -307,7 +307,9 @@ function _securesite_dialog($type) {
   global $base_path;
   // Has the password reset form been submitted?
   if (isset($_POST['form_id']) && $_POST['form_id'] == 'securesite_user_pass') {
-    $content = _securesite_dialog_page();
+    // Get form messages, but do not display form.
+    drupal_get_form('securesite_user_pass');
+    $content = '';
   }
   // Are we on a password reset page?
   elseif (strpos($_GET['q'], 'user/reset/') === 0 || module_exists('i18n') && i18n_selection_mode() != 'off' && strpos($_GET['q'], i18n_selection_mode('params') .'/user/reset/') === 0) {
@@ -386,7 +388,7 @@ function _securesite_fake_realm() {
 }
 
 /**
- * Display fallback HTML for HTTP authentication dialogs. Safari will not load
+ * Display fall-back HTML for HTTP authentication dialogs. Safari will not load
  * this. Opera will not load this after log-out unless the page has been
  * reloaded and the authentication dialog has been displayed twice.
  */
@@ -414,7 +416,7 @@ function _securesite_dialog_page() {
  * @ingroup forms
  * @see user_login()
  */
-function securesite_user_login() {
+function securesite_user_login(&$form_state) {
   $form['name'] = array(
     '#type' => 'textfield',
     '#title' => t('User name'),
@@ -430,6 +432,7 @@ function securesite_user_login() {
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Log in'),
+    '#weight' => 2,
   );
   if (module_exists('openid')) {
     global $base_path;
@@ -440,7 +443,7 @@ function securesite_user_login() {
              '</style>';
     drupal_set_html_head($style);
   }
-  drupal_alter('form', $form, NULL, 'user_login');
+  drupal_alter('form', $form, $form_state, 'user_login');
   return $form;
 }
 
@@ -455,12 +458,7 @@ function securesite_user_login() {
  */
 function template_preprocess_securesite_user_login(&$variables) {
   $variables['title'] = variable_get('securesite_login_form', t('Enter your user name and password.'));
-  $variables['messages'] = '';
-  // If the reset form exists and was submitted, status messages should be displayed there.
-  $reset = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
-  if (empty($reset) || !isset($_POST['form_id']) || isset($_POST['form_id']) && $_POST['form_id'] != 'securesite_user_pass') {
-    $variables['messages'] = theme('status_messages');
-  }
+  $variables['messages'] = theme('status_messages');
 }
 
 /**
@@ -470,10 +468,11 @@ function template_preprocess_securesite_user_login(&$variables) {
  * @see user_pass_validate
  * @see user_pass_submit
  */
-function securesite_user_pass() {
+function securesite_user_pass(&$form_state) {
   module_load_include('inc', 'user', 'user.pages');
   $form = user_pass();
-  drupal_alter('form', $form, NULL, 'user_pass');
+  $form['name']['#title'] = t('User name or e-mail address');
+  drupal_alter('form', $form, $form_state, 'user_pass');
   $form['#redirect'] = FALSE;
   $form['#validate'][] = 'user_pass_validate';
   $form['#submit'][] = 'user_pass_submit';
@@ -491,7 +490,6 @@ function securesite_user_pass() {
  */
 function template_preprocess_securesite_user_pass(&$variables) {
   $variables['title'] = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
-  $variables['messages'] = theme('status_messages');
   $variables['form']['name']['#required'] = FALSE;
 }
 
