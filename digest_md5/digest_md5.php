@@ -17,8 +17,7 @@
  *   uri=STRING          URI of requested resource. If this is given, the URI
  *                       value in the Authentication header must match it.
  *   realm=STRING        Realm. Defaults to hostname.
- *   fakerealm=STRING    Fake realm. Used to force browsers to clear
- *                       credentials.
+ *   fakerealm=STRING    Fake realm. Used to force browsers to re-authenticate.
  *   opaque=STRING       Opaque string. Defaults to base64 encoded nonce value.
  *   qop=STRING          Quality of protection. Defaults to auth.
  *   entity-body=STRING  Message body for encryption and integrity checking.
@@ -29,22 +28,20 @@
  */
 foreach (array('-h', '--help', '-help', '-?', '/?', '?') as $arg) {
   if (in_array($arg, $argv)) {
-    $output = 'Usage: digest_md5.php [OPTIONS]...'."\n";
-    $output .= "\n";
-    $output .= 'Options:'."\n";
-    $output .= '  data=STRING         The contents of the Authentication header. A challenge'."\n";
-    $output .= '                      will be issued if this is missing.'."\n";
-    $output .= '  method=STRING       HTTP connection method. Defaults to AUTHENTICATE.'."\n";
-    $output .= '  uri=STRING          URI of requested resource. If this is given, the URI'."\n";
-    $output .= '                      value in the Authentication header must match it.'."\n";
-    $output .= '  realm=STRING        Realm. Defaults to hostname.'."\n";
-    $output .= '  fakerealm=STRING    Fake realm. Used to force browsers to clear'."\n";
-    $output .= '                      credentials.'."\n";
-    $output .= '  opaque=STRING       Opaque string. Defaults to base64 encoded nonce value.'."\n";
-    $output .= '  qop=STRING          Quality of protection. Defaults to auth.'."\n";
-    $output .= '  entity-body=STRING  Message body for encryption and integrity checking.'."\n";
-    $output .= "\n";
-    exit($output);
+    exit('Usage: digest_md5.php [OPTIONS]...'."\n".
+         "\n".
+         'Options:'."\n".
+         '  data=STRING         The contents of the Authentication header. A challenge'."\n".
+         '                      will be issued if this is missing.'."\n".
+         '  method=STRING       HTTP connection method. Defaults to AUTHENTICATE.'."\n".
+         '  uri=STRING          URI of requested resource. If this is given, the URI'."\n".
+         '                      value in the Authentication header must match it.'."\n".
+         '  realm=STRING        Realm. Defaults to hostname.'."\n".
+         '  fakerealm=STRING    Fake realm. Used to force browsers to re-authenticate.'."\n".
+         '  opaque=STRING       Opaque string. Defaults to base64 encoded nonce value.'."\n".
+         '  qop=STRING          Quality of protection. Defaults to auth.'."\n".
+         '  entity-body=STRING  Message body for encryption and integrity checking.'."\n".
+         "\n");
   }
 }
 
@@ -292,11 +289,10 @@ function _digest_md5_response($edit) {
         $qop = isset($edit['entity-body']) ? 'auth,auth-int' : 'auth';
         $fields['qop'] = isset($fields['qop']) ? $fields['qop'] : $qop;
       }
-      $challenge = array('realm="'. $fields['realm'] .'"', 'nonce="'. $fields['nonce'] .'"', 'opaque="'. $fields['opaque'] .'"');
+      $challenge = array('realm="'. $fields['realm'] .'"', 'nonce="'. $fields['nonce'] .'"', 'qop="'. $fields['qop'] .'"', 'opaque="'. $fields['opaque'] .'"');
       if ($status == 'stale') {
         $challenge[] = 'stale=true';
       }
-      $challenge[] = 'qop="'. $fields['qop'] .'"';
       if (!isset($sn) || $sn === FALSE) {
         $values = array('nonce' => $fields['nonce'], 'opaque' => $fields['opaque'], 'time' => $time, 'realm' => $edit['realm'], 'qop' => $fields['qop']);
         $values += isset($edit['entity-body']) ? array('hash' => md5($edit['entity-body'])) : array();

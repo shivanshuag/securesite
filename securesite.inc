@@ -131,25 +131,20 @@ function _securesite_digest_auth($edit) {
  * @return
  *   An HTTP header string.
  */
-function _securesite_digest_validate(&$status, $edit = NULL) {
+function _securesite_digest_validate(&$status, $edit = array()) {
   static $header;
-  if (isset($edit)) {
-    if (is_array($edit)) {
-      $values = array();
-      foreach ($edit as $key => $value) {
-        $values[] = escapeshellarg("$key=$value");
-      }
-      $script = variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') .'/digest_md5/digest_md5.php');
-      $response = exec($script .' '. implode(' ', $values), $output, $status);
-      if (isset($edit['data']) && empty($status)) {
-        $header = "Authentication-Info: $response";
-      }
-      else {
-        $header = "WWW-Authenticate: Digest $response";
-      }
+  if (!empty($edit)) {
+    $args = array();
+    foreach ($edit as $key => $value) {
+      $args[] = escapeshellarg("$key=$value");
+    }
+    $script = variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') .'/digest_md5/digest_md5.php');
+    $response = exec($script .' '. implode(' ', $args), $output, $status);
+    if (isset($edit['data']) && empty($status)) {
+      $header = "Authentication-Info: $response";
     }
     else {
-      $header = $edit;
+      $header = "WWW-Authenticate: Digest $response";
     }
   }
   return $header;

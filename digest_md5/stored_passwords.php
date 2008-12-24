@@ -10,7 +10,8 @@
  * Usage: stored_passwords.php [OPTIONS]...
  *
  * Options:
- *   username=STRING  User identity.
+ *   username=STRING  User identity. When not given, the delete op removes all
+ *                    users from the realm.
  *   realm=STRING     Realm. Defaults to hostname.
  *   password=STRING  User password.
  *   op=STRING        Create or delete. By default, an existing user will be
@@ -31,13 +32,11 @@ foreach ($argv as $arg) {
   list($key, $value) = explode('=', $arg, 2);
   $edit[$key] = trim($value, '"');
 }
-$uname = posix_uname();
-$edit['realm'] = isset($edit['realm']) ? $edit['realm'] : $uname['nodename'];
 
 /**
  * Output a help message.
  */
-if (isset($edit['username'])) {
+if (!empty($edit)) {
   foreach (array('-h', '--help', '-help', '-?', '/?', '?') as $arg) {
     if (in_array($arg, $argv)) {
       _stored_passwords_help();
@@ -47,6 +46,12 @@ if (isset($edit['username'])) {
 else {
   _stored_passwords_help();
 }
+
+/**
+ * Make sure realm is set.
+ */
+$uname = posix_uname();
+$edit['realm'] = isset($edit['realm']) ? $edit['realm'] : $uname['nodename'];
 
 /**
  * Open a database connection.
@@ -89,12 +94,18 @@ function _stored_passwords_manage($edit) {
       }
       break;
     case 'delete':
-      if (db_result(db_query_range("SELECT name FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm'], 0, 1)) === FALSE) {
-        $output = "$edit[username] not found in $edit[realm].";
+      if (isset($edit['username'])) {
+        if (db_result(db_query_range("SELECT name FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm'], 0, 1)) === FALSE) {
+          $output = "$edit[username] not found in $edit[realm].";
+        }
+        else {
+          $result = db_query("DELETE FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm']);
+          $output = $result === FALSE ? "Failed to remove $edit[username] from $edit[realm]." : "Removed $edit[username] from $edit[realm].";
+        }
       }
       else {
-        $result = db_query("DELETE FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm']);
-        $output = $result === FALSE ? "Failed to remove $edit[username] from $edit[realm]." : "Removed $edit[username] from $edit[realm].";
+        $result = db_query("DELETE FROM {securesite_passwords} WHERE realm = '%s'", $edit['realm']);
+        $output = $result === FALSE ? "Failed to remove users from $edit[realm]." : "Removed users from $edit[realm].";
       }
       break;
     default:
@@ -114,15 +125,15 @@ function _stored_passwords_manage($edit) {
  * Display help message.
  */
 function _stored_passwords_help() {
-  $output = 'Usage: stored_passwords.php [OPTIONS]...'."\n";
-  $output .= "\n";
-  $output .= 'Options:'."\n";
-  $output .= '  username=STRING    User identity.'."\n";
-  $output .= '  realm=STRING       Realm. Defaults to hostname.'."\n";
-  $output .= '  password=STRING    User password.'."\n";
-  $output .= '  op=STRING          Create or delete. By default, an existing user identity'."\n";
-  $output .= '                     will be updated.'."\n";
-  $output .= "\n";
-  exit($output);
+  exit('Usage: stored_passwords.php [OPTIONS]...'."\n".
+       "\n".
+       'Options:'."\n".
+       '  username=STRING    User identity. When not given, the delete op removes all'."\n".
+       '                     users from the realm.'."\n".
+       '  realm=STRING       Realm. Defaults to hostname.'."\n".
+       '  password=STRING    User password.'."\n".
+       '  op=STRING          Create or delete. By default, an existing user identity'."\n".
+       '                     will be updated.'."\n".
+       "\n");
 }
 
