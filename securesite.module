@@ -189,10 +189,10 @@ function securesite_user($op, &$edit, &$user) {
         $edit['name'] = isset($edit['name']) ? $edit['name'] : $user->name;
         $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php');
         $values = array(
-          escapeshellarg('username="'. $edit['name'] .'"'),
-          escapeshellarg('realm="'. variable_get('securesite_realm', variable_get('site_name', 'Drupal')) .'"'),
-          escapeshellarg('pass="'. $edit['pass'] .'"'),
-          escapeshellarg('op=create'),
+          'username='. escapeshellarg($edit['name']),
+          'realm='. escapeshellarg(variable_get('securesite_realm', variable_get('site_name', 'Drupal'))),
+          'pass='. escapeshellarg($edit['pass']),
+          'op=create',
         );
         exec($script .' '. implode(' ', $values), $output, $status);
         if ($user->name != $edit['name']) {
@@ -204,9 +204,9 @@ function securesite_user($op, &$edit, &$user) {
       if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
         $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php');
         $values = array(
-          escapeshellarg('username="'. $user->name .'"'),
-          escapeshellarg('realm="'. variable_get('securesite_realm', variable_get('site_name', 'Drupal')) .'"'),
-          escapeshellarg('op=delete'),
+          'username='. escapeshellarg($user->name),
+          'realm='. escapeshellarg(variable_get('securesite_realm', variable_get('site_name', 'Drupal'))),
+          'op=delete',
         );
         exec($script .' '. implode(' ', $values));
       }

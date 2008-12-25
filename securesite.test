@@ -104,8 +104,8 @@
  *                     2.3.3.2.1 Request home page with empty credentials.
  *                     2.3.3.2.2 Request home page with random credentials.
  *                     2.3.3.2.3 Request home page with guest credentials.
- *   2.4 Form authentication for registered user with access enabled
- *       2.4.1 Request home page without password.
+ *   2.4 Form authentication
+ *       2.4.1 Request home page without credentials.
  *       2.4.2 Registered user
  *             2.4.2.1 Request home page with wrong password.
  *             2.4.2.2 Request home page with correct password and access disabled.
@@ -158,9 +158,9 @@ class SecureSiteScriptStoredPasswordsUnitTest extends DrupalWebTestCase {
     _securesite_copy_script_config($this);
     $this->user = $this->drupalCreateUser();
     $this->realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
-    $this->name_arg = escapeshellarg('username="'. $this->user->name .'"');
-    $this->pass_arg = escapeshellarg('pass="'. $this->user->pass_raw .'"');
-    $this->realm_arg = escapeshellarg('realm="'. $this->realm .'"');
+    $this->name_arg = 'username='. escapeshellarg($this->user->name);
+    $this->pass_arg = 'pass='. escapeshellarg($this->user->pass_raw);
+    $this->realm_arg = 'realm='. escapeshellarg($this->realm);
   }
 
   /**
@@ -246,7 +246,7 @@ class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
     variable_set('securesite_type', array(SECURESITE_DIGEST));
     $this->user = $this->drupalCreateUser();
     $this->realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
-    $this->challenge = _securesite_parse_directives(exec($this->digest_md5 .' '. escapeshellarg('realm="'. $this->realm .'"')));
+    $this->challenge = _securesite_parse_directives(exec($this->digest_md5 .' realm='. escapeshellarg($this->realm)));
     $this->data = array(
       'username="'. $this->user->name .'"',
       'realm="'. $this->challenge['realm'] .'"',
@@ -256,9 +256,9 @@ class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
     $this->auth[] = 'qop="auth"';
     $this->auth[] = 'opaque="'. $this->challenge['opaque'] .'"';
     // Store password.
-    $name = escapeshellarg('username="'. $this->user->name .'"');
-    $pass = escapeshellarg('pass="'. $this->user->pass_raw .'"');
-    $realm = escapeshellarg('realm="'. $this->realm .'"');
+    $name = 'username='. escapeshellarg($this->user->name);
+    $pass = 'pass='. escapeshellarg($this->user->pass_raw);
+    $realm = 'realm='. escapeshellarg($this->realm);
     exec("$this->stored_passwords $name $pass $realm op=create");
   }
 
@@ -277,7 +277,7 @@ class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
     $response = md5($ha1 .':'. $this->challenge['nonce'] .':'. md5('GET:/'));
     $this->data[] = 'nonce="'. $this->challenge['nonce'] .'"';
     $this->data[] = 'response="'. $response .'"';
-    $command = $this->digest_md5 .' '. escapeshellarg('data='. implode(', ', $this->data)) .' method=GET';
+    $command = $this->digest_md5 .' data='. escapeshellarg(implode(', ', $this->data)) .' method=GET';
     $authentication = _securesite_parse_directives(exec($command, $output, $status));
     $rspauth = md5($ha1 .':'. $this->challenge['nonce'] .':'. md5(':/'));
     $this->assertTrue($status == 0 && isset($authentication['rspauth']) && $authentication['rspauth'] == $rspauth, t('Checking response to stored password.'));
@@ -291,7 +291,7 @@ class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
     $response = md5($ha1 .':'. $this->challenge['nonce'] . $this->challenge['nonce'] .':'. md5('GET:/'));
     $this->data[] = 'nonce="'. $this->challenge['nonce'] . $this->challenge['nonce'] .'"';
     $this->data[] = 'response="'. $response .'"';
-    $command = $this->digest_md5 .' '. escapeshellarg('data='. implode(', ', $this->data)) .' method=GET';
+    $command = $this->digest_md5 .' data='. escapeshellarg(implode(', ', $this->data)) .' method=GET';
     $authentication = _securesite_parse_directives(exec($command, $output, $status));
     $this->assertTrue($status == 5 && isset($authentication['realm']) && isset($authentication['nonce']), t('Checking response to expired credentials.'));
   }
@@ -304,7 +304,7 @@ class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
     $response = md5($ha1 .':'. $this->challenge['nonce'] .':'. md5('GET:/'));
     $this->data[] = 'nonce="'. $this->challenge['nonce'] .'"';
     $this->data[] = 'response="'. $response .'"';
-    $command = $this->digest_md5 .' '. escapeshellarg('data='. implode(', ', $this->data)) .' method=GET';
+    $command = $this->digest_md5 .' data='. escapeshellarg(implode(', ', $this->data)) .' method=GET';
     $authentication = _securesite_parse_directives(exec($command, $output, $status));
     $this->assertTrue($status == 3 && isset($authentication['realm']) && isset($authentication['nonce']), t('Checking response to wrong password.'));
   }
@@ -313,12 +313,12 @@ class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
    * Check response to unstored password.
    */
   function testSecureSiteScriptDigestMD5Unstored() {
-    exec("$this->stored_passwords ". escapeshellarg('realm="'. $this->realm .'"') ." op=delete");
+    exec("$this->stored_passwords realm=". escapeshellarg($this->realm) .' op=delete');
     $ha1 = md5($this->user->name .':'. $this->challenge['realm'] .':'. $this->user->pass_raw);
     $response = md5($ha1 .':'. $this->challenge['nonce'] .':'. md5('GET:/'));
     $this->data[] = 'nonce="'. $this->challenge['nonce'] .'"';
     $this->data[] = 'response="'. $response .'"';
-    $command = $this->digest_md5 .' '. escapeshellarg('data='. implode(', ', $this->data)) .' method=GET';
+    $command = $this->digest_md5 .' data='. escapeshellarg(implode(', ', $this->data)) .' method=GET';
     $authentication = _securesite_parse_directives(exec($command, $output, $status));
     $this->assertTrue($status == 2 && isset($authentication['realm']) && isset($authentication['nonce']), t('Checking response to unstored password.'));
   }
@@ -334,7 +334,7 @@ class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
     $this->auth[] = 'cnonce="'. $cnonce .'"';
     $this->auth[] = 'nc=00000001';
     $this->auth[] = 'response="'. $response .'"';
-    $command = $this->digest_md5 .' '. escapeshellarg('data='. implode(', ', $this->auth)) .' method=GET';
+    $command = $this->digest_md5 .' data='. escapeshellarg(implode(', ', $this->auth)) .' method=GET';
     $authentication = _securesite_parse_directives(exec($command, $output, $status));
     $rspauth = md5($ha1 .':'. $this->challenge['nonce'] .":00000001:$cnonce:auth:". md5(':/'));
     $this->assertTrue($status == 0 && isset($authentication['rspauth']) && $authentication['rspauth'] == $rspauth, t('Checking response to stored password with %qop quality of protection.', array('%qop' => 'auth')));
@@ -351,7 +351,7 @@ class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
     $this->auth[] = 'cnonce="'. $cnonce .'"';
     $this->auth[] = 'nc=00000001';
     $this->auth[] = 'response="'. $response .'"';
-    $command = $this->digest_md5 .' '. escapeshellarg('data='. implode(', ', $this->auth)) .' method=GET';
+    $command = $this->digest_md5 .' data='. escapeshellarg(implode(', ', $this->auth)) .' method=GET';
     exec($command);
     $authentication = _securesite_parse_directives(exec($command, $output, $status));
     $this->assertTrue($status == 4 && isset($authentication['realm']) && isset($authentication['nonce']), t('Checking response to replay attack with %qop quality of protection.', array('%qop' => 'auth')));
@@ -361,7 +361,7 @@ class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
    * Implementation of tearDown().
    */
   function tearDown() {
-    exec("$this->stored_passwords ". escapeshellarg('realm="'. $this->realm .'"') ." op=delete");
+    exec("$this->stored_passwords realm=". escapeshellarg($this->realm) .' op=delete');
     parent::tearDown();
   }
 }
@@ -390,16 +390,16 @@ class SecureSiteFunctionUserSaveUnitTest extends DrupalWebTestCase {
     variable_set('securesite_type', array(SECURESITE_DIGEST));
     $this->user = $this->drupalCreateUser();
     $this->realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
-    $this->name_arg = escapeshellarg('username="'. $this->user->name .'"');
-    $this->pass_arg = escapeshellarg('pass="'. $this->user->pass_raw .'"');
-    $this->realm_arg = escapeshellarg('realm="'. $this->realm .'"');
+    $this->name_arg = 'username='. escapeshellarg($this->user->name);
+    $this->pass_arg = 'pass='. escapeshellarg($this->user->pass_raw);
+    $this->realm_arg = 'realm='. escapeshellarg($this->realm);
   }
 
   /**
    * Add new user.
    */
   function testSecureSiteFunctionUserSaveAdd() {
-    $command = "$this->stored_passwords ". escapeshellarg('username="'. $this->user->name .'"') ." $this->pass_arg $this->realm_arg";
+    $command = "$this->stored_passwords username=". escapeshellarg($this->user->name) ." $this->pass_arg $this->realm_arg";
     $this->assertTrue(exec($command) == 'Updated '. $this->user->name ." in $this->realm.", t('Adding new user.'));
   }
 
@@ -408,7 +408,7 @@ class SecureSiteFunctionUserSaveUnitTest extends DrupalWebTestCase {
    */
   function testSecureSiteFunctionUserSaveUpdatePassUnchanged() {
     $user = user_save($this->user, array('name' => $this->randomName()));
-    $command = "$this->stored_passwords ". escapeshellarg('username="'. $user->name .'"') ." $this->pass_arg $this->realm_arg";
+    $command = "$this->stored_passwords username=". escapeshellarg($user->name) ." $this->pass_arg $this->realm_arg";
     $this->assertTrue(exec($command) == "$user->name not found in $this->realm.", t('Updating user name without changing password.'));
   }
 
@@ -418,7 +418,7 @@ class SecureSiteFunctionUserSaveUnitTest extends DrupalWebTestCase {
   function testSecureSiteFunctionUserSaveUpdatePassChanged() {
     $user = user_save($this->user, array('name' => $this->randomName(), 'pass' => user_password()));
     $old = exec("$this->stored_passwords $this->name_arg $this->pass_arg $this->realm_arg");
-    $new = exec("$this->stored_passwords ". escapeshellarg('username="'. $user->name .'"') ." $this->pass_arg $this->realm_arg");
+    $new = exec("$this->stored_passwords username=". escapeshellarg($user->name) ." $this->pass_arg $this->realm_arg");
     $this->assertTrue($old == $this->user->name ." not found in $this->realm." && $new == "Updated $user->name in $this->realm.", t('Updating user name and password.'));
   }
 
@@ -454,9 +454,9 @@ class SecureSiteFunctionUserLoadUnitTest extends DrupalWebTestCase {
     _securesite_copy_script_config($this);
     $this->user = $this->drupalCreateUser();
     $this->realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
-    $this->name_arg = escapeshellarg('username="'. $this->user->name .'"');
-    $this->pass_arg = escapeshellarg('pass="'. $this->user->pass_raw .'"');
-    $this->realm_arg = escapeshellarg('realm="'. $this->realm .'"');
+    $this->name_arg = 'username='. escapeshellarg($this->user->name);
+    $this->pass_arg = 'pass='. escapeshellarg($this->user->pass_raw);
+    $this->realm_arg = 'realm='. escapeshellarg($this->realm);
     variable_set('securesite_type', array(SECURESITE_DIGEST));
   }
 
@@ -511,9 +511,9 @@ class SecureSiteFunctionUserDeleteUnitTest extends DrupalWebTestCase {
     variable_set('securesite_type', array(SECURESITE_DIGEST));
     $this->user = $this->drupalCreateUser();
     $this->realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
-    $this->name_arg = escapeshellarg('username="'. $this->user->name .'"');
-    $this->pass_arg = escapeshellarg('pass="'. $this->user->pass_raw .'"');
-    $this->realm_arg = escapeshellarg('realm="'. $this->realm .'"');
+    $this->name_arg = 'username='. escapeshellarg($this->user->name);
+    $this->pass_arg = 'pass='. escapeshellarg($this->user->pass_raw);
+    $this->realm_arg = 'realm='. escapeshellarg($this->realm);
   }
 
   /**
@@ -642,7 +642,7 @@ class SecureSiteFunctionDigestValidateUnitTest extends DrupalWebTestCase {
   function testSecureSiteFunctionDigestValidateData() {
     variable_set('securesite_type', array(SECURESITE_DIGEST));
     $user = $this->drupalCreateUser();
-    $challenge = _securesite_parse_directives(exec($this->digest_md5 .' '. escapeshellarg('realm="'. $this->realm .'"')));
+    $challenge = _securesite_parse_directives(exec($this->digest_md5 .' realm='. escapeshellarg($this->realm)));
     $ha1 = md5("$user->name:$challenge[realm]:$user->pass_raw");
     $data = array(
       'username="'. $user->name .'"',

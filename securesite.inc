@@ -136,7 +136,7 @@ function _securesite_digest_validate(&$status, $edit = array()) {
   if (!empty($edit)) {
     $args = array();
     foreach ($edit as $key => $value) {
-      $args[] = escapeshellarg("$key=$value");
+      $args[] = "$key=". escapeshellarg($value);
     }
     $script = variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') .'/digest_md5/digest_md5.php');
     $response = exec($script .' '. implode(' ', $args), $output, $status);

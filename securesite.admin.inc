@@ -260,29 +260,29 @@ function securesite_admin_settings_submit($form, &$form_state) {
   }
   $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php');
   $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
-  $securesite_guest_name = variable_get('securesite_guest_name', '');
-  if (
-    in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC))) && ( // Digest authentication was enabled.
-      $values['securesite_guest_name'] != $securesite_guest_name || // Guest user name has changed.
+  if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
+    // If digest authentication was enabled, we may need to do some clean-up.
+    $securesite_guest_name = variable_get('securesite_guest_name', '');
+    if (
+      isset($values['op']) && $values['op'] == t('Reset to defaults') || // Values are being reset to defaults.
       !in_array(SECURESITE_DIGEST, $values['securesite_type']) || // Digest authentication is being disabled.
-      isset($values['op']) && $values['op'] == t('Reset to defaults') // Values are being reset to defaults.
-    )
-  ) {
-    // Delete guest user password.
-    $args = array(
-      escapeshellarg("username=$securesite_guest_name"),
-      escapeshellarg("realm=$realm"),
-      escapeshellarg('op=delete'),
-    );
-    exec($script .' '. implode(' ', $args));
+      $realm != $values['securesite_realm'] // Realm has changed.
+    ) {
+      // Delete all stored passwords.
+      exec("$script realm=". escapeshellarg($realm) .' op=delete');
+    }
+    elseif ($values['securesite_guest_name'] != $securesite_guest_name) {
+      // Guest user name has changed. Delete old guest user password.
+      exec("$script username=". escapeshellarg($securesite_guest_name) .' realm='. escapeshellarg($realm) .' op=delete');
+    }
   }
   if (in_array(SECURESITE_DIGEST, $values['securesite_type']) && (!isset($values['op']) || $values['op'] != t('Reset to defaults'))) {
     // If digest authentication is enabled, update guest user password.
     $args = array(
-      escapeshellarg("username=$values[securesite_guest_name]"),
-      escapeshellarg("realm=$realm"),
-      escapeshellarg("pass=$values[securesite_guest_pass]"),
-      escapeshellarg('op=create'),
+      'username='. escapeshellarg($values['securesite_guest_name']),
+      'pass='. escapeshellarg($values['securesite_guest_pass']),
+      'realm='. escapeshellarg($realm),
+      'op=create',
     );
     exec($script .' '. implode(' ', $args));
   }
