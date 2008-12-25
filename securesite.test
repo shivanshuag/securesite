@@ -69,6 +69,8 @@
  *             2.2.2.4 Try valid reset page URL.
  *             2.2.2.5 Try invalid reset page URL.
  *             2.2.2.6 Submit password reset form.
+ *             2.2.2.7 Try cron.php with all authentication types enabled.
+ *             2.2.2.8 Try cron.php with only form authentication enabled.
  *       2.2.3 Offline
  *             2.2.3.1 Request on-line home page.
  *             2.2.3.2 Request off-line home page.
@@ -985,6 +987,26 @@ class SecureSiteForceAlwaysFunctionalTest extends DrupalWebTestCase {
     $this->drupalPost(NULL, array('name' => $this->user->name), 'E-mail new password');
     $this->assertResponse(200, t('Submitting password reset form.'));
     $this->assertText('Further instructions have been sent to your e-mail address.', t('Checking for password reset message.'));
+  }
+
+  /**
+   * Try cron.php with all authentication types enabled.
+   */
+  function testSecureSiteForceAlwaysCronAll() {
+    variable_set('securesite_type', array(SECURESITE_FORM, SECURESITE_BASIC, SECURESITE_DIGEST));
+    $cron_last = variable_get('cron_last', NULL);
+    $this->drupalGet(url(NULL, array('absolute' => TRUE)) .'cron.php');
+    $this->assertTrue(variable_get('cron_last', NULL) == $cron_last, t('Trying cron.php with all authentication types enabled.'));
+  }
+
+  /**
+   * Try cron.php with only form authentication enabled.
+   */
+  function testSecureSiteForceAlwaysCronForm() {
+    variable_set('securesite_type', array(SECURESITE_FORM));
+    $cron_last = variable_get('cron_last', NULL);
+    $this->drupalGet(url(NULL, array('absolute' => TRUE)) .'cron.php');
+    $this->assertFalse(variable_get('cron_last', NULL) == $cron_last, t('Trying cron.php with only form authentication enabled.'));
   }
 
   /**

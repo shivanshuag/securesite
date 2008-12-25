@@ -355,8 +355,10 @@ function _securesite_dialog($type) {
         drupal_set_header('HTTP/1.1 200 OK');
         break;
     }
-    // Form authentication doesn't work for cron.
-    if (request_uri() != $base_path .'cron.php') {
+    // Form authentication doesn't work for cron, so allow cron.php to run
+    // without authenticating when no other authentication type is enabled.
+    if (request_uri() != $base_path .'cron.php' || variable_get('securesite_type', array(SECURESITE_BASIC)) != array(SECURESITE_FORM)) {
+      drupal_set_title(t('Authentication required'));
       $content = _securesite_dialog_page();
     }
   }
