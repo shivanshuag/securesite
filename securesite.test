@@ -34,28 +34,25 @@
  *             1.2.2.2 Load user with password.
  *       1.2.3 user_delete()
  *             1.2.3.1 Remove user.
- *       1.2.4 system_error_reporting_settings()
+ *       1.2.4 _securesite_forced()
  *             1.2.4.1 Check output without forced authentication.
- *             1.2.4.2 Check output with authentication forced on restricted pages.
- *       1.2.5 _securesite_forced()
- *             1.2.5.1 Check output without forced authentication.
- *             1.2.5.2 Check output with authentication always forced.
- *             1.2.5.3 Check output for on-line site with authentication forced when site is off line.
- *             1.2.5.4 Check output for off-line site with authentication forced when site is off line.
- *             1.2.5.5 Check output with authentication forced on restricted pages.
- *       1.2.6 _securesite_digest_validate()
- *             1.2.6.1 Check output without input.
- *             1.2.6.2 Check output without data.
- *             1.2.6.3 Check output with data.
- *       1.2.7 _securesite_fake_realm()
- *             1.2.7.1 Check realm with normal browser.
- *             1.2.7.2 Check realm with Internet Explorer.
- *             1.2.7.3 Check realm with Opera.
- *       1.2.8 _securesite_dialog_page()
- *             1.2.8.1 Check output with both log-in and password reset disabled.
- *             1.2.8.2 Check output with log-in enabled and password reset disabled.
- *             1.2.8.3 Check output with log-in disabled and password reset enabled.
- *             1.2.8.4 Check output with both log-in and password reset enabled.
+ *             1.2.4.2 Check output with authentication always forced.
+ *             1.2.4.3 Check output for on-line site with authentication forced when site is off line.
+ *             1.2.4.4 Check output for off-line site with authentication forced when site is off line.
+ *             1.2.4.5 Check output with authentication forced on restricted pages.
+ *       1.2.5 _securesite_digest_validate()
+ *             1.2.5.1 Check output without input.
+ *             1.2.5.2 Check output without data.
+ *             1.2.5.3 Check output with data.
+ *       1.2.6 _securesite_fake_realm()
+ *             1.2.6.1 Check realm with normal browser.
+ *             1.2.6.2 Check realm with Internet Explorer.
+ *             1.2.6.3 Check realm with Opera.
+ *       1.2.7 _securesite_dialog_page()
+ *             1.2.7.1 Check output with both log-in and password reset disabled.
+ *             1.2.7.2 Check output with log-in enabled and password reset disabled.
+ *             1.2.7.3 Check output with log-in disabled and password reset enabled.
+ *             1.2.7.4 Check output with both log-in and password reset enabled.
  * 2 Functional tests
  *   2.1 Name conflict prevention
  *       2.1.1 Register user with guest name.
@@ -81,6 +78,11 @@
  *                     2.2.4.1.2 Request admin page.
  *             2.2.4.2 Logged in
  *                     2.2.4.2.1 Request admin page for non-admin user.
+ *       2.2.5 403 error configuration
+ *             2.2.5.1 Check access denied page when setting forced authentication on restricted pages.
+ *             2.2.5.2 Keep current access denied page when no previous setting exists.
+ *             2.2.5.3 Save previous access denied page.
+ *             2.2.5.4 Restore previous access denied page.
  *   2.3 Basic authentication
  *       2.3.1 Request home page without credentials.
  *       2.3.2 Registered user
@@ -519,59 +521,6 @@ class SecureSiteFunctionUserDeleteUnitTest extends DrupalWebTestCase {
     user_delete(array(), $this->user->uid);
     $command = "$this->stored_passwords $this->name_arg $this->pass_arg $this->realm_arg";
     $this->assertTrue(exec($command) == $this->user->name ." not found in $this->realm.", t('Removing user.'));
-  }
-}
-
-/**
- * Unit tests for system_error_reporting_settings().
- */
-class SecureSiteFunctionSystemErrorReportingSettingsUnitTest extends DrupalWebTestCase {
-  /**
-   * Implementation of getInfo().
-   */
-  function getInfo() {
-    return array(
-      'name' => 'system_error_reporting_settings()',
-      'description' => t('Test alterations to error reporting settings form.'),
-      'group' => t('Secure Site'),
-    );
-  }
-
-  /**
-   * Implementation of setUp().
-   */
-  function setUp() {
-    parent::setUp('securesite');
-  }
-
-  /**
-   * Check output without forced authentication.
-   */
-  function testSecureSiteFunctionSystemErrorReportingSettingsNormal() {
-    $form = drupal_get_form('system_error_reporting_settings');
-    $site_403 = strpos($form, 'id="edit-site-403"') === FALSE;
-    $securesite_403 = strpos($form, 'id="edit-securesite-403"') === FALSE;
-    $this->assertTrue(!$site_403 && $securesite_403, t('Checking output without forced authentication.'));
-  }
-
-  /**
-   * Check output with authentication forced on restricted pages.
-   */
-  function testSecureSiteFunctionSystemErrorReportingSettings403() {
-    variable_set('securesite_enabled', SECURESITE_403);
-    $form = drupal_get_form('system_error_reporting_settings');
-    $site_403 = strpos($form, 'id="edit-site-403"') === FALSE;
-    $securesite_403 = strpos($form, 'id="edit-securesite-403"') === FALSE;
-    $this->assertTrue($site_403 && !$securesite_403, t('Checking output with authentication forced on restricted pages.'));
-  }
-
-  /**
-   * Implementation of tearDown().
-   */
-  function tearDown() {
-    variable_del('securesite_enabled');
-    form_clean_id(NULL, TRUE);
-    parent::tearDown();
   }
 }
 
@@ -1136,6 +1085,77 @@ class SecureSiteForce403FunctionalTest extends DrupalWebTestCase {
     $this->drupalLogin($this->drupalCreateUser());
     $this->drupalHead('admin');
     $this->assertResponse(403, t('Requesting admin page for non-admin user.'));
+  }
+}
+
+/**
+ * Functional tests for configuring access denied page.
+ */
+class SecureSiteConfig403FunctionalTest extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => '403 error configuration',
+      'description' => t('Test configuration for access denied page.'),
+      'group' => t('Secure Site'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('securesite');
+    $this->drupalLogin($this->drupalCreateUser(array('administer site configuration')));
+  }
+
+  /**
+   * Check access denied page when setting forced authentication on restricted pages.
+   */
+  function testSecureSiteConfig403Save() {
+    variable_set('securesite_403', 'site_403');
+    $this->drupalPost('admin/settings/securesite', array('securesite_enabled' => SECURESITE_403), 'Save configuration');
+    $this->assertTrue(variable_get('site_403', '') == '', t('Checking access denied page when setting forced authentication on restricted pages.'));
+  }
+
+  /**
+   * Keep current access denied page when no previous setting exists.
+   */
+  function testSecureSiteConfig403ResetCurrent() {
+    variable_set('site_403', 'site_403');
+    $this->drupalPost('admin/settings/securesite', array(), 'Reset to defaults');
+    $this->assertTrue(variable_get('site_403', '') == 'site_403', t('Keeping current access denied page when no previous setting exists.'));
+  }
+
+  /**
+   * Save previous access denied page.
+   */
+  function testSecureSiteConfig403Page() {
+    $this->drupalPost('admin/settings/error-reporting', array('site_403' => 'site_403'), 'Save configuration');
+    variable_set('securesite_enabled', SECURESITE_403);
+    $this->drupalPost('admin/settings/error-reporting', array(), 'Save configuration');
+    $this->assertTrue(variable_get('securesite_403', 'site_403') == '', t('Saving previous access denied page.'));
+  }
+
+  /**
+   * Restore previous access denied page.
+   */
+  function testSecureSiteConfig403ResetPrevious() {
+    variable_set('securesite_403', 'site_403');
+    $this->drupalPost('admin/settings/securesite', array(), 'Reset to defaults');
+    $this->assertTrue(variable_get('site_403', '') == 'site_403', t('Restoring previous access denied page.'));
+  }
+
+  /**
+   * Implementation of tearDown().
+   */
+  function tearDown() {
+    variable_del('securesite_enabled');
+    variable_del('securesite_403');
+    variable_del('site_403');
+    parent::tearDown();
   }
 }
 
