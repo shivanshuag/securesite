@@ -2,12 +2,15 @@ $Id$
 
 Secure Site 6.x-2.x, xxxx-xx-xx
 -------------------------------
+#330367: Added note about LDAP Integration compatibility being fixed in release
+  6.x-2.1.
 
 
 Secure Site 6.x-2.1, 2008-12-25
 -------------------------------
 #172170: Fixed OpenID authentication URL.
 Coding standards and grammar update.
+#330367: Fixed compatibility with LDAP Integration.
 Fixed incorrect password handling for digest authentication.
 Fixed handling for unauthorized user log-in attempts.
 Fixed password storage for digest authentication.
