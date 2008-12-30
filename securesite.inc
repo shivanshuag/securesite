@@ -281,11 +281,6 @@ function _securesite_forced() {
         return TRUE;
       case SECURESITE_OFFLINE:
         return variable_get('site_offline', FALSE);
-      case SECURESITE_403:
-        if (variable_get('site_403', '') != 'securesite_403') {
-          variable_set('securesite_403', variable_get('site_403', ''));
-          variable_set('site_403', 'securesite_403');
-        }
       default:
         return FALSE;
     }

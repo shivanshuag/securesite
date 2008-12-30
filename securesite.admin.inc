@@ -250,13 +250,17 @@ function securesite_admin_settings_validate($form, &$form_state) {
 }
 
 /**
- * Restore core 403 error page when not using Secure Site page.
+ * Configure access denied page and manage stored guest password.
  */
 function securesite_admin_settings_submit($form, &$form_state) {
   $values = $form_state['values'];
   if ($values['securesite_enabled'] != SECURESITE_403 || isset($values['op']) && $values['op'] == t('Reset to defaults')) {
     variable_set('site_403', variable_get('securesite_403', variable_get('site_403', '')));
     variable_del('securesite_403');
+  }
+  else {
+    variable_set('securesite_403', variable_get('site_403', ''));
+    variable_set('site_403', 'securesite_403');
   }
   $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php');
   $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
