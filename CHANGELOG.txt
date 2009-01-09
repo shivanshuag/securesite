@@ -7,6 +7,8 @@ Secure Site 6.x-2.x, xxxx-xx-xx
 #352276 by naquah: Fixed delay in saving 403 page settings.
 #353216 by salvis: Fixed data type in securesite_update_6200().
   This fixes "Wrong datatype" errors for those upgrading from previous versions.
+Renamed "po" directory to "translations" for Drupal 6 compatibility.
+
 
 Secure Site 6.x-2.1, 2008-12-25
 -------------------------------

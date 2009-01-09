@@ -4,17 +4,17 @@
 # Copyright YEAR NAME <EMAIL@ADDRESS>
 # Generated from files:
 #  securesite-user-login.tpl.php,v 1.1.2.2 2008/10/31 21:24:59 darrenoh
-#  securesite.inc,v 1.30.2.11 2008/12/25 20:33:41 darrenoh
+#  securesite.inc,v 1.30.2.12 2008/12/30 20:20:57 darrenoh
 #  securesite-user-pass.tpl.php,v 1.1.2.3 2008/12/22 20:14:16 darrenoh
-#  securesite.admin.inc,v 1.13.2.9 2008/12/25 20:33:40 darrenoh
-#  securesite.module,v 1.43.2.8 2008/12/25 20:33:41 darrenoh
+#  securesite.admin.inc,v 1.13.2.10 2008/12/30 20:20:57 darrenoh
+#  securesite.module,v 1.43.2.9 2008/12/30 20:20:57 darrenoh
 #  securesite.info,v 1.4 2008/09/19 20:35:39 darrenoh
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
-"POT-Creation-Date: 2008-12-25 16:36-0500\n"
+"POT-Creation-Date: 2009-01-09 11:04-0500\n"
 "PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
@@ -23,7 +23,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: securesite-user-login.tpl.php:9 securesite.inc:431
+#: securesite-user-login.tpl.php:9 securesite.inc:426
 msgid "Log in"
 msgstr ""
 
@@ -383,7 +383,7 @@ msgstr ""
 msgid "The name %name belongs to a registered user."
 msgstr ""
 
-#: securesite.admin.inc:257;267;279
+#: securesite.admin.inc:257;271;283
 msgid "Reset to defaults"
 msgstr ""
 
@@ -407,39 +407,39 @@ msgstr ""
 msgid "Access denied"
 msgstr ""
 
-#: securesite.inc:319
+#: securesite.inc:314
 msgid "You have tried to use an invalid one-time log-in link."
 msgstr ""
 
-#: securesite.inc:320;393;489
+#: securesite.inc:315;388;484
 msgid "Enter your user name or e-mail address."
 msgstr ""
 
-#: securesite.inc:326
+#: securesite.inc:321
 msgid "Please request a new one using the form below."
 msgstr ""
 
-#: securesite.inc:361
+#: securesite.inc:356
 msgid "Authentication required"
 msgstr ""
 
-#: securesite.inc:403
+#: securesite.inc:398
 msgid "Reload the page to try logging in again."
 msgstr ""
 
-#: securesite.inc:419
+#: securesite.inc:414
 msgid "User name"
 msgstr ""
 
-#: securesite.inc:425
+#: securesite.inc:420
 msgid "Password"
 msgstr ""
 
-#: securesite.inc:457
+#: securesite.inc:452
 msgid "Enter your user name and password."
 msgstr ""
 
-#: securesite.inc:471
+#: securesite.inc:466
 msgid "User name or e-mail address"
 msgstr ""
 
@@ -474,4 +474,3 @@ msgstr ""
 #: securesite.module:0
 msgid "securesite"
 msgstr ""
-
