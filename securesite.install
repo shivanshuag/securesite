@@ -51,11 +51,11 @@ function securesite_update_6200() {
     case 1:
     case 2:
       variable_set('securesite_enabled', SECURESITE_ALWAYS);
-      variable_set('securesite_type', SECURESITE_BASIC);
+      variable_set('securesite_type', array(SECURESITE_BASIC));
       break;
     case 3:
       variable_set('securesite_enabled', SECURESITE_ALWAYS);
-      variable_set('securesite_type', SECURESITE_FORM);
+      variable_set('securesite_type', array(SECURESITE_FORM));
       break;
   }
   variable_del('securesite_filter_pages');

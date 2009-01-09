@@ -5,7 +5,8 @@ Secure Site 6.x-2.x, xxxx-xx-xx
 #330367: Added note about LDAP Integration compatibility being fixed in release
   6.x-2.1.
 #352276 by naquah: Fixed delay in saving 403 page settings.
-
+#353216 by salvis: Fixed data type in securesite_update_6200().
+  This fixes "Wrong datatype" errors for those upgrading from previous versions.
 
 Secure Site 6.x-2.1, 2008-12-25
 -------------------------------
