@@ -2,6 +2,10 @@ $Id$
 
 Secure Site 6.x-2.x, xxxx-xx-xx
 -------------------------------
+
+
+Secure Site 6.x-2.2, 2009-01-19
+-------------------------------
 #330367: Added note about LDAP Integration compatibility being fixed in release
   6.x-2.1.
 #352276 by naquah: Fixed delay in saving 403 page settings.
