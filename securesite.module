@@ -178,7 +178,7 @@ function _securesite_mechanism() {
 function securesite_user($op, &$edit, &$user) {
   switch ($op) {
     case 'validate':
-      if (!array_key_exists('name', form_set_error()) && $edit['name'] == variable_get('securesite_guest_name', '')) {
+      if (!array_key_exists('name', form_set_error()) && isset($edit['name']) && $edit['name'] == variable_get('securesite_guest_name', '')) {
         form_set_error('name', t('The name %name is being used as the %site guest name.', array('%name' => $edit['name'], '%site' => variable_get('site_name', 'Drupal'))));
       }
       break;

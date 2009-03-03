@@ -2,6 +2,10 @@ $Id$
 
 Secure Site 6.x-2.x, xxxx-xx-xx
 -------------------------------
+#378408 by sbordage: Added french translation.
+#388890 by jmiccolis: Fixed user name validation.
+  Users who didn't have permission to change their user names could not change
+  their passwords.
 
 
 Secure Site 6.x-2.2, 2009-01-19
@@ -12,6 +16,7 @@ Secure Site 6.x-2.2, 2009-01-19
 #353216 by salvis: Fixed data type in securesite_update_6200().
   This fixes "Wrong datatype" errors for those upgrading from previous versions.
 Renamed "po" directory to "translations" for Drupal 6 compatibility.
+#353216 by Darren Oh: Added 6.x-2.2 release.
 
 
 Secure Site 6.x-2.1, 2008-12-25
