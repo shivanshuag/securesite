@@ -189,4 +189,3 @@ Known issues
     If you are using HTTP Auth and are unable to login when Drupal is running on
     an IIS server, make sure that the PHP directive cgi.rfc2616_headers is set
     to 0 (the default value).
-

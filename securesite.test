@@ -283,7 +283,7 @@ class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
     $this->assertTrue($status == 0 && isset($authentication['rspauth']) && $authentication['rspauth'] == $rspauth, t('Checking response to stored password.'));
   }
 
-  /** 
+  /**
    * Check response to expired challenge.
    */
   function testSecureSiteScriptDigestMD5Expired() {
@@ -1926,4 +1926,3 @@ function _securesite_copy_script_config($object) {
   variable_set('securesite_digest_script', $object->digest_md5);
   variable_set('securesite_password_script', $object->stored_passwords);
 }
-

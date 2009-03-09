@@ -59,4 +59,3 @@ is located.
 
 If the rest of your system is secure, Web pages can now store passwords without
 having the ability to retrieve them.
-

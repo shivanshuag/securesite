@@ -4,7 +4,8 @@
 /**
  * @file
  * Template for Secure Site pages.
- * @see page.tpl.php
+ *
+ * @see template_preprocess_page()
  */
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -14,7 +15,7 @@
 <head>
 <title><?php print $head_title ?></title>
 <?php print $head ?>
-<link type="text/css" rel="stylesheet" media="all" href="<?php print $base_path . drupal_get_path('module', 'securesite') .'/securesite.css' ?>" />
+<link type="text/css" rel="stylesheet" media="all" href="<?php print $base_path . drupal_get_path('module', 'securesite') .'/theme/securesite.css' ?>" />
 <?php print $scripts ?>
 </head>
 <body>
@@ -22,4 +23,3 @@
 <?php print $content ?>
 </body>
 </html>
-

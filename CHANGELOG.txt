@@ -6,6 +6,7 @@ Secure Site 6.x-2.x, xxxx-xx-xx
 #388890 by jmiccolis: Fixed user name validation.
   Users who didn't have permission to change their user names could not change
   their passwords.
+by Darren Oh: Code re-organization and clean-up.
 
 
 Secure Site 6.x-2.2, 2009-01-19

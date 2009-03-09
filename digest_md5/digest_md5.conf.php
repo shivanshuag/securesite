@@ -146,4 +146,3 @@ function _securesite_schema() {
   }
   return $ret;
 }
-

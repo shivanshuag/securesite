@@ -291,4 +291,3 @@ function securesite_admin_settings_submit($form, &$form_state) {
     exec($script .' '. implode(' ', $args));
   }
 }
-

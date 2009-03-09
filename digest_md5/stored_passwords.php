@@ -136,4 +136,3 @@ function _stored_passwords_help() {
        '                     will be updated.'."\n".
        "\n");
 }
-

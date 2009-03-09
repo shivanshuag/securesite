@@ -346,4 +346,3 @@ function _digest_md5_response($edit) {
   }
   return array($output, $status);
 }
-

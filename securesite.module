@@ -131,7 +131,7 @@ function _securesite_mechanism() {
     }
     if (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
       list($type, $authorization) = explode(' ', $_SERVER['HTTP_AUTHORIZATION'], 2);
-      switch (strtolower($type)) {
+      switch (drupal_strtolower($type)) {
         case 'digest':
           $_SERVER['PHP_AUTH_DIGEST'] = $authorization;
           break;
@@ -220,7 +220,7 @@ function securesite_user($op, &$edit, &$user) {
         // Safari will attempt to use old credentials before requesting new credentials
         // from the user. Logging out requires that the WWW-Authenticate header be sent
         // twice.
-        $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '');
+        $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? drupal_strtolower($_SERVER['HTTP_USER_AGENT']) : '');
         if ($user_agent != str_replace('safari', '', $user_agent)) {
           session_set_save_handler('sess_open', 'sess_close', 'sess_read', 'sess_write', 'sess_destroy_sid', 'sess_gc');
           session_start();
@@ -242,17 +242,19 @@ function securesite_theme() {
     'securesite_page' => array(
       'template' => 'securesite-page',
       'arguments' => array('content' => NULL, 'show_blocks' => FALSE, 'show_messages' => TRUE),
-      'file' => 'securesite.inc',
+      'path' => drupal_get_path('module', 'securesite') .'/theme',
     ),
     'securesite_user_login' => array(
       'template' => 'securesite-user-login',
       'arguments' => array('form' => NULL),
-      'file' => 'securesite.inc',
+      'file' => 'securesite.theme.inc',
+      'path' => drupal_get_path('module', 'securesite') .'/theme',
     ),
     'securesite_user_pass' => array(
       'template' => 'securesite-user-pass',
       'arguments' => array('form' => NULL),
-      'file' => 'securesite.inc',
+      'file' => 'securesite.theme.inc',
+      'path' => drupal_get_path('module', 'securesite') .'/theme',
     ),
   );
 }
@@ -260,4 +262,3 @@ function securesite_theme() {
 function securesite_theme_registry_alter(&$theme_registry) {
   $theme_registry['securesite_page']['preprocess functions'] = $theme_registry['page']['preprocess functions'];
 }
-

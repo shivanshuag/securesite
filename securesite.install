@@ -62,4 +62,3 @@ function securesite_update_6200() {
   variable_del('securesite_filter_pages_type');
   return array();
 }
-

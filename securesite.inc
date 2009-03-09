@@ -242,7 +242,6 @@ function _securesite_denied($message) {
     drupal_set_header('HTTP/1.1 403 Forbidden');
     drupal_set_title(t('Access denied'));
     drupal_set_message($message, 'error');
-    drupal_add_css(drupal_get_path('module', 'securesite') .'/securesite.css');
     print theme('securesite_page');
     module_invoke_all('exit');
     exit();
@@ -252,7 +251,7 @@ function _securesite_denied($message) {
     // Safari will attempt to use old credentials before requesting new credentials
     // from the user. Logging out requires that the WWW-Authenticate header be sent
     // twice.
-    $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '');
+    $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? drupal_strtolower($_SERVER['HTTP_USER_AGENT']) : '');
     if ($user_agent != str_replace('safari', '', $user_agent)) {
       $_SESSION['securesite_repeat'] = TRUE;
     }
@@ -358,7 +357,6 @@ function _securesite_dialog($type) {
     }
   }
   if (isset($content)) {
-    drupal_add_css(drupal_get_path('module', 'securesite') .'/securesite.css');
     print theme('securesite_page', $content);
     module_invoke_all('exit');
     exit();
@@ -372,7 +370,7 @@ function _securesite_dialog($type) {
  */
 function _securesite_fake_realm() {
   $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
-  $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '');
+  $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? drupal_strtolower($_SERVER['HTTP_USER_AGENT']) : '');
   if ($user_agent != str_replace(array('msie', 'opera'), '', $user_agent)) {
     $realm .= ' - '. mt_rand(10, 999);
   }
@@ -440,25 +438,11 @@ function securesite_user_login(&$form_state) {
 }
 
 /**
- * Process variables for securesite-user-login.tpl.php
- *
- * The $variables array contains the following arguments:
- * - $title
- * - $messages
- *
- * @see securesite-user-login.tpl.php
- */
-function template_preprocess_securesite_user_login(&$variables) {
-  $variables['title'] = variable_get('securesite_login_form', t('Enter your user name and password.'));
-  $variables['messages'] = theme('status_messages');
-}
-
-/**
  * We use our own version of the password reset form for theming.
  *
  * @ingroup forms
- * @see user_pass_validate
- * @see user_pass_submit
+ * @see user_pass_validate()
+ * @see user_pass_submit()
  */
 function securesite_user_pass(&$form_state) {
   module_load_include('inc', 'user', 'user.pages');
@@ -470,18 +454,3 @@ function securesite_user_pass(&$form_state) {
   $form['#submit'][] = 'user_pass_submit';
   return $form;
 }
-
-/**
- * Process variables for securesite-user-pass.tpl.php
- *
- * The $variables array contains the following arguments:
- * - $title
- * - $messages
- *
- * @see securesite-user-pass.tpl.php
- */
-function template_preprocess_securesite_user_pass(&$variables) {
-  $variables['title'] = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
-  $variables['form']['name']['#required'] = FALSE;
-}
-
