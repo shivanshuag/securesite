@@ -7,6 +7,7 @@ Secure Site 6.x-2.x, xxxx-xx-xx
   Users who didn't have permission to change their user names could not change
   their passwords.
 by Darren Oh: Code re-organization and clean-up.
+by Darren Oh: Fixed a grammatical error in digest_md5/sudoers.
 
 
 Secure Site 6.x-2.2, 2009-01-19
