@@ -8,6 +8,9 @@ Secure Site 6.x-2.x, xxxx-xx-xx
   their passwords.
 by Darren Oh: Code re-organization and clean-up.
 by Darren Oh: Fixed a grammatical error in digest_md5/sudoers.
+by Darren Oh: Fixed update error for sites with disabled authentication.
+  Sites which had disabled authentication would have authentication forced when
+  updating.
 
 
 Secure Site 6.x-2.2, 2009-01-19

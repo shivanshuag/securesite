@@ -48,6 +48,7 @@ function securesite_update_6200() {
   switch (variable_get('securesite_enabled', SECURESITE_DISABLED)) {
     case 0:
       variable_del('securesite_enabled');
+      break;
     case 1:
     case 2:
       variable_set('securesite_enabled', SECURESITE_ALWAYS);
