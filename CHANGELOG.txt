@@ -2,7 +2,6 @@ $Id$
 
 Secure Site 6.x-2.x, xxxx-xx-xx
 -------------------------------
-#378408 by sbordage: Added french translation.
 #388890 by jmiccolis: Fixed user name validation.
   Users who didn't have permission to change their user names could not change
   their passwords.
@@ -11,6 +10,7 @@ by Darren Oh: Fixed a grammatical error in digest_md5/sudoers.
 by Darren Oh: Fixed update error for sites with disabled authentication.
   Sites which had disabled authentication would have authentication forced when
   updating.
+by Darren Oh: Removed CHANGELOG.txt message which belonged in Drupal 5 branch.
 
 
 Secure Site 6.x-2.2, 2009-01-19
