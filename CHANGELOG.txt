@@ -2,6 +2,11 @@ $Id$
 
 Secure Site 6.x-2.x, xxxx-xx-xx
 -------------------------------
+#441634 by Arto: Fixed undefined function drupal_strtolower().
+
+
+Secure Site 6.x-2.3, 2009-04-20
+-------------------------------
 #388890 by jmiccolis: Fixed user name validation.
   Users who didn't have permission to change their user names could not change
   their passwords.

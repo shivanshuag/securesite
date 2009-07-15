@@ -130,6 +130,7 @@ function _securesite_mechanism() {
       $_SERVER['HTTP_AUTHORIZATION'] = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
     }
     if (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
+      require_once './includes/unicode.inc';
       list($type, $authorization) = explode(' ', $_SERVER['HTTP_AUTHORIZATION'], 2);
       switch (drupal_strtolower($type)) {
         case 'digest':
