@@ -136,10 +136,10 @@ function _securesite_digest_validate(&$status, $edit = array()) {
   if (!empty($edit)) {
     $args = array();
     foreach ($edit as $key => $value) {
-      $args[] = "$key=". escapeshellarg($value);
+      $args[] = "$key=" . escapeshellarg($value);
     }
-    $script = variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') .'/digest_md5/digest_md5.php');
-    $response = exec($script .' '. implode(' ', $args), $output, $status);
+    $script = variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') . '/digest_md5/digest_md5.php');
+    $response = exec($script . ' ' . implode(' ', $args), $output, $status);
     if (isset($edit['data']) && empty($status)) {
       $header = "Authentication-Info: $response";
     }
@@ -301,7 +301,7 @@ function _securesite_dialog($type) {
     $content = '';
   }
   // Are we on a password reset page?
-  elseif (strpos($_GET['q'], 'user/reset/') === 0 || module_exists('i18n') && i18n_selection_mode() != 'off' && strpos($_GET['q'], i18n_selection_mode('params') .'/user/reset/') === 0) {
+  elseif (strpos($_GET['q'], 'user/reset/') === 0 || module_exists('i18n') && i18n_selection_mode() != 'off' && strpos($_GET['q'], i18n_selection_mode('params') . '/user/reset/') === 0) {
     $args = explode('/', $_GET['q']);
     if (module_exists('i18n') && i18n_selection_mode() != 'off' && i18n_selection_mode('params') != '') {
       // Remove the language argument.
@@ -317,7 +317,7 @@ function _securesite_dialog($type) {
         $content = '';
       }
       else {
-        $error .= ' '. t('Please request a new one using the form below.');
+        $error .= ' ' . t('Please request a new one using the form below.');
         drupal_set_message($error, 'error');
         $content = drupal_get_form('securesite_user_pass');
       }
@@ -342,7 +342,7 @@ function _securesite_dialog($type) {
         }
         break;
       case SECURESITE_BASIC:
-        drupal_set_header('WWW-Authenticate: Basic realm="'. _securesite_fake_realm() .'"');
+        drupal_set_header('WWW-Authenticate: Basic realm="' . _securesite_fake_realm() . '"');
         drupal_set_header('HTTP/1.1 401 Unauthorized');
         break;
       case SECURESITE_FORM:
@@ -351,7 +351,7 @@ function _securesite_dialog($type) {
     }
     // Form authentication doesn't work for cron, so allow cron.php to run
     // without authenticating when no other authentication type is enabled.
-    if (request_uri() != $base_path .'cron.php' || variable_get('securesite_type', array(SECURESITE_BASIC)) != array(SECURESITE_FORM)) {
+    if (request_uri() != $base_path . 'cron.php' || variable_get('securesite_type', array(SECURESITE_BASIC)) != array(SECURESITE_FORM)) {
       drupal_set_title(t('Authentication required'));
       $content = _securesite_dialog_page();
     }
@@ -372,7 +372,7 @@ function _securesite_fake_realm() {
   $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
   $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? drupal_strtolower($_SERVER['HTTP_USER_AGENT']) : '');
   if ($user_agent != str_replace(array('msie', 'opera'), '', $user_agent)) {
-    $realm .= ' - '. mt_rand(10, 999);
+    $realm .= ' - ' . mt_rand(10, 999);
   }
   return $realm;
 }
@@ -386,14 +386,14 @@ function _securesite_dialog_page() {
   $reset = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
   if (in_array(SECURESITE_FORM, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
     $output = drupal_get_form('securesite_user_login');
-    $output .= empty($reset) ? '' : "<hr />\n". drupal_get_form('securesite_user_pass');
+    $output .= empty($reset) ? '' : "<hr />\n" . drupal_get_form('securesite_user_pass');
   }
   else {
     if (!empty($reset)) {
       $output = drupal_get_form('securesite_user_pass');
     }
     else {
-      $output = '<p>'. t('Reload the page to try logging in again.') .'</p>';
+      $output = '<p>' . t('Reload the page to try logging in again.') . '</p>';
     }
   }
   return $output;
@@ -426,10 +426,10 @@ function securesite_user_login(&$form_state) {
   );
   if (module_exists('openid')) {
     global $base_path;
-    $style = '<style type="text/css" media="all">'."\n".
-             '#securesite-user-login li.openid-link {'."\n".
-             '  background:transparent url('. $base_path . drupal_get_path('module', 'openid') .'/login-bg.png) no-repeat scroll 1px 0.35em;'."\n".
-             '}'."\n".
+    $style = '<style type="text/css" media="all">' . "\n" .
+             '#securesite-user-login li.openid-link {' . "\n" .
+             '  background:transparent url(' . $base_path . drupal_get_path('module', 'openid') . '/login-bg.png) no-repeat scroll 1px 0.35em;' . "\n" .
+             '}' . "\n" .
              '</style>';
     drupal_set_html_head($style);
   }

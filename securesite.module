@@ -188,14 +188,14 @@ function securesite_user($op, &$edit, &$user) {
     case 'update':
       if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC))) && isset($edit['pass'])) {
         $edit['name'] = isset($edit['name']) ? $edit['name'] : $user->name;
-        $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php');
+        $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') . '/digest_md5/stored_passwords.php');
         $values = array(
-          'username='. escapeshellarg($edit['name']),
-          'realm='. escapeshellarg(variable_get('securesite_realm', variable_get('site_name', 'Drupal'))),
-          'pass='. escapeshellarg($edit['pass']),
+          'username=' . escapeshellarg($edit['name']),
+          'realm=' . escapeshellarg(variable_get('securesite_realm', variable_get('site_name', 'Drupal'))),
+          'pass=' . escapeshellarg($edit['pass']),
           'op=create',
         );
-        exec($script .' '. implode(' ', $values), $output, $status);
+        exec($script . ' ' . implode(' ', $values), $output, $status);
         if ($user->name != $edit['name']) {
           securesite_user('delete', $edit, $user);
         }
@@ -203,13 +203,13 @@ function securesite_user($op, &$edit, &$user) {
       break;
     case 'delete':
       if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
-        $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') .'/digest_md5/stored_passwords.php');
+        $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') . '/digest_md5/stored_passwords.php');
         $values = array(
-          'username='. escapeshellarg($user->name),
-          'realm='. escapeshellarg(variable_get('securesite_realm', variable_get('site_name', 'Drupal'))),
+          'username=' . escapeshellarg($user->name),
+          'realm=' . escapeshellarg(variable_get('securesite_realm', variable_get('site_name', 'Drupal'))),
           'op=delete',
         );
-        exec($script .' '. implode(' ', $values));
+        exec($script . ' ' . implode(' ', $values));
       }
       break;
     case 'logout':
@@ -243,19 +243,19 @@ function securesite_theme() {
     'securesite_page' => array(
       'template' => 'securesite-page',
       'arguments' => array('content' => NULL, 'show_blocks' => FALSE, 'show_messages' => TRUE),
-      'path' => drupal_get_path('module', 'securesite') .'/theme',
+      'path' => drupal_get_path('module', 'securesite') . '/theme',
     ),
     'securesite_user_login' => array(
       'template' => 'securesite-user-login',
       'arguments' => array('form' => NULL),
       'file' => 'securesite.theme.inc',
-      'path' => drupal_get_path('module', 'securesite') .'/theme',
+      'path' => drupal_get_path('module', 'securesite') . '/theme',
     ),
     'securesite_user_pass' => array(
       'template' => 'securesite-user-pass',
       'arguments' => array('form' => NULL),
       'file' => 'securesite.theme.inc',
-      'path' => drupal_get_path('module', 'securesite') .'/theme',
+      'path' => drupal_get_path('module', 'securesite') . '/theme',
     ),
   );
 }
