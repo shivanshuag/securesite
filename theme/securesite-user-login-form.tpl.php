@@ -5,7 +5,7 @@
  * @file
  * Template for Secure Site log-in form.
  *
- * @see template_preprocess_securesite_user_login()
+ * @see template_preprocess_securesite_user_login_form()
  */
 ?>
 <h1><?php print t('Log in') ?></h1>

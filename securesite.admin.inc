@@ -244,8 +244,10 @@ function securesite_admin_settings_validate($form, &$form_state) {
     }
   }
   sort($form_state['values']['securesite_type']);
-  if (db_result(db_query_range("SELECT uid FROM {users} WHERE name = '%s'", $form_state['values']['securesite_guest_name'], 0, 1)) != 0) {
-    form_set_error('securesite_guest_name', t('The name %name belongs to a registered user.', array('%name' => $form_state['values']['securesite_guest_name'])));
+
+  $name = $form_state['values']['securesite_guest_name'];
+  if ($name && db_query_range("SELECT name FROM {users} WHERE name = :name", 0, 1, array(':name' => $name))->fetchField() == $name) {
+    form_set_error('securesite_guest_name', t('The name %name belongs to a registered user.', array('%name' => $name)));
   }
 }
 

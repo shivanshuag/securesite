@@ -54,7 +54,7 @@ function _securesite_parse_directives($field_value) {
  */
 function _securesite_403() {
   global $user;
-  if (empty($user->uid) && !isset($_SESSION['securesite_guest']) && $_GET['q'] != 'logout') {
+  if (empty($user->uid) && !isset($_SESSION['securesite_guest']) && $_GET['q'] != 'user/logout') {
     _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
   }
   else {
@@ -76,12 +76,12 @@ function _securesite_digest_auth($edit) {
     // Not a registered user. See if we have guest user credentials.
     switch ($status) {
       case 1:
-        drupal_set_header('HTTP/1.1 400 Bad Request');
+        drupal_add_http_header('Status', '400 Bad Request');
         _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
         break;
       case 0:
         // Password is correct. Log user in.
-        drupal_set_header($header);
+        drupal_add_http_header($header['name'], $header['value']);
         $edit['pass'] = variable_get('securesite_guest_pass', '');
       default:
         _securesite_guest_login($edit);
@@ -92,7 +92,7 @@ function _securesite_digest_auth($edit) {
     switch ($status) {
       case 0:
         // Password is correct. Log user in.
-        drupal_set_header($header);
+        drupal_add_http_header($header['name'], $header['value']);
         _securesite_user_login($edit, $account);
         break;
       case 2:
@@ -110,7 +110,7 @@ function _securesite_digest_auth($edit) {
         _securesite_dialog($type);
         break;
       case 1:
-        drupal_set_header('HTTP/1.1 400 Bad Request');
+        drupal_add_http_header('Status', '400 Bad Request');
       default:
         // Authentication failed. Request credentials using most secure authentication method.
         watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
@@ -140,11 +140,19 @@ function _securesite_digest_validate(&$status, $edit = array()) {
     }
     $script = variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') . '/digest_md5/digest_md5.php');
     $response = exec($script . ' ' . implode(' ', $args), $output, $status);
+
+    // drupal_set_header() is now drupal_add_http_header() and requires headers passed as name, value in an array.
+    // The script returns a string, so we shall break it up as best we can. The existing code doesn't seem
+    // to worry about correct data to append to 'WWW-Authenticate: ' etc so I won't add any for the D7 conversion.
+    $response = explode('=', $response);
+    $name = array_shift($response);
+    $value = implode('=', $response);
+
     if (isset($edit['data']) && empty($status)) {
-      $header = "Authentication-Info: $response";
+      $header = array('name' => "Authentication-Info: " . $name, 'value' => $value);
     }
     else {
-      $header = "WWW-Authenticate: Digest $response";
+      $header = array('name' => "WWW-Authenticate: Digest " . $name, 'value' => $value);
     }
   }
   return $header;
@@ -190,7 +198,7 @@ function _securesite_user_login($edit, $account) {
     // Mark the session so Secure Site will be triggered on log-out.
     $_SESSION['securesite_login'] = TRUE;
     // Prevent a log-in/log-out loop by redirecting off the log-out page.
-    if ($_GET['q'] == 'logout') {
+    if ($_GET['q'] == 'user/logout') {
       drupal_goto();
     }
   }
@@ -213,7 +221,7 @@ function _securesite_guest_login($edit) {
     $_SESSION['securesite_guest'] = $edit['name'];
     $_SESSION['securesite_login'] = TRUE;
     // Prevent a 403 error by redirecting off the logout page.
-    if ($_GET['q'] == 'logout') {
+    if ($_GET['q'] == 'user/logout') {
       drupal_goto();
     }
   }
@@ -239,7 +247,7 @@ function _securesite_denied($message) {
     unset($_SESSION['messages']);
     // Set a session variable so that the log-in dialog will be displayed when the page is reloaded.
     $_SESSION['securesite_denied'] = TRUE;
-    drupal_set_header('HTTP/1.1 403 Forbidden');
+    drupal_add_http_header('Status', '403 Forbidden');
     drupal_set_title(t('Access denied'));
     drupal_set_message($message, 'error');
     print theme('securesite_page');
@@ -334,19 +342,18 @@ function _securesite_dialog($type) {
           $header = _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
         }
         if (strpos($header, 'WWW-Authenticate') === 0) {
-          drupal_set_header($header);
-          drupal_set_header('HTTP/1.1 401 Unauthorized');
+          drupal_add_http_header('Status', '401 Unauthorized');
         }
         else {
-          drupal_set_header($header);
+          drupal_add_http_header($header['name'], $header['value']);
         }
         break;
       case SECURESITE_BASIC:
-        drupal_set_header('WWW-Authenticate: Basic realm="' . _securesite_fake_realm() . '"');
-        drupal_set_header('HTTP/1.1 401 Unauthorized');
+        drupal_add_http_header('WWW-Authenticate: Basic realm', _securesite_fake_realm());
+        drupal_add_http_header('Status', '401 Unauthorized');
         break;
       case SECURESITE_FORM:
-        drupal_set_header('HTTP/1.1 200 OK');
+        drupal_add_http_header('Status', '200 OK');
         break;
     }
     // Form authentication doesn't work for cron, so allow cron.php to run
@@ -385,7 +392,7 @@ function _securesite_fake_realm() {
 function _securesite_dialog_page() {
   $reset = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
   if (in_array(SECURESITE_FORM, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
-    $output = drupal_get_form('securesite_user_login');
+    $output = drupal_get_form('securesite_user_login_form');
     $output .= empty($reset) ? '' : "<hr />\n" . drupal_get_form('securesite_user_pass');
   }
   else {
@@ -406,7 +413,7 @@ function _securesite_dialog_page() {
  * @ingroup forms
  * @see user_login()
  */
-function securesite_user_login(&$form_state) {
+function securesite_user_login_form(&$form_state) {
   $form['name'] = array(
     '#type' => 'textfield',
     '#title' => t('User name'),
@@ -433,7 +440,10 @@ function securesite_user_login(&$form_state) {
              '</style>';
     drupal_set_html_head($style);
   }
-  drupal_alter('form', $form, $form_state, 'user_login');
+
+  // drupal_alter takes this variable by reference so can't be a literal.
+  $form_id = 'user_login';
+  drupal_alter('form', $form, $form_state, $form_id);
   return $form;
 }
 
@@ -448,7 +458,8 @@ function securesite_user_pass(&$form_state) {
   module_load_include('inc', 'user', 'user.pages');
   $form = user_pass();
   $form['name']['#title'] = t('User name or e-mail address');
-  drupal_alter('form', $form, $form_state, 'user_pass');
+  $form_id = 'user_pass';
+  drupal_alter('form', $form, $form_state, $form_id);
   $form['#redirect'] = FALSE;
   $form['#validate'][] = 'user_pass_validate';
   $form['#submit'][] = 'user_pass_submit';
