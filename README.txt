@@ -1,4 +1,3 @@
-$Id$
 
 The Secure Site module allows site administrators to make a site or part of a
 site private. You can restrict access to the site by role. This means the site

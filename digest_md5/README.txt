@@ -1,4 +1,3 @@
-$Id$
 
 Digest authentication avoids transmitting passwords by exchanging character
 strings (digests) that prove both the user and the Web server know the password.
