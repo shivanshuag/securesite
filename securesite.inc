@@ -432,7 +432,9 @@ function securesite_user_login(&$form_state) {
              '</style>';
     drupal_set_html_head($style);
   }
-  drupal_alter('form', $form, $form_state, 'user_login');
+  $data = &$form;
+  $data['__drupal_alter_by_ref'] = array(&$form_state);
+  drupal_alter('form', $data, 'user_login');
   return $form;
 }
 
@@ -447,7 +449,9 @@ function securesite_user_pass(&$form_state) {
   module_load_include('inc', 'user', 'user.pages');
   $form = user_pass();
   $form['name']['#title'] = t('User name or e-mail address');
-  drupal_alter('form', $form, $form_state, 'user_pass');
+  $data = &$form;
+  $data['__drupal_alter_by_ref'] = array(&$form_state);
+  drupal_alter('form', $data, 'user_pass');
   $form['#redirect'] = FALSE;
   $form['#validate'][] = 'user_pass_validate';
   $form['#submit'][] = 'user_pass_submit';
