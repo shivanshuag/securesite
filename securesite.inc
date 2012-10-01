@@ -163,8 +163,17 @@ function _securesite_digest_validate(&$status, $edit = array()) {
 function _securesite_plain_auth($edit) {
   $account = user_load(array('name' => $edit['name'], 'status' => 1));
   if (empty($account->uid)) {
-    // Not a registered user. See if we have guest user credentials.
-    _securesite_guest_login($edit);
+    // Not a registered user.
+    // If we have correct LDAP credentials, register this new user.
+    if (module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass'], TRUE) !== FALSE) {
+      $account = user_load(array('name' => $edit['name'], 'status' => 1));
+      // System should be setup correctly now, perform log-in.
+      _securesite_user_login($edit, $account);
+    }
+    else {
+      // See if we have guest user credentials.
+      _securesite_guest_login($edit);
+    }
   }
   else {
     if (user_load(array('name' => $edit['name'], 'pass' => $edit['pass'], 'status' => 1)) !== FALSE || module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
