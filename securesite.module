@@ -73,7 +73,7 @@ function securesite_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'securesite.inc',
   );
-  $items['admin/config/securesite'] = array(
+  $items['admin/config/system/securesite'] = array(
     'title' => 'Secure Site',
     'description' => 'Enables HTTP Auth security or an HTML form to restrict site access.',
     'page callback' => 'drupal_get_form',
