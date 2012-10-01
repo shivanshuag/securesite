@@ -139,7 +139,7 @@
  */
 class SecureSiteScriptStoredPasswordsUnitTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -150,7 +150,7 @@ class SecureSiteScriptStoredPasswordsUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -213,7 +213,7 @@ class SecureSiteScriptStoredPasswordsUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     exec("$this->stored_passwords $this->realm_arg op=delete");
@@ -226,7 +226,7 @@ class SecureSiteScriptStoredPasswordsUnitTest extends DrupalWebTestCase {
  */
 class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -237,7 +237,7 @@ class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -365,7 +365,7 @@ class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     exec("$this->stored_passwords realm=" . escapeshellarg($this->realm) . ' op=delete');
@@ -378,7 +378,7 @@ class SecureSiteScriptDigestMD5UnitTest extends DrupalWebTestCase {
  */
 class SecureSiteFunctionUserSaveUnitTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -389,7 +389,7 @@ class SecureSiteFunctionUserSaveUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -430,7 +430,7 @@ class SecureSiteFunctionUserSaveUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     exec("$this->stored_passwords $this->realm_arg op=delete");
@@ -443,7 +443,7 @@ class SecureSiteFunctionUserSaveUnitTest extends DrupalWebTestCase {
  */
 class SecureSiteFunctionUserLoadUnitTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -454,7 +454,7 @@ class SecureSiteFunctionUserLoadUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -499,7 +499,7 @@ class SecureSiteFunctionUserLoadUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     exec("$this->stored_passwords $this->realm_arg op=delete");
@@ -512,7 +512,7 @@ class SecureSiteFunctionUserLoadUnitTest extends DrupalWebTestCase {
  */
 class SecureSiteFunctionUserDeleteUnitTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -523,7 +523,7 @@ class SecureSiteFunctionUserDeleteUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -551,7 +551,7 @@ class SecureSiteFunctionUserDeleteUnitTest extends DrupalWebTestCase {
  */
 class SecureSiteFunctionForcedUnitTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -562,7 +562,7 @@ class SecureSiteFunctionForcedUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -605,7 +605,7 @@ class SecureSiteFunctionForcedUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     variable_del('securesite_enabled');
@@ -621,7 +621,7 @@ class SecureSiteFunctionForcedUnitTest extends DrupalWebTestCase {
  */
 class SecureSiteFunctionDigestValidateUnitTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -632,7 +632,7 @@ class SecureSiteFunctionDigestValidateUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -678,7 +678,7 @@ class SecureSiteFunctionDigestValidateUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     variable_del('securesite_type');
@@ -691,7 +691,7 @@ class SecureSiteFunctionDigestValidateUnitTest extends DrupalWebTestCase {
  */
 class SecureSiteFunctionFakeRealmUnitTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -702,7 +702,7 @@ class SecureSiteFunctionFakeRealmUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -735,7 +735,7 @@ class SecureSiteFunctionFakeRealmUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     $_SERVER['HTTP_USER_AGENT'] = $this->user_agent;
@@ -748,7 +748,7 @@ class SecureSiteFunctionFakeRealmUnitTest extends DrupalWebTestCase {
  */
 class SecureSiteFunctionDialogPageUnitTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -759,7 +759,7 @@ class SecureSiteFunctionDialogPageUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -815,7 +815,7 @@ class SecureSiteFunctionDialogPageUnitTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     variable_del('securesite_type');
@@ -830,7 +830,7 @@ class SecureSiteFunctionDialogPageUnitTest extends DrupalWebTestCase {
  */
 class SecureSiteNameConflictFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -841,7 +841,7 @@ class SecureSiteNameConflictFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -896,7 +896,7 @@ class SecureSiteNameConflictFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteForceDisabledFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -907,7 +907,7 @@ class SecureSiteForceDisabledFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -927,7 +927,7 @@ class SecureSiteForceDisabledFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteForceAlwaysFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -938,7 +938,7 @@ class SecureSiteForceAlwaysFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1030,7 +1030,7 @@ class SecureSiteForceAlwaysFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     $this->curl_options = array();
@@ -1044,7 +1044,7 @@ class SecureSiteForceAlwaysFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteForceOfflineFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1055,7 +1055,7 @@ class SecureSiteForceOfflineFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1086,7 +1086,7 @@ class SecureSiteForceOfflineFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteForce403FunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1097,7 +1097,7 @@ class SecureSiteForce403FunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1137,7 +1137,7 @@ class SecureSiteForce403FunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteConfig403FunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1148,7 +1148,7 @@ class SecureSiteConfig403FunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1192,7 +1192,7 @@ class SecureSiteConfig403FunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     variable_del('securesite_enabled');
@@ -1207,7 +1207,7 @@ class SecureSiteConfig403FunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteTypeBasicNoneFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1218,7 +1218,7 @@ class SecureSiteTypeBasicNoneFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1244,7 +1244,7 @@ class SecureSiteTypeBasicNoneFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteTypeBasicUserFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1255,7 +1255,7 @@ class SecureSiteTypeBasicUserFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1312,7 +1312,7 @@ class SecureSiteTypeBasicUserFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     $this->curl_options = array();
@@ -1325,7 +1325,7 @@ class SecureSiteTypeBasicUserFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteTypeBasicGuestUnsetFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1336,7 +1336,7 @@ class SecureSiteTypeBasicGuestUnsetFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1396,7 +1396,7 @@ class SecureSiteTypeBasicGuestUnsetFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     $this->curl_options = array();
@@ -1409,7 +1409,7 @@ class SecureSiteTypeBasicGuestUnsetFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteTypeBasicGuestSetFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1420,7 +1420,7 @@ class SecureSiteTypeBasicGuestSetFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1463,7 +1463,7 @@ class SecureSiteTypeBasicGuestSetFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     $this->curl_options = array();
@@ -1476,7 +1476,7 @@ class SecureSiteTypeBasicGuestSetFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteTypeFormNoneFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1487,7 +1487,7 @@ class SecureSiteTypeFormNoneFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1510,7 +1510,7 @@ class SecureSiteTypeFormNoneFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteTypeFormUserFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1521,7 +1521,7 @@ class SecureSiteTypeFormUserFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1568,7 +1568,7 @@ class SecureSiteTypeFormUserFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteTypeFormGuestFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1579,7 +1579,7 @@ class SecureSiteTypeFormGuestFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1622,7 +1622,7 @@ class SecureSiteTypeFormGuestFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteTypeDigestNoneFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1633,7 +1633,7 @@ class SecureSiteTypeDigestNoneFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1664,7 +1664,7 @@ class SecureSiteTypeDigestNoneFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteTypeDigestUserUnstoredFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1675,7 +1675,7 @@ class SecureSiteTypeDigestUserUnstoredFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1726,7 +1726,7 @@ class SecureSiteTypeDigestUserUnstoredFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     user_cancel(array(), $this->user->uid, $method = 'user_cancel_delete');
@@ -1739,7 +1739,7 @@ class SecureSiteTypeDigestUserUnstoredFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteTypeDigestUserStoredFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1750,7 +1750,7 @@ class SecureSiteTypeDigestUserStoredFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1786,7 +1786,7 @@ class SecureSiteTypeDigestUserStoredFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     user_cancel(array(), $this->user->uid, $method = 'user_cancel_delete');
@@ -1799,7 +1799,7 @@ class SecureSiteTypeDigestUserStoredFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteTypeDigestGuestUnsetFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1810,7 +1810,7 @@ class SecureSiteTypeDigestGuestUnsetFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1848,7 +1848,7 @@ class SecureSiteTypeDigestGuestUnsetFunctionalTest extends DrupalWebTestCase {
  */
 class SecureSiteTypeDigestGuestSetFunctionalTest extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -1859,7 +1859,7 @@ class SecureSiteTypeDigestGuestSetFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('securesite');
@@ -1909,7 +1909,7 @@ class SecureSiteTypeDigestGuestSetFunctionalTest extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of tearDown().
+   * Implements tearDown().
    */
   function tearDown() {
     $this->curl_options[CURLOPT_USERPWD] = $this->user->name . ':' . $this->user->pass_raw;

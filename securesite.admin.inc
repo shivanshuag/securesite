@@ -161,10 +161,10 @@ function securesite_admin_settings() {
     ),
     '#required' => TRUE,
   );
-  $form['authentication']['securesite_type']['#description'] = "\n".'<p>' .
-    t('HTTP authentication requires extra configuration if PHP is not installed as an Apache module. See the !link section of the Secure Site help for details.', array('!link' => l(t('Known issues'), 'admin/help/securesite', array('fragment' => 'issues')))) . '</p>' . "\n" . '<p>'.
+  $form['authentication']['securesite_type']['#description'] = "\n<p>" .
+    t('HTTP authentication requires extra configuration if PHP is not installed as an Apache module. See the !link section of the Secure Site help for details.', array('!link' => l(t('Known issues'), 'admin/help/securesite', array('fragment' => 'issues')))) . "</p>\n<p>" .
     t('Digest authentication protects a user&rsquo;s password from eavesdroppers when you are not using SSL to encrypt the connection. However, it can only be used when a copy of the password is stored on the server.') . ' ' .
-    t('For security reasons, Drupal does not store passwords. You will need to configure scripts to securely save passwords and authenticate users. See the !link section of the Secure Site help for details.', array('!link' => l(t('Secure password storage'), 'admin/help/securesite', array('fragment' => 'passwords')))) . '</p>' . "\n" . '<p>'.
+    t('For security reasons, Drupal does not store passwords. You will need to configure scripts to securely save passwords and authenticate users. See the !link section of the Secure Site help for details.', array('!link' => l(t('Secure password storage'), 'admin/help/securesite', array('fragment' => 'passwords')))) . "</p>\n<p>" .
     t('When digest authentication is enabled, passwords will be saved when users log in or set their passwords. If you use digest authentication to protect your whole site, you should allow guest access or allow another authentication type until users whose passwords are not yet saved have logged in. Otherwise, <strong>you may lock yourself out of your own site.</strong>') . '</p>' . "\n";
   $form['authentication']['securesite_digest_script'] = array(
     '#type' => 'textarea',
@@ -274,11 +274,11 @@ function securesite_admin_settings_submit($form, &$form_state) {
       $realm != $values['securesite_realm'] // Realm has changed.
     ) {
       // Delete all stored passwords.
-      exec("$script realm=". escapeshellarg($realm) . ' op=delete');
+      exec("$script realm=" . escapeshellarg($realm) . ' op=delete');
     }
     elseif ($values['securesite_guest_name'] != $securesite_guest_name) {
       // Guest user name has changed. Delete old guest user password.
-      exec("$script username=". escapeshellarg($securesite_guest_name) . ' realm=' . escapeshellarg($realm) . ' op=delete');
+      exec("$script username=" . escapeshellarg($securesite_guest_name) . ' realm=' . escapeshellarg($realm) . ' op=delete');
     }
   }
   if (in_array(SECURESITE_DIGEST, $values['securesite_type']) && (!isset($values['op']) || $values['op'] != t('Reset to defaults'))) {

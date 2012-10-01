@@ -6,7 +6,7 @@
  */
 
 /**
- * Implementation of hook_enable().
+ * Implements hook_enable().
  */
 function securesite_enable() {
   if (variable_get('securesite_enabled', SECURESITE_DISABLED) == SECURESITE_403) {
@@ -18,14 +18,14 @@ function securesite_enable() {
 }
 
 /**
- * Implementation of hook_disable().
+ * Implements hook_disable().
  */
 function securesite_disable() {
   variable_set('site_403', variable_get('securesite_403', variable_get('site_403', '')));
 }
 
 /**
- * Implementation of hook_uninstall().
+ * Implements hook_uninstall().
  */
 function securesite_uninstall() {
   if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
@@ -34,13 +34,12 @@ function securesite_uninstall() {
     exec("$script realm=" . escapeshellarg($realm) . ' op=delete');
   }
   $settings = db_query("SELECT name FROM {variable} WHERE name LIKE 'securesite\_%'");
-  foreach($settings as $variable) {
+  foreach ($settings as $variable) {
     variable_del($variable->name);
   }
 }
 
 /**
- * Implementation of hook_update_N().
  * Convert variables from older versions.
  */
 function securesite_update_6200() {
@@ -60,5 +59,4 @@ function securesite_update_6200() {
   }
   variable_del('securesite_filter_pages');
   variable_del('securesite_filter_pages_type');
-  return array();
 }

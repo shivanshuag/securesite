@@ -1,7 +1,8 @@
 name = Secure Site
 description = Enables HTTP Auth security or an HTML form to restrict site access.
 core = 7.x
+configure = admin/config/system/securesite
 
-files[] = "securesite.test"
+files[] = securesite.test
+files[] = securesite.inc
 
-configure = "admin/config/securesite"

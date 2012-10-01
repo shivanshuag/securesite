@@ -11,4 +11,4 @@
 <p><?php print $title ?></p>
 <?php print drupal_render($form['name']); ?>
 <?php print drupal_render($form['submit']); ?>
-<?php print drupal_render($form) ?>
+<?php print drupal_render_children($form) ?>

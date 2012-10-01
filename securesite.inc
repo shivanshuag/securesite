@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @file
  * Secure Site log-in functions.
@@ -257,7 +256,7 @@ function _securesite_denied($message) {
     $_SESSION['securesite_denied'] = TRUE;
     drupal_add_http_header('Status', '403 Forbidden');
     drupal_set_title(t('Access denied'));
-    drupal_set_message($message, 'error');
+    drupal_set_message(filter_xss($message), 'error');
     print theme('securesite_page');
     module_invoke_all('exit');
     exit();
@@ -309,7 +308,7 @@ function _securesite_forced() {
  *   The type of authentication dialog to display.
  */
 function _securesite_dialog($type) {
-  global $base_path;
+  global $base_path, $language;
   // Has the password reset form been submitted?
   if (isset($_POST['form_id']) && $_POST['form_id'] == 'securesite_user_pass') {
     // Get form messages, but do not display form.
@@ -317,9 +316,9 @@ function _securesite_dialog($type) {
     $content = '';
   }
   // Are we on a password reset page?
-  elseif (strpos($_GET['q'], 'user/reset/') === 0 || module_exists('i18n') && i18n_selection_mode() != 'off' && strpos($_GET['q'], i18n_selection_mode('params') . '/user/reset/') === 0) {
+  elseif (strpos($_GET['q'], 'user/reset/') === 0 || module_exists('locale') && $language->enabled && strpos($_GET['q'], $language->prefix . '/user/reset/') === 0) {
     $args = explode('/', $_GET['q']);
-    if (module_exists('i18n') && i18n_selection_mode() != 'off' && i18n_selection_mode('params') != '') {
+    if (module_exists('locale') && $language->enabled && $language->prefix != '') {
       // Remove the language argument.
       array_shift($args);
     }
@@ -372,7 +371,7 @@ function _securesite_dialog($type) {
     }
   }
   if (isset($content)) {
-    print theme('securesite_page', $content);
+    print theme('securesite_page', array('content' => $content));
     module_invoke_all('exit');
     exit();
   }
@@ -400,12 +399,17 @@ function _securesite_fake_realm() {
 function _securesite_dialog_page() {
   $reset = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
   if (in_array(SECURESITE_FORM, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
-    $output = drupal_get_form('securesite_user_login_form');
-    $output .= empty($reset) ? '' : "<hr />\n" . drupal_get_form('securesite_user_pass');
+    $user_login = drupal_get_form('securesite_user_login');
+    $output = render($user_login);
+    if (!empty($reset)) {
+      $user_pass = drupal_get_form('securesite_user_pass');
+      $output .= "<hr />\n" . render($user_pass);
+    }
   }
   else {
     if (!empty($reset)) {
-      $output = drupal_get_form('securesite_user_pass');
+      $user_pass = drupal_get_form('securesite_user_pass');
+      $output = render($user_pass);
     }
     else {
       $output = '<p>' . t('Reload the page to try logging in again.') . '</p>';
@@ -421,7 +425,7 @@ function _securesite_dialog_page() {
  * @ingroup forms
  * @see user_login()
  */
-function securesite_user_login_form(&$form_state) {
+function securesite_user_login($form, &$form_state) {
   $form['name'] = array(
     '#type' => 'textfield',
     '#title' => t('User name'),
@@ -462,7 +466,7 @@ function securesite_user_login_form(&$form_state) {
  * @see user_pass_validate()
  * @see user_pass_submit()
  */
-function securesite_user_pass(&$form_state) {
+function securesite_user_pass($form, &$form_state) {
   module_load_include('inc', 'user', 'user.pages');
   $form = user_pass();
   $form['name']['#title'] = t('User name or e-mail address');
