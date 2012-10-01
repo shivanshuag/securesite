@@ -357,7 +357,7 @@ function _securesite_dialog($type) {
         }
         break;
       case SECURESITE_BASIC:
-        drupal_add_http_header('WWW-Authenticate: Basic realm', _securesite_fake_realm());
+        drupal_add_http_header('WWW-Authenticate', 'Basic realm="' . _securesite_fake_realm() . '"');
         drupal_add_http_header('Status', '401 Unauthorized');
         break;
       case SECURESITE_FORM:
