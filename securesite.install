@@ -34,7 +34,7 @@ function securesite_uninstall() {
     exec("$script realm=" . escapeshellarg($realm) . ' op=delete');
   }
   $settings = db_query("SELECT name FROM {variable} WHERE name LIKE 'securesite\_%'");
-  while ($variable = db_fetch_object($settings)) {
+  foreach($settings as $variable) {
     variable_del($variable->name);
   }
 }
