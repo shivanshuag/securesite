@@ -300,7 +300,7 @@ function securesite_theme() {
       ),
       'path' => drupal_get_path('module', 'securesite') . '/theme',
     ),
-    'securesite_user_login' => array(
+    'securesite_user_login_form' => array(
       'template' => 'securesite-user-login',
       'render element' => 'form',
       'file' => 'securesite.theme.inc',

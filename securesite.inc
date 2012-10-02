@@ -160,12 +160,14 @@ function _securesite_digest_validate(&$status, $edit = array()) {
  * Perform plain authentication.
  */
 function _securesite_plain_auth($edit) {
-  $account = user_load(array('name' => $edit['name'], 'status' => 1));
+  $users = user_load_multiple(array(), array('name' => $edit['name'], 'status' => 1));
+  $account = reset($users);
   if (empty($account->uid)) {
     // Not a registered user.
     // If we have correct LDAP credentials, register this new user.
     if (module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass'], TRUE) !== FALSE) {
-      $account = user_load(array('name' => $edit['name'], 'status' => 1));
+      $users = user_load_multiple(array(), array('name' => $edit['name'], 'status' => 1));
+      $account = reset($users);
       // System should be setup correctly now, perform log-in.
       _securesite_user_login($edit, $account);
     }
@@ -175,7 +177,8 @@ function _securesite_plain_auth($edit) {
     }
   }
   else {
-    if (user_load(array('name' => $edit['name'], 'pass' => $edit['pass'], 'status' => 1)) !== FALSE || module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
+    require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+    if (user_check_password($edit['pass'], $account) || module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
       // Password is correct. Perform log-in.
       _securesite_user_login($edit, $account);
     }
@@ -199,7 +202,7 @@ function _securesite_user_login($edit, $account) {
     unset($_SESSION['securesite_denied']);
     // Unset messages from previous log-in attempts.
     unset($_SESSION['messages']);
-    user_authenticate_finalize($edit);
+    user_login_finalize($edit);
     // Clear the guest session.
     unset($_SESSION['securesite_guest']);
     // Mark the session so Secure Site will be triggered on log-out.
@@ -399,7 +402,7 @@ function _securesite_fake_realm() {
 function _securesite_dialog_page() {
   $reset = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
   if (in_array(SECURESITE_FORM, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
-    $user_login = drupal_get_form('securesite_user_login');
+    $user_login = drupal_get_form('securesite_user_login_form');
     $output = render($user_login);
     if (!empty($reset)) {
       $user_pass = drupal_get_form('securesite_user_pass');
@@ -425,7 +428,7 @@ function _securesite_dialog_page() {
  * @ingroup forms
  * @see user_login()
  */
-function securesite_user_login($form, &$form_state) {
+function securesite_user_login_form($form, &$form_state) {
   $form['name'] = array(
     '#type' => 'textfield',
     '#title' => t('User name'),
