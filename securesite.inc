@@ -260,7 +260,8 @@ function _securesite_denied($message) {
     drupal_add_http_header('Status', '403 Forbidden');
     drupal_set_title(t('Access denied'));
     drupal_set_message(filter_xss($message), 'error');
-    print theme('securesite_page');
+    $page = theme('securesite_page', array('content' => ''));
+    print theme('securesite_html', array('page' => $page));
     module_invoke_all('exit');
     exit();
   }
@@ -374,7 +375,8 @@ function _securesite_dialog($type) {
     }
   }
   if (isset($content)) {
-    print theme('securesite_page', array('content' => $content));
+    $page = theme('securesite_page', array('content' => $content));
+    print theme('securesite_html',array('page' => $page));
     module_invoke_all('exit');
     exit();
   }

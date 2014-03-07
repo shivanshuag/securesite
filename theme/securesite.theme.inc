@@ -26,3 +26,13 @@ function template_preprocess_securesite_user_pass(&$variables) {
   $variables['title'] = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
   $variables['form']['name']['#required'] = FALSE;
 }
+/**
+ * Process variables for securesite-page.tpl.php
+ *
+ * @param $variables
+ *   An array of variables from the theme system.
+ */
+function template_preprocess_securesite_page(&$variables) {
+  $variables['messages'] = $variables['show_messages'] ? theme('status_messages') : '';
+  $variables['base_path'] = base_path();
+}
