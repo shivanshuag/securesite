@@ -11,7 +11,7 @@
  * @param $variables
  *   An array of variables from the theme system.
  */
-function template_preprocess_securesite_user_login(&$variables) {
+function template_preprocess_securesite_user_login_form(&$variables) {
   $variables['title'] = variable_get('securesite_login_form', t('Enter your user name and password.'));
   $variables['messages'] = theme('status_messages');
 }
