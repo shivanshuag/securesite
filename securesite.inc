@@ -53,7 +53,7 @@ function _securesite_parse_directives($field_value) {
 function _securesite_403() {
   global $user;
   if (empty($user->uid) && !isset($_SESSION['securesite_guest']) && $_GET['q'] != 'user/logout') {
-    _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
+    _securesite_dialog(securesite_type_get());
   }
   else {
     $path = drupal_get_normal_path(variable_get('securesite_403', ''));
@@ -75,7 +75,7 @@ function _securesite_digest_auth($edit) {
     switch ($status) {
       case 1:
         drupal_add_http_header('Status', '400 Bad Request');
-        _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
+        _securesite_dialog(securesite_type_get());
         break;
       case 0:
         // Password is correct. Log user in.
@@ -113,7 +113,7 @@ function _securesite_digest_auth($edit) {
         // Authentication failed. Request credentials using most secure authentication method.
         watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
         drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
-        _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
+        _securesite_dialog(securesite_type_get());
         break;
     }
   }
@@ -186,7 +186,7 @@ function _securesite_plain_auth($edit) {
       // Request credentials using most secure authentication method.
       watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
       drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
-      _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
+      _securesite_dialog(securesite_type_get());
     }
   }
 }
@@ -198,15 +198,18 @@ function _securesite_user_login($edit, $account) {
   if (user_access('access secured pages', $account)) {
     global $user;
     $user = $account;
+    user_login_finalize($edit);
+    
+    // Mark the session so Secure Site will be triggered on log-out.
+    $_SESSION['securesite_login'] = TRUE;
+    
     // Unset the session variable set by securesite_denied().
     unset($_SESSION['securesite_denied']);
     // Unset messages from previous log-in attempts.
     unset($_SESSION['messages']);
-    user_login_finalize($edit);
     // Clear the guest session.
     unset($_SESSION['securesite_guest']);
-    // Mark the session so Secure Site will be triggered on log-out.
-    $_SESSION['securesite_login'] = TRUE;
+    
     // Prevent a log-in/log-out loop by redirecting off the log-out page.
     if ($_GET['q'] == 'user/logout') {
       drupal_goto();
@@ -243,7 +246,7 @@ function _securesite_guest_login($edit) {
     else {
       watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
       drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
-      _securesite_dialog(array_pop(variable_get('securesite_type', array(SECURESITE_BASIC))));
+      _securesite_dialog(securesite_type_get());
     }
   }
 }
@@ -254,14 +257,19 @@ function _securesite_guest_login($edit) {
 function _securesite_denied($message) {
   if (empty($_SESSION['securesite_denied'])) {
     // Unset messages from previous log-in attempts.
-    unset($_SESSION['messages']);
+    if (isset($_SESSION['messages'])) {
+      unset($_SESSION['messages']);
+    }
     // Set a session variable so that the log-in dialog will be displayed when the page is reloaded.
     $_SESSION['securesite_denied'] = TRUE;
     drupal_add_http_header('Status', '403 Forbidden');
     drupal_set_title(t('Access denied'));
     drupal_set_message(filter_xss($message), 'error');
-    $page = theme('securesite_page', array('content' => ''));
-    print theme('securesite_html', array('page' => $page));
+    
+    // Theme and display output
+    print theme('securesite_page');
+    
+    // Exit
     module_invoke_all('exit');
     exit();
   }
@@ -280,7 +288,7 @@ function _securesite_denied($message) {
       $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
       _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
     }
-    _securesite_dialog(array_pop($types));
+    _securesite_dialog(securesite_type_get());
   }
 }
 
@@ -375,8 +383,10 @@ function _securesite_dialog($type) {
     }
   }
   if (isset($content)) {
-    $page = theme('securesite_page', array('content' => $content));
-    print theme('securesite_html',array('page' => $page));
+    // Theme and display output
+    print theme('securesite_page', array('content' => $content));
+    
+    // Exit page
     module_invoke_all('exit');
     exit();
   }
@@ -481,4 +491,9 @@ function securesite_user_pass($form, &$form_state) {
   $form['#validate'][] = 'user_pass_validate';
   $form['#submit'][] = 'user_pass_submit';
   return $form;
+}
+
+function securesite_type_get() {
+  $securesite_type = variable_get('securesite_type', array(SECURESITE_BASIC));
+  return array_pop($securesite_type);
 }
