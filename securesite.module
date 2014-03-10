@@ -291,16 +291,10 @@ function securesite_user_logout($account) {
  */
 function securesite_theme() {
   return array(
-    'securesite_html'=> array(
-      'template' => 'securesite-html',
-      'path' => drupal_get_path('module', 'securesite') . '/theme',
-    ),
     'securesite_page' => array(
       'template' => 'securesite-page',
       'variables' => array(
         'content' => NULL,
-        'show_blocks' => FALSE,
-        'show_messages' => TRUE
       ),
       'file' => 'securesite.theme.inc',
       'path' => drupal_get_path('module', 'securesite') . '/theme',
@@ -318,11 +312,4 @@ function securesite_theme() {
       'path' => drupal_get_path('module', 'securesite') . '/theme',
     ),
   );
-}
-
-/**
- * Implements hook_theme_registry_alter().
- */
-function securesite_theme_registry_alter(&$theme_registry) {
-  $theme_registry['securesite_html']['preprocess functions'] = $theme_registry['html']['preprocess functions'];
 }
