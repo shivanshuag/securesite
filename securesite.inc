@@ -229,7 +229,9 @@ function _securesite_guest_login($edit) {
   // Check anonymous user permission and credentials.
   if (user_access('access secured pages') && (empty($guest_name) || $edit['name'] == $guest_name) && (empty($guest_pass) || $edit['pass'] == $guest_pass)) {
     // Unset the session variable set by securesite_denied().
-    unset($_SESSION['securesite_denied']);
+    if(isset($_SESSION['securesite_denied'])){
+      unset($_SESSION['securesite_denied']);
+    }
     // Mark this session to prevent re-login (note: guests can't log out).
     $_SESSION['securesite_guest'] = $edit['name'];
     $_SESSION['securesite_login'] = TRUE;
