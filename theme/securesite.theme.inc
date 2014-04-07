@@ -35,10 +35,15 @@ function template_preprocess_securesite_user_pass(&$variables) {
  */
 function template_preprocess_securesite_page(&$variables) {
   // Add relevant default variables, taken from template_preprocess_page()
-  $variables['messages']   = $variables['show_messages'] ? theme('status_messages') : '';
+  $variables['messages']   = !empty($variables['show_messages']) ? theme('status_messages') : '';
   $variables['base_path']  = base_path();
   $variables['logo']       = theme_get_setting('logo');
   $variables['front_page'] = url();
+  
+  // Check if logo exists before output it in a template file
+  if (!file_exists($variables['logo'])) {
+    $variables['logo'] = NULL;
+  }
   
   // Clear out existing CSS
   $css = &drupal_static('drupal_add_css', array());
@@ -51,6 +56,9 @@ function template_preprocess_securesite_page(&$variables) {
   // By default we should not need any JS.
   $js = &drupal_static('drupal_add_js', array());
   $js = array();
+  
+  // Required by Core template_process_html()
+  $variables['page']['#children'] = NULL;
   
   // Call Drupal core default html page preprocess function
   template_preprocess_html($variables);
