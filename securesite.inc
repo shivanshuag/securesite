@@ -160,6 +160,12 @@ function _securesite_digest_validate(&$status, $edit = array()) {
  * Perform plain authentication.
  */
 function _securesite_plain_auth($edit) {
+  // We cant set username to be a required field so we check here if it is empty
+  if (empty($edit['name'])) {
+    drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
+    _securesite_dialog(securesite_type_get());
+  }
+
   $users = user_load_multiple(array(), array('name' => $edit['name'], 'status' => 1));
   $account = reset($users);
   if (empty($account->uid)) {
@@ -269,7 +275,8 @@ function _securesite_denied($message) {
     drupal_set_message(filter_xss($message), 'error');
     
     // Theme and display output
-    print theme('securesite_page');
+    $content = _securesite_dialog_page();
+    print theme('securesite_page', array('content' => $content));
     
     // Exit
     module_invoke_all('exit');
