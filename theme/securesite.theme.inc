@@ -41,7 +41,14 @@ function template_preprocess_securesite_page(&$variables) {
   $variables['front_page'] = url();
   
   // Check if logo exists before output it in a template file
-  if (!file_exists($variables['logo'])) {
+  // First get relative path from logo theme setting
+  $logo_parts = parse_url($variables['logo']);
+  $logo_path = $logo_parts['path'];
+  if (strpos($logo_path, $variables['base_path']) === 0) {
+    $logo_path = substr($logo_path, strlen($variables['base_path']));
+  }
+  // If file does not exist clear it
+  if (!file_exists($logo_path)) {
     $variables['logo'] = NULL;
   }
   
