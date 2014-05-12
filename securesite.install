@@ -8,6 +8,14 @@
 /**
  * Implements hook_enable().
  */
+/**
+ * TODO
+ hook_enable/disable is deprecated. use hook_install instead
+ set  securesite_digest_script config variable to when installing the module drupal_get_path('module', 'securesite') . '/digest_md5/digest_md5.php'
+ set securesite_password_script config variable to drupal_get_path('module', 'securesite') . '/digest_md5/stored_passwords.php' in hook_install
+ set securesite_realm config variable to variable_get('site_name', 'Drupal') in hook_install
+ set securesite_403 config variable to variable_get('site_403', '') in hook_install
+*/
 function securesite_enable() {
   if (variable_get('securesite_enabled', SECURESITE_DISABLED) == SECURESITE_403) {
     if (($site_403 = variable_get('site_403', '')) != 'securesite_403') {
