@@ -311,7 +311,7 @@ function _securesite_forced() {
     return FALSE;
   }
   else {
-    switch (variable_get('securesite_enabled', SECURESITE_DISABLED)) {
+    switch (\Drupal::config('securesite.settings')->get('securesite_enabled')) {
       case SECURESITE_ALWAYS:
         return TRUE;
       case SECURESITE_OFFLINE:
