@@ -112,7 +112,7 @@ function securesite_boot() {
     if (isset($_SESSION['securesite_repeat'])) {
       unset($_SESSION['securesite_repeat']);
     }
-    $types = variable_get('securesite_type', array(SECURESITE_BASIC));
+    $types = \Drupal::config('securesite.settings')->get('securesite_type');
     sort($types, SORT_NUMERIC);
     drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
     module_load_include('inc', 'securesite');
@@ -147,7 +147,7 @@ function _securesite_mechanism() {
       }
     }
     $mechanism = FALSE;
-    $types = variable_get('securesite_type', array(SECURESITE_BASIC));
+    $types = \Drupal::config('securesite.settings')->get('securesite_type');
     rsort($types, SORT_NUMERIC);
     foreach ($types as $type) {
       switch ($type) {
@@ -229,7 +229,7 @@ function securesite_user_load($users) {
  * @todo more documentation would be useful.
  */
 function _securesite_user_digest_cleanup($account) {
-  if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC))) && isset($edit['pass'])) {
+  if (in_array(SECURESITE_DIGEST, \Drupal::config('securesite.settings')->get('securesite_type')) && isset($edit['pass'])) {
     $edit['name'] = isset($edit['name']) ? $edit['name'] : $user->name;
     $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') . '/digest_md5/stored_passwords.php');
     $values = array(
@@ -249,7 +249,7 @@ function _securesite_user_digest_cleanup($account) {
  * Implements hook_user_delete().
  */
 function securesite_user_delete($account) {
-  if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
+  if (in_array(SECURESITE_DIGEST, \Drupal::config('securesite.settings')->get('securesite_type'))) {
     $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') . '/digest_md5/stored_passwords.php');
     $values = array(
       'username=' . escapeshellarg($user->name),
@@ -267,7 +267,7 @@ function securesite_user_delete($account) {
  * credentials are cleared
  */
 function securesite_user_logout($account) {
-  $types = variable_get('securesite_type', array(SECURESITE_BASIC));
+  $types = \Drupal::config('securesite.settings')->get('securesite_type');
   if ((in_array(SECURESITE_BASIC, $types) || in_array(SECURESITE_DIGEST, $types)) && !empty($_SESSION['securesite_login'])) {
     module_load_include('inc', 'securesite');
     // Load the anonymous user.

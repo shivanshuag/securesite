@@ -1,5 +1,6 @@
 securesite_enabled: 0   #SECURESITE_DISABLED
-securesite_type: 2   #SECURESITE_BASIC
+securesite_type:
+  - 2   #SECURESITE_BASIC
 securesite_digest_script: ''
 securesite_password_script: ''
 securesite_realm: ''

@@ -96,7 +96,7 @@ function _securesite_digest_auth($edit) {
       case 2:
         // Password not stored. Request credentials using next most secure authentication method.
         $mechanism = _securesite_mechanism();
-        $types = variable_get('securesite_type', array(SECURESITE_BASIC));
+        $types = \Drupal::config('securesite.settings')->get('securesite_type');
         rsort($types);
         foreach ($types as $type) {
           if ($type < $mechanism) {
@@ -291,7 +291,7 @@ function _securesite_denied($message) {
     if ($user_agent != str_replace('safari', '', $user_agent)) {
       $_SESSION['securesite_repeat'] = TRUE;
     }
-    $types = variable_get('securesite_type', array(SECURESITE_BASIC));
+    $types = \Drupal::config('securesite.settings')->get('securesite_type');
     if (in_array(SECURESITE_DIGEST, $types)) {
       // Reset the digest header.
       $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
@@ -386,7 +386,7 @@ function _securesite_dialog($type) {
     }
     // Form authentication doesn't work for cron, so allow cron.php to run
     // without authenticating when no other authentication type is enabled.
-    if (request_uri() != $base_path . 'cron.php' || variable_get('securesite_type', array(SECURESITE_BASIC)) != array(SECURESITE_FORM)) {
+    if (request_uri() != $base_path . 'cron.php' || \Drupal::config('securesite.settings')->get('securesite_type') != array(SECURESITE_FORM)) {
       drupal_set_title(t('Authentication required'));
       $content = _securesite_dialog_page();
     }
@@ -422,7 +422,7 @@ function _securesite_fake_realm() {
  */
 function _securesite_dialog_page() {
   $reset = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
-  if (in_array(SECURESITE_FORM, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
+  if (in_array(SECURESITE_FORM, \Drupal::config('securesite.settings')->get('securesite_type'))) {
     $user_login = drupal_get_form('securesite_user_login_form');
     $output = render($user_login);
     if (!empty($reset)) {
@@ -503,6 +503,6 @@ function securesite_user_pass($form, &$form_state) {
 }
 
 function securesite_type_get() {
-  $securesite_type = variable_get('securesite_type', array(SECURESITE_BASIC));
+  $securesite_type = \Drupal::config('securesite.settings')->get('securesite_type');
   return array_pop($securesite_type);
 }

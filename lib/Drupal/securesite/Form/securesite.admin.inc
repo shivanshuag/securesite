@@ -154,7 +154,7 @@ function securesite_admin_settings() {
   $form['authentication']['securesite_type'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Allowed authentication types'),
-    '#default_value' => variable_get('securesite_type', array(SECURESITE_BASIC)),
+    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_type'),
     '#options' => array(
       SECURESITE_DIGEST => t('HTTP digest'),
       SECURESITE_BASIC => t('HTTP basic'),
@@ -254,6 +254,7 @@ function securesite_admin_settings_validate($form, &$form_state) {
 /**
  * Configure access denied page and manage stored guest password.
  */
+//TODO why is securesite_type not set here
 function securesite_admin_settings_submit($form, &$form_state) {
   $values = $form_state['values'];
   if ($values['securesite_enabled'] != SECURESITE_403 || isset($values['op']) && $values['op'] == t('Reset to defaults')) {
