@@ -198,7 +198,7 @@ function securesite_admin_settings() {
   $form['guest']['securesite_guest_name'] = array(
     '#type' => 'textfield',
     '#title' => t('Guest user'),
-    '#default_value' => variable_get('securesite_guest_name', ''),
+    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_guest_name'),
     '#length' => 30,
     '#maxlength' => 40,
     '#description' => t('Do not use the name of a registered user. Leave empty to accept any name.'),
@@ -207,7 +207,7 @@ function securesite_admin_settings() {
   $form['guest']['securesite_guest_pass'] = array(
     '#type' => 'textfield',
     '#title' => t('Guest password'),
-    '#default_value' => variable_get('securesite_guest_pass', ''),
+    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_guest_pass'),
     '#length' => 30,
     '#maxlength' => 40,
     '#description' => t('Leave empty to accept any password.'),
@@ -266,10 +266,10 @@ function securesite_admin_settings_submit($form, &$form_state) {
     variable_set('site_403', 'securesite_403');
   }
   $script = \Drupal::config('securesite.settings')->get('securesite_password_script');
-  $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
+  $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
   if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
     // If digest authentication was enabled, we may need to do some clean-up.
-    $securesite_guest_name = variable_get('securesite_guest_name', '');
+    $securesite_guest_name = \Drupal::config('securesite.settings')->get('securesite_guest_name');
     if (
       isset($values['op']) && $values['op'] == t('Reset to defaults') || // Values are being reset to defaults.
       !in_array(SECURESITE_DIGEST, $values['securesite_type']) || // Digest authentication is being disabled.

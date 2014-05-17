@@ -67,7 +67,7 @@ function _securesite_403() {
  */
 function _securesite_digest_auth($edit) {
   global $user;
-  $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
+  $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
   $header = _securesite_digest_validate($status, array('data' => $_SERVER['PHP_AUTH_DIGEST'], 'method' => $_SERVER['REQUEST_METHOD'], 'uri' => request_uri(), 'realm' => $realm));
   $account = user_load(array('name' => $edit['name'], 'status' => 1));
   if (empty($account->uid)) {
@@ -80,7 +80,7 @@ function _securesite_digest_auth($edit) {
       case 0:
         // Password is correct. Log user in.
         drupal_add_http_header($header['name'], $header['value']);
-        $edit['pass'] = variable_get('securesite_guest_pass', '');
+        $edit['pass'] = \Drupal::config('securesite.settings')->get('securesite_guest_pass');
       default:
         _securesite_guest_login($edit);
         break;
@@ -230,8 +230,8 @@ function _securesite_user_login($edit, $account) {
  * Log in guest user.
  */
 function _securesite_guest_login($edit) {
-  $guest_name = variable_get('securesite_guest_name', '');
-  $guest_pass = variable_get('securesite_guest_pass', '');
+  $guest_name = \Drupal::config('securesite.settings')->get('securesite_guest_name');
+  $guest_pass = \Drupal::config('securesite.settings')->get('securesite_guest_pass');
   // Check anonymous user permission and credentials.
   if (user_access('access secured pages') && (empty($guest_name) || $edit['name'] == $guest_name) && (empty($guest_pass) || $edit['pass'] == $guest_pass)) {
     // Unset the session variable set by securesite_denied().
@@ -294,7 +294,7 @@ function _securesite_denied($message) {
     $types = \Drupal::config('securesite.settings')->get('securesite_type');
     if (in_array(SECURESITE_DIGEST, $types)) {
       // Reset the digest header.
-      $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
+      $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
       _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
     }
     _securesite_dialog(securesite_type_get());
@@ -366,7 +366,7 @@ function _securesite_dialog($type) {
       case SECURESITE_DIGEST:
         $header = _securesite_digest_validate($status);
         if (empty($header)) {
-          $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
+          $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
           $header = _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
         }
         if (strpos($header, 'WWW-Authenticate') === 0) {
@@ -407,7 +407,7 @@ function _securesite_dialog($type) {
  * random string to the realm to allow users to log out.
  */
 function _securesite_fake_realm() {
-  $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
+  $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
   $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? drupal_strtolower($_SERVER['HTTP_USER_AGENT']) : '');
   if ($user_agent != str_replace(array('msie', 'opera'), '', $user_agent)) {
     $realm .= ' - ' . mt_rand(10, 999);

@@ -188,7 +188,7 @@ function securesite_form_alter(&$form, $form_state, $form_id) {
  * Validation callback for user registration and profile.
  */
 function securesite_user_validate($form, $form_state) {
-  if (!array_key_exists('name', form_set_error()) && isset($form_state['values']['name']) && $form_state['values']['name'] == variable_get('securesite_guest_name', '')) {
+  if (!array_key_exists('name', form_set_error()) && isset($form_state['values']['name']) && $form_state['values']['name'] == \Drupal::config('securesite.settings')->get('securesite_guest_name')) {
     form_set_error('name', t('The name %name is being used as the %site guest name.', array(
       '%name' => $form_state['values']['name'],
       '%site' => variable_get('site_name', 'Drupal'))
@@ -234,7 +234,7 @@ function _securesite_user_digest_cleanup($account) {
     $script = \Drupal::config('securesite.settings')->get('securesite_password_script');
     $values = array(
       'username=' . escapeshellarg($edit['name']),
-      'realm=' . escapeshellarg(variable_get('securesite_realm', variable_get('site_name', 'Drupal'))),
+      'realm=' . escapeshellarg(\Drupal::config('securesite.settings')->get('securesite_realm')),
       'pass=' . escapeshellarg($edit['pass']),
       'op=create',
     );
@@ -253,7 +253,7 @@ function securesite_user_delete($account) {
     $script = \Drupal::config('securesite.settings')->get('securesite_password_script');
     $values = array(
       'username=' . escapeshellarg($user->name),
-      'realm=' . escapeshellarg(variable_get('securesite_realm', variable_get('site_name', 'Drupal'))),
+      'realm=' . escapeshellarg(\Drupal::config('securesite.settings')->get('securesite_realm')),
       'op=delete',
     );
     exec($script . ' ' . implode(' ', $values));
