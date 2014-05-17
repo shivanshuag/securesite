@@ -170,14 +170,14 @@ function securesite_admin_settings() {
   $form['authentication']['securesite_digest_script'] = array(
     '#type' => 'textarea',
     '#title' => t('Digest authentication script'),
-    '#default_value' => variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') . '/digest_md5/digest_md5.php'),
+    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_digest_script'),
     '#description' => t('Enter the digest authentication script exactly as it should appear on the command line. Use absolute paths.'),
     '#rows' => 2,
   );
   $form['authentication']['securesite_password_script'] = array(
     '#type' => 'textarea',
     '#title' => t('Password storage script'),
-    '#default_value' => variable_get('securesite_password_script', drupal_get_path('module', 'securesite') . '/digest_md5/stored_passwords.php'),
+    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_password_script'),
     '#description' => t('Enter the password storage script exactly as it should appear on the command line. Use absolute paths.'),
     '#rows' => 2,
   );
@@ -265,7 +265,7 @@ function securesite_admin_settings_submit($form, &$form_state) {
     variable_set('securesite_403', variable_get('site_403', ''));
     variable_set('site_403', 'securesite_403');
   }
-  $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') . '/digest_md5/stored_passwords.php');
+  $script = \Drupal::config('securesite.settings')->get('securesite_password_script');
   $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
   if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
     // If digest authentication was enabled, we may need to do some clean-up.

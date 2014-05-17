@@ -37,7 +37,7 @@ function securesite_disable() {
  */
 function securesite_uninstall() {
   if (in_array(SECURESITE_DIGEST, \Drupal::config('securesite.settings')->get('securesite_type'))) {
-    $script = variable_get('securesite_password_script', drupal_get_path('module', 'securesite') . '/digest_md5/stored_passwords.php');
+    $script = \Drupal::config('securesite.settings')->get('securesite_password_script');
     $realm = variable_get('securesite_realm', variable_get('site_name', 'Drupal'));
     exec("$script realm=" . escapeshellarg($realm) . ' op=delete');
   }

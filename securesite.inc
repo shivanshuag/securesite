@@ -136,7 +136,7 @@ function _securesite_digest_validate(&$status, $edit = array()) {
     foreach ($edit as $key => $value) {
       $args[] = "$key=" . escapeshellarg($value);
     }
-    $script = variable_get('securesite_digest_script', drupal_get_path('module', 'securesite') . '/digest_md5/digest_md5.php');
+    $script = \Drupal::config('securesite.settings')->get('securesite_digest_script');
     $response = exec($script . ' ' . implode(' ', $args), $output, $status);
 
     // drupal_set_header() is now drupal_add_http_header() and requires headers passed as name, value in an array.
