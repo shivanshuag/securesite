@@ -89,7 +89,7 @@ function securesite_menu() {
 function securesite_form_system_site_information_settings_alter(&$form, $form_state) {
   if (\Drupal::config('securesite.settings')->get('securesite_enabled') == SECURESITE_403) {
     $form['error_page']['securesite_403'] = $form['error_page']['site_403'];
-    $form['error_page']['securesite_403']['#default_value'] = variable_get('securesite_403', variable_get('site_403', ''));
+    $form['error_page']['securesite_403']['#default_value'] = \Drupal::config('securesite.settings')->get('securesite_403');
     $form['error_page']['securesite_403']['#weight'] = 0;
     unset($form['error_page']['site_403']);
   }

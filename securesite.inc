@@ -56,7 +56,7 @@ function _securesite_403() {
     _securesite_dialog(securesite_type_get());
   }
   else {
-    $path = drupal_get_normal_path(variable_get('securesite_403', ''));
+    $path = drupal_get_normal_path(\Drupal::config('securesite.settings')->get('securesite_403'));
     menu_set_active_item($path);
     return menu_execute_active_handler($path);
   }
@@ -347,7 +347,7 @@ function _securesite_dialog($type) {
     // required parameters or if the UID parameter isn't valid
     if (count($args) < 5 || user_load(array('uid' => $args[2], 'status' => 1)) == FALSE) {
       $error = t('You have tried to use an invalid one-time log-in link.');
-      $reset = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
+      $reset = \Drupal::config('securesite.settings')->get('securesite_reset_form');
       if (empty($reset)) {
         drupal_set_message($error, 'error');
         $content = '';
@@ -421,7 +421,7 @@ function _securesite_fake_realm() {
  * reloaded and the authentication dialog has been displayed twice.
  */
 function _securesite_dialog_page() {
-  $reset = variable_get('securesite_reset_form', t('Enter your user name or e-mail address.'));
+  $reset = \Drupal::config('securesite.settings')->get('securesite_reset_form');
   if (in_array(SECURESITE_FORM, \Drupal::config('securesite.settings')->get('securesite_type'))) {
     $user_login = drupal_get_form('securesite_user_login_form');
     $output = render($user_login);

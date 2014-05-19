@@ -221,14 +221,14 @@ function securesite_admin_settings() {
   $form['login_form']['securesite_login_form'] = array(
     '#type' => 'textarea',
     '#title' => t('Custom message for HTML log-in form'),
-    '#default_value' => variable_get('securesite_login_form', t('Enter your user name and password:')),
+    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_login_form'),
     '#length' => 60,
     '#height' => 3,
   );
   $form['login_form']['securesite_reset_form'] = array(
     '#type' => 'textarea',
     '#title' => t('Custom message for password reset form'),
-    '#default_value' => variable_get('securesite_reset_form', t('Enter your user name or e-mail address:')),
+    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_reset_form'),
     '#length' => 60,
     '#height' => 3,
     '#description' => t('Leave empty to disable Secure Site&rsquo;s password reset form.'),
@@ -258,12 +258,18 @@ function securesite_admin_settings_validate($form, &$form_state) {
 function securesite_admin_settings_submit($form, &$form_state) {
   $values = $form_state['values'];
   if ($values['securesite_enabled'] != SECURESITE_403 || isset($values['op']) && $values['op'] == t('Reset to defaults')) {
-    variable_set('site_403', variable_get('securesite_403', variable_get('site_403', '')));
-    variable_del('securesite_403');
+    \Drupal::config('system.settings')
+      ->set('page.403', \Drupal::config('securesite.settings')->get('securesite_403'))
+      ->save();
+    //variable_del('securesite_403');
   }
   else {
-    variable_set('securesite_403', variable_get('site_403', ''));
-    variable_set('site_403', 'securesite_403');
+    \Drupal::config('securesite.settings')
+      ->set('securesite_403', \Drupal::config('system.settings')->get('page.403'))
+      ->save();
+    \Drupal::config('system.settings')
+      ->set('page.403', \Drupal::config('securesite.settings')->get('securesite_403'))
+      ->save();
   }
   $script = \Drupal::config('securesite.settings')->get('securesite_password_script');
   $realm = \Drupal::config('securesite.settings')->get('securesite_realm');

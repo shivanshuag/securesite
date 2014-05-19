@@ -18,9 +18,13 @@
 */
 function securesite_enable() {
   if (\Drupal::config('securesite.settings')->get('securesite_enabled') == SECURESITE_403) {
-    if (($site_403 = variable_get('site_403', '')) != 'securesite_403') {
-      variable_set('securesite_403', variable_get('site_403', ''));
-      variable_set('site_403', 'securesite_403');
+    if (($site_403 = \Drupal::config('system.settings')->get('page.403')) != 'securesite_403') {
+      \Drupal::config('securesite.settings')
+        ->set('securesite_403', \Drupal::config('system.settings')->get('page.403'))
+        ->save();
+      \Drupal::config('system.settings')
+        ->set('page.403', \Drupal::config('securesite.settings')->get('securesite_403'))
+        ->save();
     }
   }
 }
@@ -29,7 +33,9 @@ function securesite_enable() {
  * Implements hook_disable().
  */
 function securesite_disable() {
-  variable_set('site_403', variable_get('securesite_403', variable_get('site_403', '')));
+  \Drupal::config('system.settings')
+    ->set('page.403', \Drupal::config('securesite.settings')->get('securesite_403'))
+    ->save();
 }
 
 /**
@@ -49,6 +55,8 @@ function securesite_uninstall() {
 
 /**
  * Convert variables from older versions.
+ * implements hook_update_n()
+ * todo change 6200 to 800x. read upgrade variibales to config
  */
 function securesite_update_6200() {
   switch (\Drupal::config('securesite.settings')->get('securesite_enabled')) {
@@ -75,6 +83,6 @@ function securesite_update_6200() {
         ->save();
       break;
   }
-  variable_del('securesite_filter_pages');
-  variable_del('securesite_filter_pages_type');
+  //variable_del('securesite_filter_pages');
+  //variable_del('securesite_filter_pages_type');
 }
