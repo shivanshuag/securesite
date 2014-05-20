@@ -184,7 +184,7 @@ function securesite_admin_settings() {
   $form['authentication']['securesite_realm'] = array(
     '#type' => 'textfield',
     '#title' => t('Authentication realm'),
-    '#default_value' => variable_get('securesite_realm', variable_get('site_name', 'Drupal')),
+    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_realm'),
     '#length' => 30,
     '#maxlength' => 40,
     '#description' => t('Name to identify the log-in area in the HTTP authentication dialog.'),
