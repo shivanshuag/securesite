@@ -258,16 +258,16 @@ function securesite_admin_settings_validate($form, &$form_state) {
 function securesite_admin_settings_submit($form, &$form_state) {
   $values = $form_state['values'];
   if ($values['securesite_enabled'] != SECURESITE_403 || isset($values['op']) && $values['op'] == t('Reset to defaults')) {
-    \Drupal::config('system.settings')
+    \Drupal::config('system.site')
       ->set('page.403', \Drupal::config('securesite.settings')->get('securesite_403'))
       ->save();
     //variable_del('securesite_403');
   }
   else {
     \Drupal::config('securesite.settings')
-      ->set('securesite_403', \Drupal::config('system.settings')->get('page.403'))
+      ->set('securesite_403', \Drupal::config('system.site')->get('page.403'))
       ->save();
-    \Drupal::config('system.settings')
+    \Drupal::config('system.site')
       ->set('page.403', \Drupal::config('securesite.settings')->get('securesite_403'))
       ->save();
   }

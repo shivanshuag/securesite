@@ -18,11 +18,11 @@
 */
 function securesite_enable() {
   if (\Drupal::config('securesite.settings')->get('securesite_enabled') == SECURESITE_403) {
-    if (($site_403 = \Drupal::config('system.settings')->get('page.403')) != 'securesite_403') {
+    if (($site_403 = \Drupal::config('system.site')->get('page.403')) != 'securesite_403') {
       \Drupal::config('securesite.settings')
-        ->set('securesite_403', \Drupal::config('system.settings')->get('page.403'))
+        ->set('securesite_403', \Drupal::config('system.site')->get('page.403'))
         ->save();
-      \Drupal::config('system.settings')
+      \Drupal::config('system.site')
         ->set('page.403', \Drupal::config('securesite.settings')->get('securesite_403'))
         ->save();
     }
@@ -33,7 +33,7 @@ function securesite_enable() {
  * Implements hook_disable().
  */
 function securesite_disable() {
-  \Drupal::config('system.settings')
+  \Drupal::config('system.site')
     ->set('page.403', \Drupal::config('securesite.settings')->get('securesite_403'))
     ->save();
 }
