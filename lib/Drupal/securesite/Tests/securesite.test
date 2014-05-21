@@ -602,8 +602,7 @@ class SecureSiteFunctionForcedUnitTest extends DrupalWebTestCase {
     //todo default value
     variable_set('securesite_enabled', SECURESITE_OFFLINE);
     $this->assertFalse(_securesite_forced(), t('Checking output for on-line site with authentication forced when site is off line.'));
-    //todo site_offline isnt used by d7 anymore, use maintenance_mode variable instead https://drupal.org/node/1363630
-    variable_set('site_offline', TRUE);
+    \Drupal::state()->set('system.maintenance_mode', 1);
     $this->assertTrue(_securesite_forced(), t('Checking output for off-line site with authentication forced when site is off line.'));
   }
 
@@ -624,8 +623,7 @@ class SecureSiteFunctionForcedUnitTest extends DrupalWebTestCase {
   function tearDown() {
     $config_securesite = \Drupal::config('securesite.settings');
     $config_securesite->clear('securesite_enabled');
-    //todo site_offline no longer exists
-    variable_del('site_offline');
+    //variable_del('site_offline');
     \Drupal::config('system.site')->clear('page.403')->save();
     $config_securesite->clear('securesite_403');
     $config_securesite->save();

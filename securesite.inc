@@ -315,7 +315,7 @@ function _securesite_forced() {
       case SECURESITE_ALWAYS:
         return TRUE;
       case SECURESITE_OFFLINE:
-        return variable_get('site_offline', FALSE);
+        return(\Drupal::state()->get('system.maintenance_mode') ?: 0);
       default:
         return FALSE;
     }
