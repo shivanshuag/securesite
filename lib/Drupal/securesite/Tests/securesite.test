@@ -675,7 +675,7 @@ class SecureSiteFunctionDigestValidateUnitTest extends DrupalWebTestCase {
   /**
    * Check output with data.
    */
-  function testSecureSiteFunctionDigestValidateData()
+  function testSecureSiteFunctionDigestValidateData() {
     //todo - default value
     variable_set('securesite_type', array(SECURESITE_DIGEST));
     $user = $this->drupalCreateUser();
@@ -877,7 +877,7 @@ class SecureSiteNameConflictFunctionalTest extends DrupalWebTestCase {
   function testSecureSiteNameConflictUserRegister() {
     $this->drupalPost('user/register', array('name' => $this->guest, 'mail' => $this->guest . '@example.com'), 'Create new account');
     $this->assertText("The name $this->guest is being used as the " . \Drupal::config('system.site')->get('name') . " guest name.", t('Registering user with guest name.'));
-    $this->assertTrue(db_query_range("SELECT uid FROM {users} WHERE name = :name", array(':name' => $this->guest))->fetchField() === FALSE, t('Checking for user with guest name.'));
+    $this->assertTrue(db_query("SELECT uid FROM {users} WHERE name = :name", array(':name' => $this->guest))->fetchField() === FALSE, t('Checking for user with guest name.'));
   }
 
   /**
@@ -887,7 +887,7 @@ class SecureSiteNameConflictFunctionalTest extends DrupalWebTestCase {
     $this->drupalLogin($this->user);
     $this->drupalPost('admin/user/user/create', array('name' => $this->guest, 'mail' => $this->guest . '@example.com', 'pass[pass1]' => $this->user->pass_raw, 'pass[pass2]' => $this->user->pass_raw), 'Create new account');
     $this->assertText("The name $this->guest is being used as the " . \Drupal::config('system.site')->get('name') . " guest name.", t('Creating user with guest name.'));
-    $this->assertTrue(db_query_range("SELECT uid FROM {users} WHERE name = :name", array(':name' => $this->guest))->fetchField() === FALSE, t('Checking for user with guest name.'));
+    $this->assertTrue(db_query("SELECT uid FROM {users} WHERE name = :name", array(':name' => $this->guest))->fetchField() === FALSE, t('Checking for user with guest name.'));
   }
 
   /**
@@ -897,7 +897,7 @@ class SecureSiteNameConflictFunctionalTest extends DrupalWebTestCase {
     $this->drupalLogin($this->user);
     $this->drupalPost('user/' . $this->user->uid . '/edit', array('name' => $this->guest), 'Save');
     $this->assertText("The name $this->guest is being used as the " . \Drupal::config('system.site')->get('name') . " guest name.", t('Setting user name to guest name.'));
-    $this->assertTrue(db_query_range("SELECT uid FROM {users} WHERE name = :name", array(':name' => $this->guest))->fetchField() === FALSE, t('Checking for user with guest name.'));
+    $this->assertTrue(db_query("SELECT uid FROM {users} WHERE name = :name", array(':name' => $this->guest))->fetchField() === FALSE, t('Checking for user with guest name.'));
   }
 
   /**
@@ -1048,7 +1048,7 @@ class SecureSiteForceAlwaysFunctionalTest extends DrupalWebTestCase {
     \Drupal::config('securesite.settings')->set('securesite_type', array(SECURESITE_FORM))->save();
     $cron_last = \Drupal::state()->get('system.cron_last') ?: NULL;
     $this->drupalGet(url(NULL, array('absolute' => TRUE)) . 'cron.php');
-    $this->assertFalse(\Drupal::state()->get('system.cron_last') ?: NULL; == $cron_last, t('Trying cron.php with only form authentication enabled.'));
+    $this->assertFalse((\Drupal::state()->get('system.cron_last') ?: NULL) == $cron_last, t('Trying cron.php with only form authentication enabled.'));
   }
 
   /**
