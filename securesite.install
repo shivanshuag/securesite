@@ -56,7 +56,7 @@ function securesite_uninstall() {
 /**
  * Convert variables from older versions.
  * implements hook_update_n()
- * todo change 6200 to 800x. read upgrade variibales to config
+ * todo change 6200 to 800x. read upgrade varibales to config
  */
 function securesite_update_6200() {
   switch (\Drupal::config('securesite.settings')->get('securesite_enabled')) {
