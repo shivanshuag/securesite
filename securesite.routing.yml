@@ -1,8 +1,7 @@
-securesite.settings:
+securesite.administer:
   path: 'admin/config/system/securesite'
   defaults:
     _form: '\Drupal\securesite\Form\SecuresiteSettingsForm'
-    _title: 'Securesite'
+    _title: 'Securesite Settings'
   requirements:
-  #TODO find out about this permission from drupal 7 version
-    _permission: 'administer pants'
+    _permission: 'administer site configuration'

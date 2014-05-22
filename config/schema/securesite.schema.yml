@@ -9,6 +9,7 @@ securesite.settings:
         type: sequence
         sequence:
           - type: integer
+            label: 'Securesite Type'
       securesite_guest_name:
         type: string
         label: 'Guest Name'

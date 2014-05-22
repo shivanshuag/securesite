@@ -2,14 +2,207 @@
 
 /**
  * @file
- * Secure Site administration pages.
+ * Contains \Drupal\securesite\Form\SecuresiteSettingsForm.
  */
 
-/**
+namespace Drupal\securesite\Form;
+
+use Drupal\Core\Form\ConfigFormBase;
+
+class SecuresiteSettingsForm extends ConfigFormBase {
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getFormId() {
+    return 'securesite_admin_settings';
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildForm(array $form, array &$form_state) {
+    $config = $this->config('securesite.settings');
+
+    $form['authentication'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Authentication'),
+      '#description' => t('Enable Secure Site below. Users must have the <em>!access</em> permission in order to access the site if authentication is forced.', array('!access' => l(t('access secured pages'), 'admin/people/permissions', array('fragment' => 'module-securesite'))))
+    );
+    $form['authentication']['securesite_enabled'] = array(
+      '#type' => 'radios',
+      '#title' => t('Force authentication'),
+      '#default_value' => $config->get('securesite_enabled'),
+      '#options' => array(
+        SECURESITE_DISABLED => t('Never'),
+        SECURESITE_ALWAYS => t('Always'),
+        SECURESITE_OFFLINE => t('During maintenance'),
+        SECURESITE_403 => t('On restricted pages'),
+      ),
+      '#description' => t('Choose when to force authentication.'),
+    );
+    $form['authentication']['securesite_type'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Allowed authentication types'),
+      '#default_value' => $config->get('securesite_type'),
+      '#options' => array(
+        SECURESITE_DIGEST => t('HTTP digest'),
+        SECURESITE_BASIC => t('HTTP basic'),
+        SECURESITE_FORM => t('HTML log-in form'),
+      ),
+      '#required' => TRUE,
+    );
+    $form['authentication']['securesite_type']['#description'] = "\n<p>" .
+      t('HTTP authentication requires extra configuration if PHP is not installed as an Apache module. See the !link section of the Secure Site help for details.', array('!link' => l(t('Known issues'), 'admin/help/securesite', array('fragment' => 'issues')))) . "</p>\n<p>" .
+      t('Digest authentication protects a user&rsquo;s password from eavesdroppers when you are not using SSL to encrypt the connection. However, it can only be used when a copy of the password is stored on the server.') . ' ' .
+      t('For security reasons, Drupal does not store passwords. You will need to configure scripts to securely save passwords and authenticate users. See the !link section of the Secure Site help for details.', array('!link' => l(t('Secure password storage'), 'admin/help/securesite', array('fragment' => 'passwords')))) . "</p>\n<p>" .
+      t('When digest authentication is enabled, passwords will be saved when users log in or set their passwords. If you use digest authentication to protect your whole site, you should allow guest access or allow another authentication type until users whose passwords are not yet saved have logged in. Otherwise, <strong>you may lock yourself out of your own site.</strong>') . '</p>' . "\n";
+    $form['authentication']['securesite_digest_script'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Digest authentication script'),
+      '#default_value' => $config->get('securesite_digest_script'),
+      '#description' => t('Enter the digest authentication script exactly as it should appear on the command line. Use absolute paths.'),
+      '#rows' => 2,
+    );
+    $form['authentication']['securesite_password_script'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Password storage script'),
+      '#default_value' => $config->get('securesite_password_script'),
+      '#description' => t('Enter the password storage script exactly as it should appear on the command line. Use absolute paths.'),
+      '#rows' => 2,
+    );
+    $form['authentication']['securesite_realm'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Authentication realm'),
+      '#default_value' => $config->get('securesite_realm'),
+      '#length' => 30,
+      '#maxlength' => 40,
+      '#description' => t('Name to identify the log-in area in the HTTP authentication dialog.'),
+    );
+    $form['guest'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Guest access'),
+      '#description' => t('Guest access allows anonymous users to view secure pages, though they will still be prompted for a user name and password. If you give anonymous users the <em>!access</em> permission, you can set the user name and password for anonymous users below.', array('!access' => l(t('access secured pages'), 'admin/people/permissions', array('fragment' => 'module-securesite')))),
+    );
+    $guest_access = !user_access('access secured pages', drupal_anonymous_user());  //todo fix this
+    $form['guest']['securesite_guest_name'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Guest user'),
+      '#default_value' => $config->get('securesite_guest_name'),
+      '#length' => 30,
+      '#maxlength' => 40,
+      '#description' => t('Do not use the name of a registered user. Leave empty to accept any name.'),
+      '#disabled' => $guest_access,
+    );
+    $form['guest']['securesite_guest_pass'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Guest password'),
+      '#default_value' => $config->get('securesite_guest_pass'),
+      '#length' => 30,
+      '#maxlength' => 40,
+      '#description' => t('Leave empty to accept any password.'),
+      '#disabled' => $guest_access,
+    );
+    $form['login_form'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Customize HTML forms'),
+      '#description' => t('Configure the message displayed on the HTML log-in form (if enabled) and password reset form below.')
+    );
+    $form['login_form']['securesite_login_form'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Custom message for HTML log-in form'),
+      '#default_value' => $config->get('securesite_login_form'),
+      '#length' => 60,
+      '#height' => 3,
+    );
+    $form['login_form']['securesite_reset_form'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Custom message for password reset form'),
+      '#default_value' => $config->get('securesite_reset_form'),
+      '#length' => 60,
+      '#height' => 3,
+      '#description' => t('Leave empty to disable Secure Site&rsquo;s password reset form.'),
+    );
+
+    return parent::buildForm($form, $form_state);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, array &$form_state){
+    foreach ($form_state['values']['securesite_type'] as $type => $value) {
+      if (empty($value)) {
+        unset($form_state['values']['securesite_type'][$type]);
+      }
+    }
+    sort($form_state['values']['securesite_type']);
+
+    $name = $form_state['values']['securesite_guest_name'];
+    if ($name && db_query_range("SELECT name FROM {users} WHERE name = :name", 0, 1, array(':name' => $name))->fetchField() == $name) {
+      form_set_error('securesite_guest_name', t('The name %name belongs to a registered user.', array('%name' => $name)));
+    }
+
+  }
+
+  /**
+   * {@inheritdoc}
+   * Configure access denied page and manage stored guest password.
+   */
+  public function submitForm(array &$form, array &$form_state) {
+    $values = $form_state['values'];
+
+    $config_securesite = $this->config('securesite.settings');
+    $config_site = $this->config('system.site');
+
+    if ($values['securesite_enabled'] != SECURESITE_403 || isset($values['op']) && $values['op'] == t('Reset to defaults')) {
+      $config_site->set('page.403', $config_securesite->get('securesite_403'))->save();
+      $config_securesite->clear('securesite_403')->save();
+    }
+    else {
+      $config_securesite->set('securesite_403', $config_site->get('page.403'))->save();
+      $config_site->set('page.403', $config_site->get('securesite_403'))->save();
+    }
+    $script = $config_securesite->get('securesite_password_script');
+    $realm = $config_securesite->get('securesite_realm');
+    if (in_array(SECURESITE_DIGEST, $config_securesite->get('securesite_type'))) {
+      // If digest authentication was enabled, we may need to do some clean-up.
+      $securesite_guest_name = $config_securesite->get('securesite_guest_name');
+      if (
+        isset($values['op']) && $values['op'] == t('Reset to defaults') || // Values are being reset to defaults.
+        !in_array(SECURESITE_DIGEST, $values['securesite_type']) || // Digest authentication is being disabled.
+        $realm != $values['securesite_realm'] // Realm has changed.
+      ) {
+        // Delete all stored passwords.
+        exec("$script realm=" . escapeshellarg($realm) . ' op=delete');
+      }
+      elseif ($values['securesite_guest_name'] != $securesite_guest_name) {
+        // Guest user name has changed. Delete old guest user password.
+        exec("$script username=" . escapeshellarg($securesite_guest_name) . ' realm=' . escapeshellarg($realm) . ' op=delete');
+      }
+    }
+    if (in_array(SECURESITE_DIGEST, $values['securesite_type']) && (!isset($values['op']) || $values['op'] != t('Reset to defaults'))) {
+      // If digest authentication is enabled, update guest user password.
+      $args = array(
+        'username=' . escapeshellarg($values['securesite_guest_name']),
+        'pass=' . escapeshellarg($values['securesite_guest_pass']),
+        'realm=' . escapeshellarg($realm),
+        'op=create',
+      );
+      exec($script . ' ' . implode(' ', $args));
+    }
+
+    parent::submitForm($form, $form_state);
+  }
+
+}
+
+
+  /**
  * Module help page.
  */
-//TODO change this form to drupal 8 compatible
-function _securesite_admin_help() {
+//TODO find right place for this
+/*function _securesite_admin_help() {
   return '<p>' . t('Secure Site allows site administrators to make a site or part of a site private. You can restrict access to the site by role. This means the site will be inaccessible to search engines and other crawlers, but you can still allow access to certain people.') . '</p>' . "\n" .
   '<p>' . t('You can also secure remote access to RSS feeds. You can keep content private and protected, but still allow users to get notification of new content and other actions via RSS with news readers that support <em>user:pass@example.com/node/feed</em> URLs, or have direct support for user name and password settings. This is especially useful when paired with the Organic Groups module or other node access systems.') . '</p>' . "\n" .
   '<h3>' . t('Configuration') . '</h3>' . "\n" .
@@ -124,179 +317,4 @@ function _securesite_admin_help() {
   '    <p>' . t('If you are using HTTP authentication and are unable to log in when Drupal is running on an IIS server, make sure that the PHP directive <em>cgi.rfc2616_headers</em> is set to <em>0</em> (the default value).') . '</p>' . "\n" .
   '  </li>' . "\n" .
   '</ul>' . "\n";
-}
-
-/**
- * FAPI definition for Secure Site admin settings form
- * @ingroup forms
- * @see system_settings_form()
- * @see securesite_admin_settings_validate()
- * @see securesite_admin_settings_submit()
- */
-function securesite_admin_settings() {
-  $form['authentication'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Authentication'),
-    '#description' => t('Enable Secure Site below. Users must have the <em>!access</em> permission in order to access the site if authentication is forced.', array('!access' => l(t('access secured pages'), 'admin/people/permissions', array('fragment' => 'module-securesite'))))
-  );
-  $form['authentication']['securesite_enabled'] = array(
-    '#type' => 'radios',
-    '#title' => t('Force authentication'),
-    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_enabled'),
-    '#options' => array(
-      SECURESITE_DISABLED => t('Never'),
-      SECURESITE_ALWAYS => t('Always'),
-      SECURESITE_OFFLINE => t('During maintenance'),
-      SECURESITE_403 => t('On restricted pages'),
-    ),
-    '#description' => t('Choose when to force authentication.'),
-  );
-  $form['authentication']['securesite_type'] = array(
-    '#type' => 'checkboxes',
-    '#title' => t('Allowed authentication types'),
-    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_type'),
-    '#options' => array(
-      SECURESITE_DIGEST => t('HTTP digest'),
-      SECURESITE_BASIC => t('HTTP basic'),
-      SECURESITE_FORM => t('HTML log-in form'),
-    ),
-    '#required' => TRUE,
-  );
-  $form['authentication']['securesite_type']['#description'] = "\n<p>" .
-    t('HTTP authentication requires extra configuration if PHP is not installed as an Apache module. See the !link section of the Secure Site help for details.', array('!link' => l(t('Known issues'), 'admin/help/securesite', array('fragment' => 'issues')))) . "</p>\n<p>" .
-    t('Digest authentication protects a user&rsquo;s password from eavesdroppers when you are not using SSL to encrypt the connection. However, it can only be used when a copy of the password is stored on the server.') . ' ' .
-    t('For security reasons, Drupal does not store passwords. You will need to configure scripts to securely save passwords and authenticate users. See the !link section of the Secure Site help for details.', array('!link' => l(t('Secure password storage'), 'admin/help/securesite', array('fragment' => 'passwords')))) . "</p>\n<p>" .
-    t('When digest authentication is enabled, passwords will be saved when users log in or set their passwords. If you use digest authentication to protect your whole site, you should allow guest access or allow another authentication type until users whose passwords are not yet saved have logged in. Otherwise, <strong>you may lock yourself out of your own site.</strong>') . '</p>' . "\n";
-  $form['authentication']['securesite_digest_script'] = array(
-    '#type' => 'textarea',
-    '#title' => t('Digest authentication script'),
-    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_digest_script'),
-    '#description' => t('Enter the digest authentication script exactly as it should appear on the command line. Use absolute paths.'),
-    '#rows' => 2,
-  );
-  $form['authentication']['securesite_password_script'] = array(
-    '#type' => 'textarea',
-    '#title' => t('Password storage script'),
-    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_password_script'),
-    '#description' => t('Enter the password storage script exactly as it should appear on the command line. Use absolute paths.'),
-    '#rows' => 2,
-  );
-  $form['authentication']['securesite_realm'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Authentication realm'),
-    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_realm'),
-    '#length' => 30,
-    '#maxlength' => 40,
-    '#description' => t('Name to identify the log-in area in the HTTP authentication dialog.'),
-  );
-  $form['guest'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Guest access'),
-    '#description' => t('Guest access allows anonymous users to view secure pages, though they will still be prompted for a user name and password. If you give anonymous users the <em>!access</em> permission, you can set the user name and password for anonymous users below.', array('!access' => l(t('access secured pages'), 'admin/people/permissions', array('fragment' => 'module-securesite')))),
-  );
-  $guest_access = !user_access('access secured pages', drupal_anonymous_user());
-  $form['guest']['securesite_guest_name'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Guest user'),
-    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_guest_name'),
-    '#length' => 30,
-    '#maxlength' => 40,
-    '#description' => t('Do not use the name of a registered user. Leave empty to accept any name.'),
-    '#disabled' => $guest_access,
-  );
-  $form['guest']['securesite_guest_pass'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Guest password'),
-    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_guest_pass'),
-    '#length' => 30,
-    '#maxlength' => 40,
-    '#description' => t('Leave empty to accept any password.'),
-    '#disabled' => $guest_access,
-  );
-  $form['login_form'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Customize HTML forms'),
-    '#description' => t('Configure the message displayed on the HTML log-in form (if enabled) and password reset form below.')
-  );
-  $form['login_form']['securesite_login_form'] = array(
-    '#type' => 'textarea',
-    '#title' => t('Custom message for HTML log-in form'),
-    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_login_form'),
-    '#length' => 60,
-    '#height' => 3,
-  );
-  $form['login_form']['securesite_reset_form'] = array(
-    '#type' => 'textarea',
-    '#title' => t('Custom message for password reset form'),
-    '#default_value' => \Drupal::config('securesite.settings')->get('securesite_reset_form'),
-    '#length' => 60,
-    '#height' => 3,
-    '#description' => t('Leave empty to disable Secure Site&rsquo;s password reset form.'),
-  );
-  $form['#submit'][] = 'securesite_admin_settings_submit';
-  return system_settings_form($form);
-}
-
-function securesite_admin_settings_validate($form, &$form_state) {
-  foreach ($form_state['values']['securesite_type'] as $type => $value) {
-    if (empty($value)) {
-      unset($form_state['values']['securesite_type'][$type]);
-    }
-  }
-  sort($form_state['values']['securesite_type']);
-
-  $name = $form_state['values']['securesite_guest_name'];
-  if ($name && db_query_range("SELECT name FROM {users} WHERE name = :name", 0, 1, array(':name' => $name))->fetchField() == $name) {
-    form_set_error('securesite_guest_name', t('The name %name belongs to a registered user.', array('%name' => $name)));
-  }
-}
-
-/**
- * Configure access denied page and manage stored guest password.
- */
-//TODO why is securesite_type not set here
-function securesite_admin_settings_submit($form, &$form_state) {
-  $values = $form_state['values'];
-  if ($values['securesite_enabled'] != SECURESITE_403 || isset($values['op']) && $values['op'] == t('Reset to defaults')) {
-    \Drupal::config('system.site')
-      ->set('page.403', \Drupal::config('securesite.settings')->get('securesite_403'))
-      ->save();
-    //variable_del('securesite_403');
-  }
-  else {
-    \Drupal::config('securesite.settings')
-      ->set('securesite_403', \Drupal::config('system.site')->get('page.403'))
-      ->save();
-    \Drupal::config('system.site')
-      ->set('page.403', \Drupal::config('securesite.settings')->get('securesite_403'))
-      ->save();
-  }
-  $script = \Drupal::config('securesite.settings')->get('securesite_password_script');
-  $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
-  if (in_array(SECURESITE_DIGEST, variable_get('securesite_type', array(SECURESITE_BASIC)))) {
-    // If digest authentication was enabled, we may need to do some clean-up.
-    $securesite_guest_name = \Drupal::config('securesite.settings')->get('securesite_guest_name');
-    if (
-      isset($values['op']) && $values['op'] == t('Reset to defaults') || // Values are being reset to defaults.
-      !in_array(SECURESITE_DIGEST, $values['securesite_type']) || // Digest authentication is being disabled.
-      $realm != $values['securesite_realm'] // Realm has changed.
-    ) {
-      // Delete all stored passwords.
-      exec("$script realm=" . escapeshellarg($realm) . ' op=delete');
-    }
-    elseif ($values['securesite_guest_name'] != $securesite_guest_name) {
-      // Guest user name has changed. Delete old guest user password.
-      exec("$script username=" . escapeshellarg($securesite_guest_name) . ' realm=' . escapeshellarg($realm) . ' op=delete');
-    }
-  }
-  if (in_array(SECURESITE_DIGEST, $values['securesite_type']) && (!isset($values['op']) || $values['op'] != t('Reset to defaults'))) {
-    // If digest authentication is enabled, update guest user password.
-    $args = array(
-      'username=' . escapeshellarg($values['securesite_guest_name']),
-      'pass=' . escapeshellarg($values['securesite_guest_pass']),
-      'realm=' . escapeshellarg($realm),
-      'op=create',
-    );
-    exec($script . ' ' . implode(' ', $args));
-  }
-}
+}*/
