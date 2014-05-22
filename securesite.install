@@ -6,28 +6,17 @@
  */
 
 /**
- * Implements hook_enable().
+ * Implements hook_install().
  */
-/**
- * TODO
- hook_enable/disable is deprecated. use hook_install instead
- set  securesite_digest_script config variable to when installing the module drupal_get_path('module', 'securesite') . '/digest_md5/digest_md5.php'
- set securesite_password_script config variable to drupal_get_path('module', 'securesite') . '/digest_md5/stored_passwords.php' in hook_install
- set securesite_realm config variable to variable_get('site_name', 'Drupal') in hook_install
- set securesite_403 config variable to variable_get('site_403', '') in hook_install
-*/
-function securesite_enable() {
-  if (\Drupal::config('securesite.settings')->get('securesite_enabled') == SECURESITE_403) {
-    if (($site_403 = \Drupal::config('system.site')->get('page.403')) != 'securesite_403') {
-      \Drupal::config('securesite.settings')
-        ->set('securesite_403', \Drupal::config('system.site')->get('page.403'))
-        ->save();
-      \Drupal::config('system.site')
-        ->set('page.403', \Drupal::config('securesite.settings')->get('securesite_403'))
-        ->save();
-    }
-  }
+function securesite_install(){
+  $config_securesite = \Drupal::config('securesite.settings');
+  $config_site = \Drupal::config('system.site');
+  $config_securesite->set('securesite_digest_script', drupal_get_path('module', 'securesite') . '/digest_md5/digest_md5.php');
+  $config_securesite->set('securesite_password_script', drupal_get_path('module', 'securesite') . '/digest_md5/stored_passwords.php');
+  $config_securesite->set('securesite_realm', $config_site->get('name'));
+  $config_securesite->set('securesite_403', $config_site->get('page.403'));
 }
+
 
 /**
  * Implements hook_disable().
@@ -42,47 +31,13 @@ function securesite_disable() {
  * Implements hook_uninstall().
  */
 function securesite_uninstall() {
-  if (in_array(SECURESITE_DIGEST, \Drupal::config('securesite.settings')->get('securesite_type'))) {
-    $script = \Drupal::config('securesite.settings')->get('securesite_password_script');
-    $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
+  $config_securesite = \Drupal::config('securesite.settings');
+  \Drupal::config('system.site')
+    ->set('page.403', $config_securesite->get('securesite_403'))
+    ->save();
+  if (in_array(SECURESITE_DIGEST, $config_securesite->get('securesite_type'))) {
+    $script = $config_securesite->get('securesite_password_script');
+    $realm = $config_securesite->get('securesite_realm');
     exec("$script realm=" . escapeshellarg($realm) . ' op=delete');
   }
-  $settings = db_query("SELECT name FROM {variable} WHERE name LIKE 'securesite\_%'");
-  foreach ($settings as $variable) {
-    variable_del($variable->name);
-  }
-}
-
-/**
- * Convert variables from older versions.
- * implements hook_update_n()
- * todo change 6200 to 800x. read upgrade varibales to config
- */
-function securesite_update_6200() {
-  switch (\Drupal::config('securesite.settings')->get('securesite_enabled')) {
-    case 0:
-      \Drupal::config('securesite.settings')
-        ->set('securesite_enabled', SECURESITE_DISABLED)
-        ->save();
-      break;
-    case 1:
-    case 2:
-      \Drupal::config('securesite.settings')
-        ->set('securesite_enabled', SECURESITE_ALWAYS)
-        ->save();
-      \Drupal::config('securesite.settings')
-        ->set('securesite_type', array(SECURESITE_BASIC))
-        ->save();
-      break;
-    case 3:
-      \Drupal::config('securesite.settings')
-        ->set('securesite_enabled', SECURESITE_ALWAYS)
-        ->save();
-      \Drupal::config('securesite.settings')
-        ->set('securesite_type', array(SECURESITE_FORM))
-        ->save();
-      break;
-  }
-  //variable_del('securesite_filter_pages');
-  //variable_del('securesite_filter_pages_type');
 }
