@@ -15,6 +15,7 @@ function securesite_install(){
   $config_securesite->set('securesite_password_script', drupal_get_path('module', 'securesite') . '/digest_md5/stored_passwords.php');
   $config_securesite->set('securesite_realm', $config_site->get('name'));
   $config_securesite->set('securesite_403', $config_site->get('page.403'));
+  $config_securesite->save();
 }
 
 /**
