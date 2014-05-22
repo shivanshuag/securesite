@@ -17,16 +17,6 @@ function securesite_install(){
   $config_securesite->set('securesite_403', $config_site->get('page.403'));
 }
 
-
-/**
- * Implements hook_disable().
- */
-function securesite_disable() {
-  \Drupal::config('system.site')
-    ->set('page.403', \Drupal::config('securesite.settings')->get('securesite_403'))
-    ->save();
-}
-
 /**
  * Implements hook_uninstall().
  */
