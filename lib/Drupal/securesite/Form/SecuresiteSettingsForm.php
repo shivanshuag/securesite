@@ -140,6 +140,7 @@ class SecuresiteSettingsForm extends ConfigFormBase {
 
     $name = $form_state['values']['securesite_guest_name'];
     if ($name && db_query_range("SELECT name FROM {users} WHERE name = :name", 0, 1, array(':name' => $name))->fetchField() == $name) {
+      //todo fix this deprecated api
       form_set_error('securesite_guest_name', t('The name %name belongs to a registered user.', array('%name' => $name)));
     }
 
@@ -154,6 +155,17 @@ class SecuresiteSettingsForm extends ConfigFormBase {
 
     $config_securesite = $this->config('securesite.settings');
     $config_site = $this->config('system.site');
+
+    $config_securesite->set('securesite_enabled', $values['securesite_enabled'])
+      ->set('securesite_type', $values['securesite_type'])
+      ->set('securesite_digest_script', $values['securesite_digest_script'])
+      ->set('securesite_password_script', $values['securesite_password_script'])
+      ->set('securesite_realm', $values['securesite_realm'])
+      ->set('securesite_guest_name', $values['securesite_guest_name'])
+      ->set('securesite_guest_pass', $values['securesite_guest_pass'])
+      ->set('securesite_login_form', $values['securesite_login_form'])
+      ->set('securesite_reset_form', $values['securesite_reset_form'])
+      ->save();
 
     if ($values['securesite_enabled'] != SECURESITE_403 || isset($values['op']) && $values['op'] == t('Reset to defaults')) {
       $config_site->set('page.403', $config_securesite->get('securesite_403'))->save();
