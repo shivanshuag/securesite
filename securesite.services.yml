@@ -1,0 +1,5 @@
+services:
+  securesite.subscriber:
+    class: Drupal\securesite\EventSubscriber\SecuresiteSubscriber
+    tags:
+      - { name: event_subscriber }
