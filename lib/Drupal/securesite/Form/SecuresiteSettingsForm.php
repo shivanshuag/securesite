@@ -8,6 +8,8 @@
 namespace Drupal\securesite\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
+use Drupal\Core\Session\AnonymousUserSession;
+
 
 class SecuresiteSettingsForm extends ConfigFormBase {
 
@@ -23,7 +25,7 @@ class SecuresiteSettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, array &$form_state) {
     $config = $this->config('securesite.settings');
-
+    $anonymous_user = new AnonymousUserSession();
     $form['authentication'] = array(
       '#type' => 'fieldset',
       '#title' => t('Authentication'),
@@ -84,7 +86,7 @@ class SecuresiteSettingsForm extends ConfigFormBase {
       '#title' => t('Guest access'),
       '#description' => t('Guest access allows anonymous users to view secure pages, though they will still be prompted for a user name and password. If you give anonymous users the <em>!access</em> permission, you can set the user name and password for anonymous users below.', array('!access' => l(t('access secured pages'), 'admin/people/permissions', array('fragment' => 'module-securesite')))),
     );
-    $guest_access = !user_access('access secured pages', drupal_anonymous_user());  //todo fix this
+    $guest_access = !$anonymous_user->hasPermission('access secured pages');
     $form['guest']['securesite_guest_name'] = array(
       '#type' => 'textfield',
       '#title' => t('Guest user'),
@@ -140,8 +142,7 @@ class SecuresiteSettingsForm extends ConfigFormBase {
 
     $name = $form_state['values']['securesite_guest_name'];
     if ($name && db_query_range("SELECT name FROM {users} WHERE name = :name", 0, 1, array(':name' => $name))->fetchField() == $name) {
-      //todo fix this deprecated api
-      form_set_error('securesite_guest_name', t('The name %name belongs to a registered user.', array('%name' => $name)));
+      \Drupal::formBuilder()->setErrorByName('securesite_guest_name', $form_state, t('The name %name belongs to a registered user.', array('%name' => $name)));
     }
 
   }
