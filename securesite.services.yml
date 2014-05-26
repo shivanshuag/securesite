@@ -1,5 +1,8 @@
 services:
+  securesite.manager:
+    class: Drupal\securesite\SecuresiteManager
   securesite.subscriber:
     class: Drupal\securesite\EventSubscriber\SecuresiteSubscriber
     tags:
       - { name: event_subscriber }
+    arguments: ['@securesite.manager']
