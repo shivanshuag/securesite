@@ -28,6 +28,9 @@ interface SecuresiteManagerInterface {
   /**
    * @param int $type
    *    type of the authentication mechanism
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *  request for the page
    */
-  public function boot($type);
+  public function boot($type, Request $request);
 }

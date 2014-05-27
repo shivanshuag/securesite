@@ -8,9 +8,13 @@ namespace Drupal\securesite;
 
 use Symfony\Component\HttpFoundation\Request;
 use Drupal\Component\Utility\Unicode;
+use Drupal\basic_auth\Authentication\Provider\BasicAuth;
 
 class SecuresiteManager implements SecuresiteManagerInterface {
 
+  /**
+   * {@inheritdoc}
+   */
   public function getMechanism(Request $request){
     static $mechanism;
     if (!isset($mechanism)) {
@@ -32,7 +36,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
             break;
         }
       }
-      debug($request->headers);
+      debug(SECURESITE_FORM);
       $mechanism = FALSE;
       $types = \Drupal::config('securesite.settings')->get('securesite_type');
       rsort($types, SORT_NUMERIC);
@@ -64,7 +68,37 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     return $mechanism;
   }
 
-  public function boot($type){
+  /**
+   * {@inheritdoc}
+   */
+  public function boot($type, Request $request){
+    $user = \Drupal::currentUser();
+    switch ($type) {
+      case SECURESITE_DIGEST:
+        $edit = _securesite_parse_directives($_SERVER['PHP_AUTH_DIGEST']);
+        $edit['name'] = $edit['username'];
+        $edit['pass'] = NULL;
+        $function = '_securesite_digest_auth';
+        break;
+      case SECURESITE_BASIC:
+
+        $edit['name'] = isset($_SERVER['PHP_AUTH_USER']) ? $_SERVER['PHP_AUTH_USER'] : '';
+        $edit['pass'] = isset($_SERVER['PHP_AUTH_PW']) ? $_SERVER['PHP_AUTH_PW'] : '';
+        $function = '_securesite_plain_auth';
+        break;
+      case SECURESITE_FORM:
+        //todo check if openid works
+        if (!empty($_POST['openid_identifier'])) {
+          openid_begin($_POST['openid_identifier'], $_POST['openid.return_to']);
+        }
+        $edit = array('name' => $_POST['name'], 'pass' => $_POST['pass']);
+        $function = '_securesite_plain_auth';
+        break;
+    }
+    // Are credentials different from current user?
+    if ((!isset($user->name) || $edit['name'] !== $user->name) && (!isset($_SESSION['securesite_guest']) || $edit['name'] !== $_SESSION['securesite_guest'])) {
+      $function($edit);
+    }
 
   }
 
