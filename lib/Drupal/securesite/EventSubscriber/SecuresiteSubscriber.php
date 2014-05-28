@@ -11,7 +11,8 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\securesite\SecuresiteManagerInterface;
-use \Drupal\basic_auth\Authentication\Provider\BasicAuth;
+use Drupal\Core\Authentication\AuthenticationManager;
+//use \Drupal\basic_auth\Authentication\Provider\BasicAuth;
 /**
  * Subscribes to the kernel request event to check whether authentication is required
  */
@@ -24,7 +25,7 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    */
   protected $manager;
 
-  protected $basicAuthProvider;
+  protected $authManager;
 
   /**
    * Construct the SecuresiteSubscriber.
@@ -32,13 +33,13 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    * @param \Drupal\securesite\SecuresiteManagerInterface $manager
    *   The manager used to check for authentication.
    *
-   * @param \Drupal\basic_auth\Authentication\Provider\BasicAuth $basicAuthProvider
+   * @param \Drupal\Core\Authentication\AuthenticationManager $authManager
    *
    */
 
-  public function __construct(SecuresiteManagerInterface $manager, BasicAuth $basicAuthProvider){
+  public function __construct(SecuresiteManagerInterface $manager, AuthenticationManager $authManager){
     $this->manager = $manager;
-    $this->basicAuthProvider = $basicAuthProvider;
+    $this->authManager = $authManager;
   }
 
   /**
@@ -52,10 +53,11 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
 
     // Did the user send credentials that we accept?
     $type = $this->manager->getMechanism($event->getRequest());
+    debug(array_keys($this->authManager->getSortedProviders()));
 
     if ($type !== FALSE && (isset($_SESSION['securesite_repeat']) ? !$_SESSION['securesite_repeat'] : TRUE)) {
       drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-      $this->manager->boot($type, $event->getRequest());
+      $this->manager->boot($type, $event->getRequest(), $this->authManager);
     }
     // If credentials are missing and user is not logged in, request new credentials.
     //todo check if empty($account->id()) works
@@ -66,9 +68,8 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
       $types = \Drupal::config('securesite.settings')->get('securesite_type');
       sort($types, SORT_NUMERIC);
       drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-      module_load_include('inc', 'securesite');
-      if (_securesite_forced()) {
-        _securesite_dialog(array_pop($types));
+      if ($this->manager->forcedAuth()) {
+        $event->setResponse($this->manager->showDialog(array_pop($types), $event->getRequest()));
       }
     }
   }

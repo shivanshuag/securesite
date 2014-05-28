@@ -6,9 +6,13 @@
 
 namespace Drupal\securesite;
 
+use Drupal\Core\Authentication\AuthenticationManager;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Drupal\Component\Utility\Unicode;
-use Drupal\basic_auth\Authentication\Provider\BasicAuth;
+use Drupal\Core\Session\AnonymousUserSession;
+
+//use Drupal\basic_auth\Authentication\Provider\BasicAuth;
 
 class SecuresiteManager implements SecuresiteManagerInterface {
 
@@ -71,7 +75,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   /**
    * {@inheritdoc}
    */
-  public function boot($type, Request $request){
+  public function boot($type, Request $request, AuthenticationManager $authManager){
     $user = \Drupal::currentUser();
     switch ($type) {
       case SECURESITE_DIGEST:
@@ -81,10 +85,16 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         $function = '_securesite_digest_auth';
         break;
       case SECURESITE_BASIC:
-
-        $edit['name'] = isset($_SERVER['PHP_AUTH_USER']) ? $_SERVER['PHP_AUTH_USER'] : '';
-        $edit['pass'] = isset($_SERVER['PHP_AUTH_PW']) ? $_SERVER['PHP_AUTH_PW'] : '';
-        $function = '_securesite_plain_auth';
+        //todo bleeding edge here. be careful here and verify with securesite.inc
+        $basicAuthProvider = $authManager->getSortedProviders()['basic_auth'];
+        $account = $basicAuthProvider->authenticate($request);
+        if($account){
+          //\Drupal::currentUser()->setAccount(new AnonymousUserSession());
+        }
+        debug(\Drupal::currentUser()->getRoles());
+        //$edit['name'] = isset($_SERVER['PHP_AUTH_USER']) ? $_SERVER['PHP_AUTH_USER'] : '';
+        //$edit['pass'] = isset($_SERVER['PHP_AUTH_PW']) ? $_SERVER['PHP_AUTH_PW'] : '';
+        //$function = '_securesite_plain_auth';
         break;
       case SECURESITE_FORM:
         //todo check if openid works
@@ -96,11 +106,57 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         break;
     }
     // Are credentials different from current user?
-    if ((!isset($user->name) || $edit['name'] !== $user->name) && (!isset($_SESSION['securesite_guest']) || $edit['name'] !== $_SESSION['securesite_guest'])) {
+/*    if ((!isset($user->name) || $edit['name'] !== $user->name) && (!isset($_SESSION['securesite_guest']) || $edit['name'] !== $_SESSION['securesite_guest'])) {
       $function($edit);
-    }
+    }*/
 
   }
 
+
+  public function showDialog($type, Request $request) {
+    $response =  new Response();
+    switch ($type) {
+      case SECURESITE_BASIC:
+        debug('visited showDialog');
+        $response->setStatusCode(401);
+        $response->headers->set('WWW-Authenticate', 'Basic realm="' . $this->getFakeRealm($request) . '"');
+        break;
+    }
+    return $response;
+  }
+
+  /**
+   * Determine if Secure Site authentication should be forced.
+   */
+  public function forcedAuth() {
+    // Do we require credentials to display this page?
+/*    if (php_sapi_name() == 'cli' || $_GET['q'] == 'admin/reports/request-test') {
+      return FALSE;
+    }*/
+ //   else {
+      switch (\Drupal::config('securesite.settings')->get('securesite_enabled')) {
+        case SECURESITE_ALWAYS:
+          return TRUE;
+        case SECURESITE_OFFLINE:
+          return(\Drupal::state()->get('system.maintenance_mode') ?: 0);
+        default:
+          return FALSE;
+      }
+ //   }
+  }
+
+  /**
+   * Opera and Internet Explorer save credentials indefinitely and will keep
+   * attempting to use them even when they have failed multiple times. We add a
+   * random string to the realm to allow users to log out.
+   */
+  protected function getFakeRealm(Request $request) {
+    $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
+    $user_agent = drupal_strtolower($request->server->get('HTTP_USER_AGENT', ''));
+    if ($user_agent != str_replace(array('msie', 'opera'), '', $user_agent)) {
+      $realm .= ' - ' . mt_rand(10, 999);
+    }
+    return $realm;
+  }
 }
 
