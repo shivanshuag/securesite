@@ -7,6 +7,8 @@
 namespace Drupal\securesite;
 
 use Drupal\Core\Authentication\AuthenticationManager;
+use Drupal\Core\Session\AccountInterface;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Drupal\Component\Utility\Unicode;
@@ -19,7 +21,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   /**
    * {@inheritdoc}
    */
-  public function getMechanism(Request $request){
+  public function getMechanism(Request $request) {
     static $mechanism;
     if (!isset($mechanism)) {
       // PHP in CGI mode work-arounds. Sometimes "REDIRECT_" prefixes $_SERVER
@@ -75,7 +77,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   /**
    * {@inheritdoc}
    */
-  public function boot($type, Request $request, AuthenticationManager $authManager){
+  public function boot($type, Request $request, AuthenticationManager $authManager) {
     $user = \Drupal::currentUser();
     switch ($type) {
       case SECURESITE_DIGEST:
@@ -87,7 +89,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       case SECURESITE_BASIC:
         $edit['name'] = $request->headers->get('PHP_AUTH_USER', '');
         $edit['pass'] = $request->headers->get('PHP_AUTH_PW', '');
-        $function = '_securesite_plain_auth';
+        $function = 'plainAuth';
         break;
         //todo bleeding edge here. be careful here and verify with securesite.inc
 /*        $basicAuthProvider = $authManager->getSortedProviders()['basic_auth'];
@@ -107,37 +109,43 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         break;
     }
     // Are credentials different from current user?
-    if ((!isset($user->name) || $edit['name'] !== $user->name) && (!isset($_SESSION['securesite_guest']) || $edit['name'] !== $_SESSION['securesite_guest'])) {
-      $function($edit);
+    $differentUser = ($user->getUsername() == \Drupal::config('user.settings')->get('anonymous')) || ($edit['name'] !== $user->getUsername());
+    $notGuestLogin = !isset($_SESSION['securesite_guest']) || $edit['name'] !== $_SESSION['securesite_guest'];
+    if ($differentUser && $notGuestLogin) {
+      $this->$function($edit, $request);
     }
 
   }
 
 
-  public function plainAuth($edit){
+  public function plainAuth($edit, $request) {
     // We cant set username to be a required field so we check here if it is empty
     if (empty($edit['name'])) {
       drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
-      _securesite_dialog(securesite_type_get());
+      $this->showDialog($this->getType(), $request);
     }
 
-    $users = user_load_multiple(array(), array('name' => $edit['name'], 'status' => 1));
-    $account = reset($users);
-    if (empty($account->uid)) {
+    //$users = user_load_multiple(array(), array('name' => $edit['name'], 'status' => 1));
+    //todo not checked whether status = 1
+    $account = user_load_by_name($edit['name']);
+    if (!$account) {
       // Not a registered user.
       // If we have correct LDAP credentials, register this new user.
       if ( \Drupal::moduleHandler()->moduleExists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass'], TRUE) !== FALSE) {
-        $users = user_load_multiple(array(), array('name' => $edit['name'], 'status' => 1));
-        $account = reset($users);
+        //$users = user_load_multiple(array(), array('name' => $edit['name'], 'status' => 1));
+        $account = user_load_by_name($edit['name']);
         // System should be setup correctly now, perform log-in.
-        _securesite_user_login($edit, $account);
+        if($account != FALSE) {
+          $this->userLogin($edit, $account);
+        }
       }
       else {
         // See if we have guest user credentials.
-        _securesite_guest_login($edit);
+        $this->guestLogin($edit, $request);
       }
     }
     else {
+      //todo find a replacement for user_check_password
       require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
       if (user_check_password($edit['pass'], $account) || module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
         // Password is correct. Perform log-in.
@@ -147,7 +155,67 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         // Request credentials using most secure authentication method.
         watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
         drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
-        _securesite_dialog(securesite_type_get());
+        $this->showDialog($this->getType(), $request);
+      }
+    }
+
+  }
+
+
+  protected function userLogin($edit, AccountInterface $account) {
+    if ($account->hasPermission('access secured pages')) {
+      \Drupal::currentUser()->setAccount($account);
+      user_login_finalize($edit);
+
+      // Mark the session so Secure Site will be triggered on log-out.
+      $_SESSION['securesite_login'] = TRUE;
+
+      // Unset the session variable set by securesite_denied().
+      unset($_SESSION['securesite_denied']);
+      // Unset messages from previous log-in attempts.
+      unset($_SESSION['messages']);
+      // Clear the guest session.
+      unset($_SESSION['securesite_guest']);
+
+      // Prevent a log-in/log-out loop by redirecting off the log-out page.
+      if (current_path() == 'user/logout') {
+        return new RedirectResponse('');
+      }
+    }
+    else {
+      _securesite_denied(t('You have not been authorized to log in to secured pages.'));
+    }
+
+  }
+
+  protected function guestLogin($edit, $request) {
+    $config = \Drupal::config('securesite.settings');
+    $guest_name = $config->get('securesite_guest_name');
+    $guest_pass = $config->get('securesite_guest_pass');
+    $anonymous_user = new AnonymousUserSession();
+    // Check anonymous user permission and credentials.
+    if ($anonymous_user->hasPermission('access secured pages') && (empty($guest_name) || $edit['name'] == $guest_name) && (empty($guest_pass) || $edit['pass'] == $guest_pass)) {
+      // Unset the session variable set by securesite_denied().
+      if(isset($_SESSION['securesite_denied'])){
+        unset($_SESSION['securesite_denied']);
+      }
+      // Mark this session to prevent re-login (note: guests can't log out).
+      $_SESSION['securesite_guest'] = $edit['name'];
+      $_SESSION['securesite_login'] = TRUE;
+      // Prevent a 403 error by redirecting off the logout page.
+      if (current_path() == 'user/logout') {
+        return new RedirectResponse('');
+      }
+    }
+    else {
+      if (empty($edit['name'])) {
+        watchdog('user', 'Log-in attempt failed for <em>anonymous</em> user.');
+        _securesite_denied(t('Anonymous users are not allowed to log in to secured pages.'));
+      }
+      else {
+        watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
+        drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
+        $this->showDialog(securesite_type_get(), $request);
       }
     }
 
@@ -198,5 +266,10 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     }
     return $realm;
   }
-}
 
+
+  protected function getType() {
+    $securesite_type = \Drupal::config('securesite.settings')->get('securesite_type');
+    return array_pop($securesite_type);
+  }
+}
