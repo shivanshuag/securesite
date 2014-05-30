@@ -85,17 +85,18 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         $function = '_securesite_digest_auth';
         break;
       case SECURESITE_BASIC:
+        $edit['name'] = $request->headers->get('PHP_AUTH_USER', '');
+        $edit['pass'] = $request->headers->get('PHP_AUTH_PW', '');
+        $function = '_securesite_plain_auth';
+        break;
         //todo bleeding edge here. be careful here and verify with securesite.inc
-        $basicAuthProvider = $authManager->getSortedProviders()['basic_auth'];
+/*        $basicAuthProvider = $authManager->getSortedProviders()['basic_auth'];
         $account = $basicAuthProvider->authenticate($request);
         if($account){
-          //\Drupal::currentUser()->setAccount(new AnonymousUserSession());
+          \Drupal::currentUser()->setAccount($account);
         }
         debug(\Drupal::currentUser()->getRoles());
-        //$edit['name'] = isset($_SERVER['PHP_AUTH_USER']) ? $_SERVER['PHP_AUTH_USER'] : '';
-        //$edit['pass'] = isset($_SERVER['PHP_AUTH_PW']) ? $_SERVER['PHP_AUTH_PW'] : '';
-        //$function = '_securesite_plain_auth';
-        break;
+        break;*/
       case SECURESITE_FORM:
         //todo check if openid works
         if (!empty($_POST['openid_identifier'])) {
@@ -106,12 +107,51 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         break;
     }
     // Are credentials different from current user?
-/*    if ((!isset($user->name) || $edit['name'] !== $user->name) && (!isset($_SESSION['securesite_guest']) || $edit['name'] !== $_SESSION['securesite_guest'])) {
+    if ((!isset($user->name) || $edit['name'] !== $user->name) && (!isset($_SESSION['securesite_guest']) || $edit['name'] !== $_SESSION['securesite_guest'])) {
       $function($edit);
-    }*/
+    }
 
   }
 
+
+  public function plainAuth($edit){
+    // We cant set username to be a required field so we check here if it is empty
+    if (empty($edit['name'])) {
+      drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
+      _securesite_dialog(securesite_type_get());
+    }
+
+    $users = user_load_multiple(array(), array('name' => $edit['name'], 'status' => 1));
+    $account = reset($users);
+    if (empty($account->uid)) {
+      // Not a registered user.
+      // If we have correct LDAP credentials, register this new user.
+      if ( \Drupal::moduleHandler()->moduleExists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass'], TRUE) !== FALSE) {
+        $users = user_load_multiple(array(), array('name' => $edit['name'], 'status' => 1));
+        $account = reset($users);
+        // System should be setup correctly now, perform log-in.
+        _securesite_user_login($edit, $account);
+      }
+      else {
+        // See if we have guest user credentials.
+        _securesite_guest_login($edit);
+      }
+    }
+    else {
+      require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+      if (user_check_password($edit['pass'], $account) || module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
+        // Password is correct. Perform log-in.
+        _securesite_user_login($edit, $account);
+      }
+      else {
+        // Request credentials using most secure authentication method.
+        watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
+        drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
+        _securesite_dialog(securesite_type_get());
+      }
+    }
+
+  }
 
   public function showDialog($type, Request $request) {
     $response =  new Response();
