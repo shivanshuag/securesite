@@ -50,6 +50,7 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    */
   public function onKernelRequest(GetResponseEvent $event) {
     $account = \Drupal::currentUser();
+    $this->manager->setRequest($event->getRequest());
 
     // Did the user send credentials that we accept?
     $type = $this->manager->getMechanism($event->getRequest());
@@ -69,7 +70,7 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
       sort($types, SORT_NUMERIC);
       drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
       if ($this->manager->forcedAuth()) {
-        $event->setResponse($this->manager->showDialog(array_pop($types), $event->getRequest()));
+        $event->setResponse($this->manager->showDialog(array_pop($types)));
       }
     }
   }

@@ -15,29 +15,26 @@ use Drupal\Core\Authentication\AuthenticationManager;
  */
 interface SecuresiteManagerInterface {
 
+
+  public function setRequest(Request $request);
+
   /**
    * Return the appropriate method of authentication for the request
-   *
-   * @param \Symfony\Component\HttpFoundation\Request $request
-   *  request for the page
    *
    * @return int
    *    type of the authentication mechanism
    */
-  public function getMechanism(Request $request);
+  public function getMechanism();
 
   /**
    * @param int $type
    *    type of the authentication mechanism
    *
-   * @param \Symfony\Component\HttpFoundation\Request $request
-   *  request for the page
-   *
    * @param \Drupal\Core\Authentication\AuthenticationManager $authManager
    */
-  public function boot($type, Request $request, AuthenticationManager $authManager);
+  public function boot($type, AuthenticationManager $authManager);
 
-  public function showDialog($type, Request $request);
+  public function showDialog($type);
 
   public function forcedAuth();
 }

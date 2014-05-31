@@ -11,7 +11,6 @@ use Drupal\Core\Session\AccountInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Session\AnonymousUserSession;
 
 //use Drupal\basic_auth\Authentication\Provider\BasicAuth;
@@ -19,10 +18,25 @@ use Drupal\Core\Session\AnonymousUserSession;
 class SecuresiteManager implements SecuresiteManagerInterface {
 
   /**
+   * The page request to act on.
+   *
+   * @var \Symfony\Component\HttpFoundation\Request
+   */
+  protected $request;
+
+  /**
    * {@inheritdoc}
    */
-  public function getMechanism(Request $request) {
+  public function setRequest(Request $request) {
+    $this->request = $request;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getMechanism() {
     static $mechanism;
+    $request = $this->request;
     if (!isset($mechanism)) {
       // PHP in CGI mode work-arounds. Sometimes "REDIRECT_" prefixes $_SERVER
       // variables. See http://www.php.net/reserved.variables.
@@ -31,7 +45,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
       if (!empty($request->headers->get('HTTP_AUTHORIZATION'))) {
         list($type, $authorization) = explode(' ', $request->headers->get('HTTP_AUTHORIZATION'), 2);
-        switch (Unicode::strtolower($type)) {
+        switch (drupal_strtolower($type)) {
           case 'digest':
             $request->headers->set('PHP_AUTH_DIGEST', $authorization);
             break;
@@ -77,8 +91,9 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   /**
    * {@inheritdoc}
    */
-  public function boot($type, Request $request, AuthenticationManager $authManager) {
+  public function boot($type, AuthenticationManager $authManager) {
     $user = \Drupal::currentUser();
+    $request = $this->request;
     switch ($type) {
       case SECURESITE_DIGEST:
         $edit = _securesite_parse_directives($_SERVER['PHP_AUTH_DIGEST']);
@@ -118,11 +133,11 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   }
 
 
-  public function plainAuth($edit, $request) {
+  public function plainAuth($edit) {
     // We cant set username to be a required field so we check here if it is empty
     if (empty($edit['name'])) {
       drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
-      $this->showDialog($this->getType(), $request);
+      $this->showDialog($this->getType());
     }
 
     //$users = user_load_multiple(array(), array('name' => $edit['name'], 'status' => 1));
@@ -141,7 +156,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
       else {
         // See if we have guest user credentials.
-        $this->guestLogin($edit, $request);
+        $this->guestLogin($edit);
       }
     }
     else {
@@ -155,7 +170,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         // Request credentials using most secure authentication method.
         watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
         drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
-        $this->showDialog($this->getType(), $request);
+        $this->showDialog($this->getType());
       }
     }
 
@@ -188,7 +203,8 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
   }
 
-  protected function guestLogin($edit, $request) {
+  protected function guestLogin($edit) {
+    $request = $this->request;
     $config = \Drupal::config('securesite.settings');
     $guest_name = $config->get('securesite_guest_name');
     $guest_pass = $config->get('securesite_guest_pass');
@@ -215,13 +231,13 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       else {
         watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
         drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
-        $this->showDialog(securesite_type_get(), $request);
+        $this->showDialog(securesite_type_get());
       }
     }
 
   }
 
-  public function showDialog($type, Request $request) {
+  public function showDialog($type) {
     $response =  new Response();
     switch ($type) {
       case SECURESITE_BASIC:
@@ -238,10 +254,10 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    */
   public function forcedAuth() {
     // Do we require credentials to display this page?
-/*    if (php_sapi_name() == 'cli' || $_GET['q'] == 'admin/reports/request-test') {
+    if (php_sapi_name() == 'cli' || current_path() == 'admin/reports/request-test') {
       return FALSE;
-    }*/
- //   else {
+    }
+    else {
       switch (\Drupal::config('securesite.settings')->get('securesite_enabled')) {
         case SECURESITE_ALWAYS:
           return TRUE;
@@ -250,7 +266,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         default:
           return FALSE;
       }
- //   }
+    }
   }
 
   /**
@@ -258,9 +274,9 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    * attempting to use them even when they have failed multiple times. We add a
    * random string to the realm to allow users to log out.
    */
-  protected function getFakeRealm(Request $request) {
+  protected function getFakeRealm() {
     $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
-    $user_agent = drupal_strtolower($request->server->get('HTTP_USER_AGENT', ''));
+    $user_agent = drupal_strtolower($this->request->server->get('HTTP_USER_AGENT', ''));
     if ($user_agent != str_replace(array('msie', 'opera'), '', $user_agent)) {
       $realm .= ' - ' . mt_rand(10, 999);
     }
