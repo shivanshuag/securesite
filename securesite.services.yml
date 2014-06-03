@@ -1,5 +1,5 @@
 services:
-  scuresite.manager:
+  securesite.manager:
     class: Drupal\securesite\SecuresiteManager
     arguments: ['@entity.manager', '@config.factory', '@user.auth']
   securesite.subscriber:

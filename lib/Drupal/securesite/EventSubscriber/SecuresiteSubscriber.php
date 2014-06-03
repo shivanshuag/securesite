@@ -53,16 +53,14 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
   public function onKernelRequest(GetResponseEvent $event) {
     $account = \Drupal::currentUser();
     $this->manager->setRequest($event->getRequest());
-    $anonymous_user = new AnonymousUserSession();
 
     // Did the user send credentials that we accept?
-    $type = $this->manager->getMechanism($event->getRequest());
-    debug($type);
+    $type = $this->manager->getMechanism();
+    var_dump($type);
 
     if ($type !== FALSE && (isset($_SESSION['securesite_repeat']) ? !$_SESSION['securesite_repeat'] : TRUE)) {
-      debug('boot');
-      debug($account->id());
-      debug($anonymous_user->id());
+      var_dump('boot');
+      var_dump($account->id());
       drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
       $this->manager->boot($type, $this->authManager);
     }

@@ -80,7 +80,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         }
       }
       $mechanism = FALSE;
-      $types = \Drupal::config('securesite.settings')->get('securesite_type');
+      $types = $this->configFactory->get('securesite.settings')->get('securesite_type');
       rsort($types, SORT_NUMERIC);
       foreach ($types as $type) {
         switch ($type) {
@@ -124,8 +124,10 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         $function = '_securesite_digest_auth';
         break;
       case SECURESITE_BASIC:
+        var_dump('basic');
         $edit['name'] = $request->headers->get('PHP_AUTH_USER', '');
         $edit['pass'] = $request->headers->get('PHP_AUTH_PW', '');
+        var_dump($edit);
         $function = 'plainAuth';
         break;
         //todo bleeding edge here. be careful here and verify with securesite.inc
@@ -163,7 +165,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
   public function plainAuth($edit) {
     // We cant set username to be a required field so we check here if it is empty
-    debug('inside plainauth');
+    var_dump('inside plainauth');
     if (empty($edit['name'])) {
       drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
       $this->showDialog($this->getType());
@@ -173,6 +175,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     //todo not checked whether status = 1
     $accounts = $this->entityManager->getStorage('user')->loadByProperties(array('name' => $edit['name'], 'status' => 1));
     $account = reset($accounts);
+    var_dump($account->id());
     if (!$account) {
       // Not a registered user.
       // If we have correct LDAP credentials, register this new user.
@@ -181,7 +184,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         $account = reset($accounts);
         // System should be setup correctly now, perform log-in.
         if($account != FALSE) {
-          debug('set current account');
           $this->userLogin($edit, $account);
         }
       }
@@ -195,6 +197,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       //require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
       if ( $this->userAuth->authenticate($edit['name'], $edit['pass']) || module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
         // Password is correct. Perform log-in.
+        var_dump('correct password');
         $this->userLogin($edit, $account);
       }
       else {
@@ -210,9 +213,12 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
   protected function userLogin($edit, AccountInterface $account) {
     if ($account->hasPermission('access secured pages')) {
+      var_dump('has permission');
       \Drupal::currentUser()->setAccount($account);
-      user_login_finalize($edit);
-
+      $user = user_load($account->id());
+      var_dump($user);
+      user_login_finalize($user);
+      var_dump('logged in admin');
       // Mark the session so Secure Site will be triggered on log-out.
       $_SESSION['securesite_login'] = TRUE;
 
