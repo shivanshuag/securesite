@@ -12,6 +12,9 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Drupal\Core\Session\AnonymousUserSession;
+use Drupal\Core\Entity\EntityManagerInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\user\UserAuthInterface;
 
 //use Drupal\basic_auth\Authentication\Provider\BasicAuth;
 
@@ -23,7 +26,27 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    * @var \Symfony\Component\HttpFoundation\Request
    */
   protected $request;
+  /**
+   * The entity manager.
+   *
+   * @var \Drupal\Core\Entity\EntityManagerInterface
+   */
+  protected $entityManager;
 
+  protected $configFactory;
+
+  /**
+   * The user auth service.
+   *
+   * @var \Drupal\user\UserAuthInterface
+   */
+  protected $userAuth;
+
+  public function __construct(EntityManagerInterface $entity_manager, ConfigFactoryInterface $config_factory, UserAuthInterface $user_auth){
+    $this->entityManager = $entity_manager;
+    $this->configFactory = $config_factory;
+    $this->userAuth = $user_auth;
+  }
   /**
    * {@inheritdoc}
    */
@@ -56,7 +79,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
             break;
         }
       }
-      debug(SECURESITE_FORM);
       $mechanism = FALSE;
       $types = \Drupal::config('securesite.settings')->get('securesite_type');
       rsort($types, SORT_NUMERIC);
@@ -124,9 +146,15 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         break;
     }
     // Are credentials different from current user?
+    debug($user->getUsername());
+    debug($edit['name']);
     $differentUser = ($user->getUsername() == \Drupal::config('user.settings')->get('anonymous')) || ($edit['name'] !== $user->getUsername());
+    debug($differentUser);
     $notGuestLogin = !isset($_SESSION['securesite_guest']) || $edit['name'] !== $_SESSION['securesite_guest'];
-    if ($differentUser && $notGuestLogin) {
+    debug($notGuestLogin);
+
+    if ($notGuestLogin) {
+      debug('calling plainauth');
       $this->$function($edit, $request);
     }
 
@@ -135,6 +163,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
   public function plainAuth($edit) {
     // We cant set username to be a required field so we check here if it is empty
+    debug('inside plainauth');
     if (empty($edit['name'])) {
       drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
       $this->showDialog($this->getType());
@@ -142,15 +171,17 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
     //$users = user_load_multiple(array(), array('name' => $edit['name'], 'status' => 1));
     //todo not checked whether status = 1
-    $account = user_load_by_name($edit['name']);
+    $accounts = $this->entityManager->getStorage('user')->loadByProperties(array('name' => $edit['name'], 'status' => 1));
+    $account = reset($accounts);
     if (!$account) {
       // Not a registered user.
       // If we have correct LDAP credentials, register this new user.
       if ( \Drupal::moduleHandler()->moduleExists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass'], TRUE) !== FALSE) {
-        //$users = user_load_multiple(array(), array('name' => $edit['name'], 'status' => 1));
-        $account = user_load_by_name($edit['name']);
+        $accounts = $this->entityManager->getStorage('user')->loadByProperties(array('name' => $edit['name'], 'status' => 1));
+        $account = reset($accounts);
         // System should be setup correctly now, perform log-in.
         if($account != FALSE) {
+          debug('set current account');
           $this->userLogin($edit, $account);
         }
       }
@@ -161,10 +192,10 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     }
     else {
       //todo find a replacement for user_check_password
-      require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
-      if (user_check_password($edit['pass'], $account) || module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
+      //require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+      if ( $this->userAuth->authenticate($edit['name'], $edit['pass']) || module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
         // Password is correct. Perform log-in.
-        _securesite_user_login($edit, $account);
+        $this->userLogin($edit, $account);
       }
       else {
         // Request credentials using most secure authentication method.
@@ -243,7 +274,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       case SECURESITE_BASIC:
         debug('visited showDialog');
         $response->setStatusCode(401);
-        $response->headers->set('WWW-Authenticate', 'Basic realm="' . $this->getFakeRealm($request) . '"');
+        $response->headers->set('WWW-Authenticate', 'Basic realm="' . $this->getFakeRealm() . '"');
         break;
     }
     return $response;

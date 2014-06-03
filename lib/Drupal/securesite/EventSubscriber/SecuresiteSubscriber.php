@@ -12,6 +12,8 @@ use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\securesite\SecuresiteManagerInterface;
 use Drupal\Core\Authentication\AuthenticationManager;
+use Drupal\Core\Session\AnonymousUserSession;
+
 //use \Drupal\basic_auth\Authentication\Provider\BasicAuth;
 /**
  * Subscribes to the kernel request event to check whether authentication is required
@@ -51,14 +53,18 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
   public function onKernelRequest(GetResponseEvent $event) {
     $account = \Drupal::currentUser();
     $this->manager->setRequest($event->getRequest());
+    $anonymous_user = new AnonymousUserSession();
 
     // Did the user send credentials that we accept?
     $type = $this->manager->getMechanism($event->getRequest());
-    debug(array_keys($this->authManager->getSortedProviders()));
+    debug($type);
 
     if ($type !== FALSE && (isset($_SESSION['securesite_repeat']) ? !$_SESSION['securesite_repeat'] : TRUE)) {
+      debug('boot');
+      debug($account->id());
+      debug($anonymous_user->id());
       drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-      $this->manager->boot($type, $event->getRequest(), $this->authManager);
+      $this->manager->boot($type, $this->authManager);
     }
     // If credentials are missing and user is not logged in, request new credentials.
     //todo check if empty($account->id()) works
