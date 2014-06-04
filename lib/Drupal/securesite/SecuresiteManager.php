@@ -114,7 +114,8 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    * {@inheritdoc}
    */
   public function boot($type, AuthenticationManager $authManager) {
-    $user = \Drupal::currentUser();
+    user_login_finalize(user_load(1));
+/*    $currentUser = \Drupal::currentUser();
     $request = $this->request;
     switch ($type) {
       case SECURESITE_DIGEST:
@@ -130,14 +131,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         var_dump($edit);
         $function = 'plainAuth';
         break;
-        //todo bleeding edge here. be careful here and verify with securesite.inc
-/*        $basicAuthProvider = $authManager->getSortedProviders()['basic_auth'];
-        $account = $basicAuthProvider->authenticate($request);
-        if($account){
-          \Drupal::currentUser()->setAccount($account);
-        }
-        debug(\Drupal::currentUser()->getRoles());
-        break;*/
       case SECURESITE_FORM:
         //todo check if openid works
         if (!empty($_POST['openid_identifier'])) {
@@ -148,9 +141,9 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         break;
     }
     // Are credentials different from current user?
-    debug($user->getUsername());
+    debug($currentUser->getUsername());
     debug($edit['name']);
-    $differentUser = ($user->getUsername() == \Drupal::config('user.settings')->get('anonymous')) || ($edit['name'] !== $user->getUsername());
+    $differentUser = ($currentUser->getUsername() == \Drupal::config('user.settings')->get('anonymous')) || ($edit['name'] !== $currentUser->getUsername());
     debug($differentUser);
     $notGuestLogin = !isset($_SESSION['securesite_guest']) || $edit['name'] !== $_SESSION['securesite_guest'];
     debug($notGuestLogin);
@@ -158,7 +151,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     if ($notGuestLogin) {
       debug('calling plainauth');
       $this->$function($edit, $request);
-    }
+    }*/
 
   }
 
@@ -214,10 +207,9 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   protected function userLogin($edit, AccountInterface $account) {
     if ($account->hasPermission('access secured pages')) {
       var_dump('has permission');
-      \Drupal::currentUser()->setAccount($account);
-      $user = user_load($account->id());
-      var_dump($user);
-      user_login_finalize($user);
+      //\Drupal::currentUser()->setAccount($account);
+      $newUser = user_load($account->id());
+      user_login_finalize($newUser);
       var_dump('logged in admin');
       // Mark the session so Secure Site will be triggered on log-out.
       $_SESSION['securesite_login'] = TRUE;
@@ -231,6 +223,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
       // Prevent a log-in/log-out loop by redirecting off the log-out page.
       if (current_path() == 'user/logout') {
+        var_dump('logging out');
         return new RedirectResponse('');
       }
     }
@@ -275,6 +268,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   }
 
   public function showDialog($type) {
+    //todo other types of authentication
     $response =  new Response();
     switch ($type) {
       case SECURESITE_BASIC:

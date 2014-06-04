@@ -52,17 +52,20 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    */
   public function onKernelRequest(GetResponseEvent $event) {
     $account = \Drupal::currentUser();
+    //user_login_finalize(user_load(1));
     $this->manager->setRequest($event->getRequest());
 
     // Did the user send credentials that we accept?
     $type = $this->manager->getMechanism();
-    var_dump($type);
 
     if ($type !== FALSE && (isset($_SESSION['securesite_repeat']) ? !$_SESSION['securesite_repeat'] : TRUE)) {
       var_dump('boot');
       var_dump($account->id());
-      drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
       $this->manager->boot($type, $this->authManager);
+      ;
+      var_dump('logged in');
+      //drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+
     }
     // If credentials are missing and user is not logged in, request new credentials.
     //todo check if empty($account->id()) works
@@ -72,8 +75,9 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
       }
       $types = \Drupal::config('securesite.settings')->get('securesite_type');
       sort($types, SORT_NUMERIC);
-      drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+      //drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
       if ($this->manager->forcedAuth()) {
+        var_dump('forced');
         $event->setResponse($this->manager->showDialog(array_pop($types)));
       }
     }

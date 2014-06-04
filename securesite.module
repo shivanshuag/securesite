@@ -51,6 +51,29 @@ function securesite_permission() {
   );
 }
 
+function securesite_user_logout($account) {
+  $types = \Drupal::config('securesite.settings')->get('securesite_type');
+  var_dump($types);
+  debug($types);
+  if ((in_array(SECURESITE_BASIC, $types) || in_array(SECURESITE_DIGEST, $types)) && !empty($_SESSION['securesite_login'])) {
+    // Load the anonymous user.
+    \Drupal::currentUser()->setAccount(drupal_anonymous_user());
+    var_dump('logged out');
+    // Safari will attempt to use old credentials before requesting new credentials
+    // from the user. Logging out requires that the WWW-Authenticate header be sent
+    // twice.
+    $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? drupal_strtolower($_SERVER['HTTP_USER_AGENT']) : '');
+    if ($user_agent != str_replace('safari', '', $user_agent)) {
+      session_set_save_handler('sess_open', 'sess_close', 'sess_read', 'sess_write', 'sess_destroy_sid', 'sess_gc');
+      session_start();
+      $_SESSION['securesite_repeat'] = TRUE;
+    }
+    // Clear stored credentials.
+    \Drupal::service('securesite.manager')->showDialog(array_pop($types));
+  }
+}
+
+
 /**
  * Implementation of hook_help().
  * todo refactor needed here
