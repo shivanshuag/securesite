@@ -29,10 +29,8 @@ interface SecuresiteManagerInterface {
   /**
    * @param int $type
    *    type of the authentication mechanism
-   *
-   * @param \Drupal\Core\Authentication\AuthenticationManager $authManager
    */
-  public function boot($type, AuthenticationManager $authManager);
+  public function boot($type);
 
   public function showDialog($type);
 

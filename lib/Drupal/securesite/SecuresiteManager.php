@@ -113,10 +113,10 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   /**
    * {@inheritdoc}
    */
-  public function boot($type, AuthenticationManager $authManager) {
-    user_login_finalize(user_load(1));
-/*    $currentUser = \Drupal::currentUser();
+  public function boot($type) {
+    $currentUser = \Drupal::currentUser();
     $request = $this->request;
+
     switch ($type) {
       case SECURESITE_DIGEST:
         $edit = _securesite_parse_directives($_SERVER['PHP_AUTH_DIGEST']);
@@ -140,19 +140,21 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         $function = '_securesite_plain_auth';
         break;
     }
+    var_dump($function);
     // Are credentials different from current user?
-    debug($currentUser->getUsername());
-    debug($edit['name']);
-    $differentUser = ($currentUser->getUsername() == \Drupal::config('user.settings')->get('anonymous')) || ($edit['name'] !== $currentUser->getUsername());
-    debug($differentUser);
+    //$differentUser = ($currentUser->getUsername() == \Drupal::config('user.settings')->get('anonymous')) || ($edit['name'] !== $currentUser->getUsername());
+    //var_dump($differentUser);
     $notGuestLogin = !isset($_SESSION['securesite_guest']) || $edit['name'] !== $_SESSION['securesite_guest'];
-    debug($notGuestLogin);
+    var_dump($notGuestLogin);
 
     if ($notGuestLogin) {
-      debug('calling plainauth');
-      $this->$function($edit, $request);
-    }*/
-
+      var_dump('calling plainauth');
+      return ($this->$function($edit, $request));
+    }
+    //todo check this
+    else {
+      return $currentUser;
+    }
   }
 
 
@@ -161,6 +163,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     var_dump('inside plainauth');
     if (empty($edit['name'])) {
       drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
+      //todo showDialog has no effect inside plainauth because this function is called in authmanager
       $this->showDialog($this->getType());
     }
 
@@ -177,7 +180,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         $account = reset($accounts);
         // System should be setup correctly now, perform log-in.
         if($account != FALSE) {
-          $this->userLogin($edit, $account);
+          return $this->userLogin($edit, $account);
         }
       }
       else {
@@ -186,12 +189,10 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
     }
     else {
-      //todo find a replacement for user_check_password
-      //require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
       if ( $this->userAuth->authenticate($edit['name'], $edit['pass']) || module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
         // Password is correct. Perform log-in.
         var_dump('correct password');
-        $this->userLogin($edit, $account);
+        return $this->userLogin($edit, $account);
       }
       else {
         // Request credentials using most secure authentication method.
@@ -207,10 +208,10 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   protected function userLogin($edit, AccountInterface $account) {
     if ($account->hasPermission('access secured pages')) {
       var_dump('has permission');
-      //\Drupal::currentUser()->setAccount($account);
+      \Drupal::service('session_manager')->initialize();
+/*      \Drupal::currentUser()->setAccount($account);
       $newUser = user_load($account->id());
-      user_login_finalize($newUser);
-      var_dump('logged in admin');
+      user_login_finalize($newUser);*/
       // Mark the session so Secure Site will be triggered on log-out.
       $_SESSION['securesite_login'] = TRUE;
 
@@ -224,8 +225,11 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       // Prevent a log-in/log-out loop by redirecting off the log-out page.
       if (current_path() == 'user/logout') {
         var_dump('logging out');
-        return new RedirectResponse('');
+        $response = new RedirectResponse('/');
+        $response->send();
+
       }
+      return $account;
     }
     else {
       _securesite_denied(t('You have not been authorized to log in to secured pages.'));
@@ -250,7 +254,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       $_SESSION['securesite_login'] = TRUE;
       // Prevent a 403 error by redirecting off the logout page.
       if (current_path() == 'user/logout') {
-        return new RedirectResponse('');
+        return new RedirectResponse('<front>');
       }
     }
     else {
@@ -277,7 +281,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         $response->headers->set('WWW-Authenticate', 'Basic realm="' . $this->getFakeRealm() . '"');
         break;
     }
-    return $response;
+    $response->send();
   }
 
   /**

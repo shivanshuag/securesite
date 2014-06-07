@@ -34,14 +34,10 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    *
    * @param \Drupal\securesite\SecuresiteManagerInterface $manager
    *   The manager used to check for authentication.
-   *
-   * @param \Drupal\Core\Authentication\AuthenticationManager $authManager
-   *
    */
 
-  public function __construct(SecuresiteManagerInterface $manager, AuthenticationManager $authManager){
+  public function __construct(SecuresiteManagerInterface $manager){
     $this->manager = $manager;
-    $this->authManager = $authManager;
   }
 
   /**
@@ -51,34 +47,28 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    *   The event to process.
    */
   public function onKernelRequest(GetResponseEvent $event) {
+    var_dump('subscriber');
     $account = \Drupal::currentUser();
-    //user_login_finalize(user_load(1));
     $this->manager->setRequest($event->getRequest());
 
     // Did the user send credentials that we accept?
     $type = $this->manager->getMechanism();
-
+    var_dump($account->id());
     if ($type !== FALSE && (isset($_SESSION['securesite_repeat']) ? !$_SESSION['securesite_repeat'] : TRUE)) {
-      var_dump('boot');
-      var_dump($account->id());
-      $this->manager->boot($type, $this->authManager);
-      ;
-      var_dump('logged in');
-      //drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-
+      //authentication is done by SecuresiteAuth authentication provider. Nothing here
     }
     // If credentials are missing and user is not logged in, request new credentials.
-    //todo check if empty($account->id()) works
-    elseif (empty($account->id()) && !isset($_SESSION['securesite_guest'])) {
+    //todo check if $account->id() == 0 works
+    elseif ($account->id() == 0 && !isset($_SESSION['securesite_guest'])) {
+      var_dump('show dialog');
       if (isset($_SESSION['securesite_repeat'])) {
         unset($_SESSION['securesite_repeat']);
       }
-      $types = \Drupal::config('securesite.settings')->get('securesite_type');
-      sort($types, SORT_NUMERIC);
-      //drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
       if ($this->manager->forcedAuth()) {
+        $types = \Drupal::config('securesite.settings')->get('securesite_type');
+        sort($types, SORT_NUMERIC);
         var_dump('forced');
-        $event->setResponse($this->manager->showDialog(array_pop($types)));
+        $this->manager->showDialog(array_pop($types));
       }
     }
   }
@@ -90,7 +80,7 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    *   An array of event listener definitions.
    */
   static function getSubscribedEvents() {
-    $events[KernelEvents::REQUEST][] = array('onKernelRequest', 40);
+    $events[KernelEvents::REQUEST][] = array('onKernelRequest', 255);
     return $events;
   }
 
