@@ -142,12 +142,12 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     }
     var_dump($function);
     // Are credentials different from current user?
-    //$differentUser = ($currentUser->getUsername() == \Drupal::config('user.settings')->get('anonymous')) || ($edit['name'] !== $currentUser->getUsername());
+    $differentUser = ($currentUser->getUsername() == \Drupal::config('user.settings')->get('anonymous')) || ($edit['name'] !== $currentUser->getUsername());
     //var_dump($differentUser);
     $notGuestLogin = !isset($_SESSION['securesite_guest']) || $edit['name'] !== $_SESSION['securesite_guest'];
     var_dump($notGuestLogin);
 
-    if ($notGuestLogin) {
+    if ($differentUser && $notGuestLogin) {
       var_dump('calling plainauth');
       return ($this->$function($edit, $request));
     }
@@ -206,12 +206,15 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
 
   protected function userLogin($edit, AccountInterface $account) {
+    global $user;
     if ($account->hasPermission('access secured pages')) {
       var_dump('has permission');
-      \Drupal::service('session_manager')->initialize();
-/*      \Drupal::currentUser()->setAccount($account);
+      //\Drupal::currentUser()->setAccount($account);
+      //$session_manager = \Drupal::service('session_manager');
+      //$session_manager->start();
+      //\Drupal::currentUser()->setAccount($account);
       $newUser = user_load($account->id());
-      user_login_finalize($newUser);*/
+      user_login_finalize($newUser);
       // Mark the session so Secure Site will be triggered on log-out.
       $_SESSION['securesite_login'] = TRUE;
 

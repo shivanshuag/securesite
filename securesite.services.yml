@@ -4,9 +4,9 @@ services:
     arguments: ['@entity.manager', '@config.factory', '@user.auth']
   authentication.securesite:
     class: Drupal\securesite\Authentication\Provider\SecuresiteAuth
-    arguments: ['@securesite.manager', '@config.factory']
+    arguments: ['@session_manager']
     tags:
-      - { name: authentication_provider, priority: 150 }
+      - { name: authentication_provider, priority: -10 }
   securesite.subscriber:
     class: Drupal\securesite\EventSubscriber\SecuresiteSubscriber
     tags:

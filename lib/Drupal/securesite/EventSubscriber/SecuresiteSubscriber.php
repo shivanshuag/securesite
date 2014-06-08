@@ -47,7 +47,7 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    *   The event to process.
    */
   public function onKernelRequest(GetResponseEvent $event) {
-    var_dump('subscriber');
+    //var_dump($event->getRequest()->attributes->get('_authentication_provider'));
     $account = \Drupal::currentUser();
     $this->manager->setRequest($event->getRequest());
 
@@ -56,6 +56,7 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
     var_dump($account->id());
     if ($type !== FALSE && (isset($_SESSION['securesite_repeat']) ? !$_SESSION['securesite_repeat'] : TRUE)) {
       //authentication is done by SecuresiteAuth authentication provider. Nothing here
+      $this->manager->boot($type);
     }
     // If credentials are missing and user is not logged in, request new credentials.
     //todo check if $account->id() == 0 works

@@ -7,90 +7,65 @@
 
 namespace Drupal\securesite\Authentication\Provider;
 
-use Drupal\securesite\SecuresiteManagerInterface;
-
-use \Drupal\Component\Utility\String;
 use Drupal\Core\Authentication\AuthenticationProviderInterface;
-use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Entity\EntityManagerInterface;
-use Drupal\Core\Flood\FloodInterface;
-use Drupal\user\UserAuthInterface;
+use Drupal\Core\Session\SessionManagerInterface;
+use Drupal\Component\Utility\Settings;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\GetResponseForExceptionEvent;
-use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
- * Securesite authentication provider.
+ * Cookie based authentication provider.
  */
 class SecuresiteAuth implements AuthenticationProviderInterface {
 
   /**
-   * The Securesite Manager
+   * The session manager.
    *
-   * @var \Drupal\securesite\SecuresiteManagerInterface
+   * @var \Drupal\Core\Session\SessionManagerInterface
    */
-  protected $securesiteManager;
+  protected $sessionManager;
 
   /**
-   * The config factory.
+   * Constructs a new Cookie authentication provider instance.
    *
-   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   * @param \Drupal\Core\Session\SessionManagerInterface $session_manager
+   *   The session manager.
    */
-  protected $configFactory;
-
-  /**
-   * Constructs a HTTP basic authentication provider object.
-   *
-   * @param \Drupal\securesite\SecuresiteManagerInterface $securesite_manager
-   *    The Securesite Manager
-   *
-   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
-   *    The config factory.
-   */
-  public function __construct(SecuresiteManagerInterface $securesite_manager, ConfigFactoryInterface $config_factory) {
-    $this->securesiteManager = $securesite_manager;
-    $this->configFactory = $config_factory;
+  public function __construct(SessionManagerInterface $session_manager) {
+    $this->sessionManager = $session_manager;
   }
 
   /**
    * {@inheritdoc}
    */
   public function applies(Request $request) {
-    var_dump('applies called');
-    // Did the user send credentials that we accept?
-    $this->securesiteManager->setRequest($request);
-    $type = $this->securesiteManager->getMechanism();
-    if ($type !== FALSE && (isset($_SESSION['securesite_repeat']) ? !$_SESSION['securesite_repeat'] : TRUE)) {
-      return TRUE;
-    }
-    return FALSE;
+    return TRUE;
   }
 
   /**
    * {@inheritdoc}
    */
   public function authenticate(Request $request) {
-    var_dump('authenticating');
-    $account = $this->securesiteManager->boot($this->securesiteManager->getMechanism());
-    if(!empty($account)) {
-      var_dump('got account');
-      return $account;
+    // Global $user is deprecated, but the session system is still based on it.
+    //debug('securesite auth');
+    global $user;
+    if ($this->sessionManager->initialize()->isStarted()) {
+      return $user;
     }
-    else {
-      return NULL;
-    }
+    return NULL;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function cleanup(Request $request) {}
+  public function cleanup(Request $request) {
+    $this->sessionManager->save();
+  }
 
   /**
    * {@inheritdoc}
    */
   public function handleException(GetResponseForExceptionEvent $event) {
+    return FALSE;
   }
-
 }
