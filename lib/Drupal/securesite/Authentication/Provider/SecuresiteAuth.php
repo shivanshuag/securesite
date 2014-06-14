@@ -47,9 +47,11 @@ class SecuresiteAuth implements AuthenticationProviderInterface {
    */
   public function authenticate(Request $request) {
     // Global $user is deprecated, but the session system is still based on it.
-    //debug('securesite auth');
+    var_dump('securesite auth');
     global $user;
-    if ($this->sessionManager->initialize()->isStarted()) {
+    $start = $this->sessionManager->initialize()->isStarted();
+    var_dump($start);
+    if ($start) {
       return $user;
     }
     return NULL;

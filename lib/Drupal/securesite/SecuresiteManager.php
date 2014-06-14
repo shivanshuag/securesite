@@ -210,11 +210,9 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     if ($account->hasPermission('access secured pages')) {
       var_dump('has permission');
       //\Drupal::currentUser()->setAccount($account);
-      //$session_manager = \Drupal::service('session_manager');
-      //$session_manager->start();
-      //\Drupal::currentUser()->setAccount($account);
       $newUser = user_load($account->id());
       user_login_finalize($newUser);
+      $this->request->headers->remove('Authorization');
       // Mark the session so Secure Site will be triggered on log-out.
       $_SESSION['securesite_login'] = TRUE;
 

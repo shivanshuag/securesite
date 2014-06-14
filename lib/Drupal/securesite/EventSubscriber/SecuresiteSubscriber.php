@@ -81,7 +81,7 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    *   An array of event listener definitions.
    */
   static function getSubscribedEvents() {
-    $events[KernelEvents::REQUEST][] = array('onKernelRequest', 255);
+    $events[KernelEvents::REQUEST][] = array('onKernelRequest', 0);
     return $events;
   }
 
