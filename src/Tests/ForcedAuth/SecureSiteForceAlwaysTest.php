@@ -100,7 +100,7 @@ class SecureSiteForceAlwaysTest extends WebTestBase {
    * Submit password reset form.
    */
   function testSecureSiteForceAlwaysResetSubmit() {
-    $this->drupalPost(NULL, array('name' => $this->user->name), 'E-mail new password');
+    $this->drupalPostForm(NULL, array('name' => $this->user->name), 'E-mail new password');
     $this->assertResponse(200, t('Submitting password reset form.'));
     $this->assertText('Further instructions have been sent to your e-mail address.', t('Checking for password reset message.'));
   }

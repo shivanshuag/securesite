@@ -54,7 +54,7 @@ class SecureSiteFormUserTest extends WebTestBase {
    * Request home page with wrong password.
    */
   function testSecureSiteTypeFormUserWrong() {
-    $this->drupalPost('', array('name' => $this->access_user->name, 'pass' => $this->access_user->pass), 'Log in');
+    $this->drupalPostForm('', array('name' => $this->access_user->name, 'pass' => $this->access_user->pass), 'Log in');
     $this->assertFieldByXPath('//form[@id="securesite-user-login"]', '', t('Requesting home page with wrong password.'));
     $this->assertText('Unrecognized user name and/or password.', t('Checking for error message when password is wrong.'));
   }
@@ -63,7 +63,7 @@ class SecureSiteFormUserTest extends WebTestBase {
    * Request home page with correct password and access disabled.
    */
   function testSecureSiteTypeFormUserNoAccess() {
-    $this->drupalPost('', array('name' => $this->normal_user->name, 'pass' => $this->normal_user->pass_raw), 'Log in');
+    $this->drupalPostForm('', array('name' => $this->normal_user->name, 'pass' => $this->normal_user->pass_raw), 'Log in');
     $this->assertNoFieldByXPath('//form[@id="securesite-user-login"]', '', t('Requesting home page with correct password and access disabled.'));
     $this->assertText('You have not been authorized to log in to secured pages.', t('Checking for access denied message when password is correct and access is disabled.'));
   }
@@ -72,7 +72,7 @@ class SecureSiteFormUserTest extends WebTestBase {
    * Request home page with correct password and access enabled.
    */
   function testSecureSiteTypeFormUserAccess() {
-    $this->drupalPost('', array('name' => $this->access_user->name, 'pass' => $this->access_user->pass_raw), 'Log in');
+    $this->drupalPostForm('', array('name' => $this->access_user->name, 'pass' => $this->access_user->pass_raw), 'Log in');
     $this->assertNoFieldByXPath('//form[@id="securesite-user-login"]', '', t('Requesting home page with correct password and access enabled.'));
     $this->assertText($this->access_user->name, t('Checking for user name when password is correct and access is enabled.'));
     $this->assertText('My account', t('Checking for account link when password is correct and access is enabled.'));

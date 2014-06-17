@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Contains Drupal\securesite\Tests\BasicAuth\SecureSiteBasicGuestTest
+ * Contains Drupal\securesite\Tests\BasicAuth\SecureSiteBasicGuestUnsetTest
  */
 
 use Drupal\simpletest\WebTestBase;
@@ -12,10 +12,18 @@ use Drupal\simpletest\WebTestBase;
  * Functional tests for basic authentication with guest credentials unset.
  */
 class SecureSiteBasicGuestUnsetTest extends WebTestBase {
+
+  /**
+   * Modules to enable.
+   *
+   * @var array
+   */
+  public static $modules = array('securesite');
+
   /**
    * Implements getInfo().
    */
-  function getInfo() {
+  public static function getInfo() {
     return array(
       'name' => t('Basic authentication: Guest credentials unset'),
       'description' => t('Test HTTP basic authentication with guest credentials unset.'),
@@ -27,10 +35,11 @@ class SecureSiteBasicGuestUnsetTest extends WebTestBase {
    * Implements setUp().
    */
   function setUp() {
-    parent::setUp('securesite');
+    parent::setUp();
     user_role_grant_permissions(DRUPAL_ANONYMOUS_RID, array('access secured pages'));
     // Should work with all authentication methods enabled.
     \Drupal::config('securesite.settings')->set('securesite_type', array(SECURESITE_FORM, SECURESITE_BASIC, SECURESITE_DIGEST))->save();
+    //todo curl options
     $this->curl_options[CURLOPT_USERPWD] = ':';
   }
 

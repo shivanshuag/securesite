@@ -10,7 +10,7 @@ use Drupal\simpletest\WebTestBase;
 /**
  * Functional tests for digest authentication with guest credentials unset.
  */
-class SecureSiteTypeDigestGuestUnsetFunctionalTest extends WebTestBase {
+class SecureSiteDigestGuestUnsetTest extends WebTestBase {
 
   /**
    * Modules to enable.

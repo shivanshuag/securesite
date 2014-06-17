@@ -46,7 +46,7 @@ class SecureSiteFormGuestTest extends WebTestBase {
    * Request home page with empty credentials and access disabled.
    */
   function testSecureSiteTypeFormGuestUnsetEmptyNoAccess() {
-    $this->drupalPost('', array('name' => '', 'pass' => ''), 'Log in');
+    $this->drupalPostForm('', array('name' => '', 'pass' => ''), 'Log in');
     $this->assertNoFieldByXPath('//form[@id="securesite-user-login"]', '', t('Requesting home page with empty credentials and guest access disabled.'));
     $this->assertText('Anonymous users are not allowed to log in to secured pages.', t('Checking for access denied message when guest access is disabled and credentials are empty.'));
   }
@@ -55,7 +55,7 @@ class SecureSiteFormGuestTest extends WebTestBase {
    * Request home page with random credentials and access disabled.
    */
   function testSecureSiteTypeFormGuestUnsetRandomNoAccess() {
-    $this->drupalPost('', array('name' => $this->randomName(), 'pass' => user_password()), 'Log in');
+    $this->drupalPostForm('', array('name' => $this->randomName(), 'pass' => user_password()), 'Log in');
     $this->assertFieldByXPath('//form[@id="securesite-user-login"]', '', t('Requesting home page with random credentials and guest access disabled.'));
     $this->assertText('Unrecognized user name and/or password.', t('Checking for error message when guest access is disabled and random password is given.'));
   }
@@ -65,7 +65,7 @@ class SecureSiteFormGuestTest extends WebTestBase {
    */
   function testSecureSiteTypeFormGuestUnsetRandomAccess() {
     user_role_grant_permissions(DRUPAL_ANONYMOUS_RID, array('access secured pages'));
-    $this->drupalPost('', array('name' => $this->randomName(), 'pass' => user_password()), 'Log in');
+    $this->drupalPostForm('', array('name' => $this->randomName(), 'pass' => user_password()), 'Log in');
     $this->assertNoFieldByXPath('//form[@id="securesite-user-login"]', '', t('Requesting home page with random credentials and guest access enabled.'));
     $this->assertFieldByXPath('//form[@id="user-login-form"]', '', t('Checking for user log-in form when guest access is enabled and random password is given.'));
   }
