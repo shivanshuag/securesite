@@ -53,7 +53,7 @@ class SecureSiteDigestGuestSetTest extends WebTestBase {
     $this->curl_options[CURLOPT_USERPWD] = $this->user->name . ':' . $this->user->pass_raw;
     $this->guest_name = $this->randomName();
     $this->guest_pass = user_password();
-    $this->drupalPost('admin/settings/securesite', array('securesite_guest_name' => $this->guest_name, 'securesite_guest_pass' => $this->guest_pass, 'securesite_type[' . SECURESITE_DIGEST . ']' => TRUE), 'Save configuration');
+    $this->drupalPostForm('admin/settings/securesite', array('securesite_guest_name' => $this->guest_name, 'securesite_guest_pass' => $this->guest_pass, 'securesite_type[' . SECURESITE_DIGEST . ']' => TRUE), 'Save configuration');
     $this->curlClose();
   }
 
