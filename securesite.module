@@ -73,6 +73,34 @@ function securesite_user_logout($account) {
   }
 }
 
+/**
+ * Implements hook_theme().
+ */
+function securesite_theme() {
+  return array(
+    'securesite_page' => array(
+      'template' => 'securesite-page',
+      'variables' => array(
+        'content' => NULL,
+      ),
+      'file' => 'securesite.theme.inc',
+      'path' => drupal_get_path('module', 'securesite') . '/theme',
+    ),
+    'securesite_user_login_form' => array(
+      'template' => 'securesite-user-login',
+      'render element' => 'form',
+      'file' => 'securesite.theme.inc',
+      'path' => drupal_get_path('module', 'securesite') . '/theme',
+    ),
+    'securesite_user_pass' => array(
+      'template' => 'securesite-user-pass',
+      'render element' => 'form',
+      'file' => 'securesite.theme.inc',
+      'path' => drupal_get_path('module', 'securesite') . '/theme',
+    ),
+  );
+}
+
 
 /**
  * Implementation of hook_help().
