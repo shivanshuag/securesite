@@ -5,6 +5,9 @@
  * Theme functions.
  */
 
+use \Drupal\Component\Utility\String;
+
+
 /**
  * Process variables for securesite-user-login.tpl.php
  *
@@ -12,8 +15,8 @@
  *   An array of variables from the theme system.
  */
 function template_preprocess_securesite_user_login_form(&$variables) {
-  $variables['title'] = \Drupal::config('securesite.settings')->get('securesite_login_form');
-  $variables['messages'] = theme('status_messages');
+  $variables['title'] = String::checkPlain(\Drupal::config('securesite.settings')->get('securesite_login_form'));
+  $variables['messages'] = _theme('status_messages');
 }
 
 /**
@@ -23,7 +26,7 @@ function template_preprocess_securesite_user_login_form(&$variables) {
  *   An array of variables from the theme system.
  */
 function template_preprocess_securesite_user_pass(&$variables) {
-  $variables['title'] = \Drupal::config('securesite.settings')->get('securesite_reset_form');
+  $variables['title'] = String::checkPlain(\Drupal::config('securesite.settings')->get('securesite_reset_form'));
   $variables['form']['name']['#required'] = FALSE;
 }
 
@@ -35,7 +38,7 @@ function template_preprocess_securesite_user_pass(&$variables) {
  */
 function template_preprocess_securesite_page(&$variables) {
   // Add relevant default variables, taken from template_preprocess_page()
-  $variables['messages']   = !empty($variables['show_messages']) ? theme('status_messages') : '';
+  $variables['messages']   = !empty($variables['show_messages']) ? _theme('status_messages') : '';
   $variables['base_path']  = base_path();
   $variables['logo']       = theme_get_setting('logo');
   $variables['front_page'] = url();
@@ -57,7 +60,7 @@ function template_preprocess_securesite_page(&$variables) {
   $css = array();
   
   // Add our css file back, so it will be the only one
-  drupal_add_css(drupal_get_path('module', 'securesite') . '/theme/securesite.css');
+  _drupal_add_css(drupal_get_path('module', 'securesite') . '/theme/securesite.css');
 
   // By default a lot unnecessary JS is load,
   // By default we should not need any JS.
@@ -68,7 +71,7 @@ function template_preprocess_securesite_page(&$variables) {
   $variables['page']['#children'] = NULL;
   
   // Call Drupal core default html page preprocess function
-  template_preprocess_html($variables);
+  //template_preprocess_html($variables);
 }
 
 /**
