@@ -101,6 +101,68 @@ function securesite_theme() {
   );
 }
 
+/**
+ * We use our own version of the log-in form for theming. We do not use the
+ * default validate and submit functions because we may allow anonymous users.
+ *
+ * @ingroup forms
+ * @see user_login()
+ */
+function securesite_user_login_form($form, &$form_state) {
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('User name'),
+    '#maxlength' => USERNAME_MAX_LENGTH,
+    '#size' => 15,
+  );
+  $form['pass'] = array(
+    '#type' => 'password',
+    '#title' => t('Password'),
+    '#maxlength' => 60,
+    '#size' => 15,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Log in'),
+    '#weight' => 2,
+  );
+  if (module_exists('openid')) {
+    global $base_path;
+    $style = '<style type="text/css" media="all">' . "\n" .
+      '#securesite-user-login li.openid-link {' . "\n" .
+      '  background:transparent url(' . $base_path . drupal_get_path('module', 'openid') . '/login-bg.png) no-repeat scroll 1px 0.35em;' . "\n" .
+      '}' . "\n" .
+      '</style>';
+    drupal_add_html_head($style);
+  }
+
+  // drupal_alter takes this variable by reference so can't be a literal.
+  $form_id = 'user_login';
+  \Drupal::moduleHandler()->alter('form', $form, $form_state, $form_id);
+  return $form;
+}
+
+/**
+ * We use our own version of the password reset form for theming.
+ *
+ * @ingroup forms
+ * @see user_pass_validate()
+ * @see user_pass_submit()
+ */
+function securesite_user_pass($form, &$form_state) {
+  module_load_include('inc', 'user', 'user.pages');
+  $form = \Drupal::formBuilder()->getForm('Drupal\user\Form\UserLoginForm');
+  $form['name']['#title'] = t('User name or e-mail address');
+  $form_id = 'user_pass';
+  \Drupal::moduleHandler()->alter('form', $form, $form_state, $form_id);
+  $form['#redirect'] = FALSE;
+  $form['#validate'][] = 'user_pass_validate';
+  $form['#submit'][] = 'user_pass_submit';
+  return $form;
+}
+
+
+
 
 /**
  * Implementation of hook_help().
@@ -196,9 +258,9 @@ function securesite_help($path, $arg) {
       '<h3>' . t('Theming') . '</h3>' . "\n" .
       '<p>' . t('Secure Site&rsquo;s HTML output is controlled by three files:') . '</p>' . "\n" .
       '<dl>' . "\n" .
-      '  <dt>securesite-page.tpl.php<dt><dd>' . t('Template for Secure Site pages. Works in the same way as page.tpl.php.') . '</dd>' . "\n" .
-      '  <dt>securesite-user-login.tpl.php<dt><dd>' . t('Template for the user log-in form.') . '</dd>' . "\n" .
-      '  <dt>securesite-user-pass.tpl.php<dt><dd>' . t('Template for the password reset form.') . '</dd>' . "\n" .
+      '  <dt>securesite-page.html.twig<dt><dd>' . t('Template for Secure Site pages. Works in the same way as page.tpl.php.') . '</dd>' . "\n" .
+      '  <dt>securesite-user-login.html.twig<dt><dd>' . t('Template for the user log-in form.') . '</dd>' . "\n" .
+      '  <dt>securesite-user-pass.html.twig<dt><dd>' . t('Template for the password reset form.') . '</dd>' . "\n" .
       '</dl>' . "\n" .
       '<p>' . t('You can theme Secure Site&rsquo;s HTML output by copying these files to your theme&rsquo;s directory. The files in your theme&rsquo;s directory will become the templates for all Secure Site HTML output.') . '</p>' . "\n" .
       '<h3>' . t('Configuring cron jobs') . '</h3>' . "\n" .
