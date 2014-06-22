@@ -83,15 +83,3 @@ function template_preprocess_securesite_page(&$variables) {
   // Call Drupal core default html page preprocess function
   template_preprocess_html($variables);
 }
-
-/**
- * Process variables for securesite-page.html.twig
- *
- * @param $variables
- *   An array of variables from the theme system.
- */
-function template_process_securesite_page(&$variables) {
-  // Process all the variables set by template_preprocess_html()
-//  template_preprocess_html($variables);
-//  var_dump($variables);
-}
