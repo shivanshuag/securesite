@@ -6,21 +6,28 @@
  */
 
 use \Drupal\Component\Utility\String;
-
+use Drupal\Core\Page\HtmlPage;
 
 /**
- * Process variables for securesite-user-login.tpl.php
+ * Process variables for securesite-user-login.html.twig
  *
  * @param $variables
  *   An array of variables from the theme system.
  */
 function template_preprocess_securesite_user_login_form(&$variables) {
+  var_dump($variables);
   $variables['title'] = String::checkPlain(\Drupal::config('securesite.settings')->get('securesite_login_form'));
   $variables['messages'] = _theme('status_messages');
+  $variables['openid_identifier'] = drupal_render($variables['form']['openid_identifier']);
+  $variables['name'] = drupal_render($variables['form']['name']);
+  $variables['pass'] = drupal_render($variables['form']['pass']);
+  $variables['submit'] = drupal_render($variables['form']['submit']);
+  $variables['openid_links'] = drupal_render($variables['form']['openid_links']);
+  $variables['children'] = drupal_render_children($variables['form']);
 }
 
 /**
- * Process variables for securesite-user-pass.tpl.php
+ * Process variables for securesite-user-pass.html.twig
  *
  * @param $variables
  *   An array of variables from the theme system.
@@ -28,10 +35,13 @@ function template_preprocess_securesite_user_login_form(&$variables) {
 function template_preprocess_securesite_user_pass(&$variables) {
   $variables['title'] = String::checkPlain(\Drupal::config('securesite.settings')->get('securesite_reset_form'));
   $variables['form']['name']['#required'] = FALSE;
+  $variables['name'] = drupal_render($variables['form']['name']);
+  $variables['submit'] = drupal_render($variables['form']['submit']);
+  $variables['children'] = drupal_render_children($variables['form']);
 }
 
 /**
- * Process variables for securesite-page.tpl.php
+ * Process variables for securesite-page.html.twig
  *
  * @param $variables
  *   An array of variables from the theme system.
@@ -68,19 +78,20 @@ function template_preprocess_securesite_page(&$variables) {
   $js = array();
   
   // Required by Core template_process_html()
-  $variables['page']['#children'] = NULL;
-  
+  //$variables['page_object']['#children'] = NULL;
+  $variables['page_object'] = new HtmlPage();
   // Call Drupal core default html page preprocess function
-  //template_preprocess_html($variables);
+  template_preprocess_html($variables);
 }
 
 /**
- * Process variables for securesite-page.tpl.php
+ * Process variables for securesite-page.html.twig
  *
  * @param $variables
  *   An array of variables from the theme system.
  */
 function template_process_securesite_page(&$variables) {
   // Process all the variables set by template_preprocess_html()
-  template_process_html($variables);
+//  template_preprocess_html($variables);
+//  var_dump($variables);
 }
