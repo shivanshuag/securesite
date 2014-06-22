@@ -303,9 +303,9 @@ class SecuresiteSettingsForm extends ConfigFormBase {
   '<h3>' . t('Theming') . '</h3>' . "\n" .
   '<p>' . t('Secure Site&rsquo;s HTML output is controlled by three files:') . '</p>' . "\n" .
   '<dl>' . "\n" .
-  '  <dt>securesite-page.tpl.php<dt><dd>' . t('Template for Secure Site pages. Works in the same way as page.tpl.php.') . '</dd>' . "\n" .
-  '  <dt>securesite-user-login.tpl.php<dt><dd>' . t('Template for the user log-in form.') . '</dd>' . "\n" .
-  '  <dt>securesite-user-pass.tpl.php<dt><dd>' . t('Template for the password reset form.') . '</dd>' . "\n" .
+  '  <dt>securesite-page.html.twig<dt><dd>' . t('Template for Secure Site pages. Works in the same way as page.html.twig.') . '</dd>' . "\n" .
+  '  <dt>securesite-user-login.html.twig<dt><dd>' . t('Template for the user log-in form.') . '</dd>' . "\n" .
+  '  <dt>securesite-user-pass.html.twig<dt><dd>' . t('Template for the password reset form.') . '</dd>' . "\n" .
   '</dl>' . "\n" .
   '<p>' . t('You can theme Secure Site&rsquo;s HTML output by copying these files to your theme&rsquo;s directory. The files in your theme&rsquo;s directory will become the templates for all Secure Site HTML output.') . '</p>' . "\n" .
   '<h3>' . t('Configuring cron jobs') . '</h3>' . "\n" .
