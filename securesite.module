@@ -151,7 +151,7 @@ function securesite_user_login_form($form, &$form_state) {
  */
 function securesite_user_pass($form, &$form_state) {
   module_load_include('inc', 'user', 'user.pages');
-  $form = \Drupal::formBuilder()->getForm('Drupal\user\Form\UserLoginForm');
+  $form = \Drupal::formBuilder()->getForm('Drupal\user\Form\UserPasswordForm');
   $form['name']['#title'] = t('User name or e-mail address');
   $form_id = 'user_pass';
   \Drupal::moduleHandler()->alter('form', $form, $form_state, $form_id);
