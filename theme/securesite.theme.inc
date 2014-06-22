@@ -5,7 +5,7 @@
  * Theme functions.
  */
 
-use \Drupal\Component\Utility\String;
+use Drupal\Component\Utility\String;
 use Drupal\Core\Page\HtmlPage;
 
 /**
@@ -50,9 +50,8 @@ function template_preprocess_securesite_page(&$variables) {
   // Add relevant default variables, taken from template_preprocess_page()
   $variables['messages']   = !empty($variables['show_messages']) ? _theme('status_messages') : '';
   $variables['base_path']  = base_path();
-  $variables['logo']       = theme_get_setting('logo');
+  $variables['logo']       = theme_get_setting('logo')['url'];
   $variables['front_page'] = url();
-  
   // Check if logo exists before output it in a template file
   // First get relative path from logo theme setting
   $logo_parts = parse_url($variables['logo']);
@@ -66,7 +65,7 @@ function template_preprocess_securesite_page(&$variables) {
   }
   
   // Clear out existing CSS
-  $css = &drupal_static('drupal_add_css', array());
+  $css = &drupal_static('_drupal_add_css', array());
   $css = array();
   
   // Add our css file back, so it will be the only one
@@ -74,11 +73,10 @@ function template_preprocess_securesite_page(&$variables) {
 
   // By default a lot unnecessary JS is load,
   // By default we should not need any JS.
-  $js = &drupal_static('drupal_add_js', array());
+  $js = &drupal_static('_drupal_add_js', array());
   $js = array();
   
   // Required by Core template_process_html()
-  //$variables['page_object']['#children'] = NULL;
   $variables['page_object'] = new HtmlPage();
   // Call Drupal core default html page preprocess function
   template_preprocess_html($variables);
