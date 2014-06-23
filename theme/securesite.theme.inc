@@ -15,7 +15,6 @@ use Drupal\Core\Page\HtmlPage;
  *   An array of variables from the theme system.
  */
 function template_preprocess_securesite_user_login_form(&$variables) {
-  var_dump($variables);
   $variables['title'] = String::checkPlain(\Drupal::config('securesite.settings')->get('securesite_login_form'));
   $variables['messages'] = _theme('status_messages');
   $variables['openid_identifier'] = drupal_render($variables['form']['openid_identifier']);
