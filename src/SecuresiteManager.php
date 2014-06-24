@@ -8,6 +8,7 @@ namespace Drupal\securesite;
 
 use Drupal\Core\Authentication\AuthenticationManager;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\user\Entity\User;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -137,7 +138,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
           openid_begin($_POST['openid_identifier'], $_POST['openid.return_to']);
         }
         $edit = array('name' => $_POST['name'], 'pass' => $_POST['pass']);
-        $function = '_securesite_plain_auth';
+        $function = 'plainAuth';
         break;
     }
     var_dump($function);
@@ -210,7 +211,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     if ($account->hasPermission('access secured pages')) {
       var_dump('has permission');
       //\Drupal::currentUser()->setAccount($account);
-      $newUser = user_load($account->id());
+      $newUser = User::load($account->id());
       user_login_finalize($newUser);
       $this->request->headers->remove('Authorization');
       // Mark the session so Secure Site will be triggered on log-out.
@@ -273,16 +274,109 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   }
 
   public function showDialog($type) {
-    //todo other types of authentication
+    global $base_path, $language;
     $response =  new Response();
-    switch ($type) {
-      case SECURESITE_BASIC:
-        debug('visited showDialog');
-        $response->setStatusCode(401);
-        $response->headers->set('WWW-Authenticate', 'Basic realm="' . $this->getFakeRealm() . '"');
-        break;
+    // Has the password reset form been submitted?
+    if (isset($_POST['form_id']) && $_POST['form_id'] == 'securesite_user_pass') {
+      // Get form messages, but do not display form.
+      //todo see if next line works
+      \Drupal::formBuilder()->getForm('securesite_user_pass');
+      $content = '';
     }
-    $response->send();
+    // Are we on a password reset page?
+    elseif (strpos($_GET['q'], 'user/reset/') === 0 || module_exists('locale') && $language->enabled && strpos($_GET['q'], $language->prefix . '/user/reset/') === 0) {
+      $args = explode('/', $_GET['q']);
+      if (module_exists('locale') && $language->enabled && $language->prefix != '') {
+        // Remove the language argument.
+        array_shift($args);
+      }
+      // The password reset function doesn't work well if it doesn't have all the
+      // required parameters or if the UID parameter isn't valid
+      //todo see if loadByProperties works
+      if (count($args) < 5 || $this->entityManager->getStorage('user')->loadByProperties(array('uid' => $args[2], 'status' => 1)) == FALSE) {
+        $error = t('You have tried to use an invalid one-time log-in link.');
+        $reset = \Drupal::config('securesite.settings')->get('securesite_reset_form');
+        if (empty($reset)) {
+          drupal_set_message($error, 'error');
+          $content = '';
+        }
+        else {
+          $error .= ' ' . t('Please request a new one using the form below.');
+          drupal_set_message($error, 'error');
+          $content = \Drupal::formBuilder()->getForm('securesite_user_pass');
+        }
+      }
+    }
+    // Allow OpenID log-in page to bypass dialog.
+    elseif (!module_exists('openid') || $_GET['q'] != 'openid/authenticate') {
+      // Display log-in dialog.
+      switch ($type) {
+/*        case SECURESITE_DIGEST:
+          $header = _securesite_digest_validate($status);
+          if (empty($header)) {
+            $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
+            $header = _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
+          }
+          if (strpos($header, 'WWW-Authenticate') === 0) {
+            drupal_add_http_header('Status', '401 Unauthorized');
+          }
+          else {
+            drupal_add_http_header($header['name'], $header['value']);
+          }
+          break;*/
+        case SECURESITE_BASIC:
+          $response->setStatusCode(401);
+          $response->headers->set('WWW-Authenticate', 'Basic realm="' . $this->getFakeRealm() . '"');
+          $response->send();
+          return;
+        case SECURESITE_FORM:
+          $response->setStatusCode(200);
+          break;
+      }
+      // Form authentication doesn't work for cron, so allow cron.php to run
+      // without authenticating when no other authentication type is enabled.
+      if (request_uri() != $base_path . 'cron.php' || \Drupal::config('securesite.settings')->get('securesite_type') != array(SECURESITE_FORM)) {
+        //todo fix next line
+        //drupal_set_title(t('Authentication required'));
+        $content = $this->dialogPage();
+      }
+    }
+    if (isset($content)) {
+      // Theme and display output
+      $html = _theme('securesite_page', array('content' => $content));
+      $response->setContent($html);
+      $response->headers->set('Content-Type', 'text/html');
+      $response->send();
+    }
+  }
+
+
+  /**
+   * Display fall-back HTML for HTTP authentication dialogs. Safari will not load
+   * this. Opera will not load this after log-out unless the page has been
+   * reloaded and the authentication dialog has been displayed twice.
+   */
+  public function dialogPage(){
+    $formBuilder = \Drupal::formBuilder();
+    $reset = \Drupal::config('securesite.settings')->get('securesite_reset_form');
+    if (in_array(SECURESITE_FORM, \Drupal::config('securesite.settings')->get('securesite_type'))) {
+      $user_login = $formBuilder->getForm('securesite_user_login_form');
+      $output = render($user_login);
+      if (!empty($reset)) {
+        $user_pass = $formBuilder->getForm('securesite_user_pass');
+        $output .= "<hr />\n" . render($user_pass);
+      }
+    }
+    else {
+      if (!empty($reset)) {
+        $user_pass = $formBuilder->getForm('securesite_user_pass');
+        $output = render($user_pass);
+      }
+      else {
+        $output = '<p>' . t('Reload the page to try logging in again.') . '</p>';
+      }
+    }
+    return $output;
   }
 
   /**
