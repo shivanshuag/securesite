@@ -165,7 +165,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     var_dump('inside plainauth');
     if (empty($edit['name'])) {
       drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
-      //todo showDialog has no effect inside plainauth because this function is called in authmanager
       $this->showDialog($this->getType());
     }
 
@@ -182,7 +181,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         $account = reset($accounts);
         // System should be setup correctly now, perform log-in.
         if($account != FALSE) {
-          return $this->userLogin($edit, $account);
+          $this->userLogin($edit, $account);
         }
       }
       else {
@@ -194,7 +193,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       if ( $this->userAuth->authenticate($edit['name'], $edit['pass']) || module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
         // Password is correct. Perform log-in.
         var_dump('correct password');
-        return $this->userLogin($edit, $account);
+        $this->userLogin($edit, $account);
       }
       else {
         // Request credentials using most secure authentication method.
@@ -214,7 +213,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       //\Drupal::currentUser()->setAccount($account);
       $newUser = User::load($account->id());
       user_login_finalize($newUser);
-      $this->request->headers->remove('Authorization');
+      //$this->request->headers->remove('Authorization');
       // Mark the session so Secure Site will be triggered on log-out.
       $_SESSION['securesite_login'] = TRUE;
 
@@ -241,6 +240,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   }
 
   protected function guestLogin($edit) {
+    //todo check if the function works correctly
     $request = $this->request;
     $config = \Drupal::config('securesite.settings');
     $guest_name = $config->get('securesite_guest_name');
@@ -257,7 +257,8 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       $_SESSION['securesite_login'] = TRUE;
       // Prevent a 403 error by redirecting off the logout page.
       if (current_path() == 'user/logout') {
-        return new RedirectResponse('<front>');
+        $response = new RedirectResponse('/');
+        $response->send();
       }
     }
     else {
