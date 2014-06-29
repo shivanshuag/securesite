@@ -3,6 +3,7 @@
  * @file
  * Contains Drupal\securesite\Tests\DigestAuth\SecureSiteDigestGuestSetTest
  */
+namespace Drupal\securesite\Tests\DigestAuth;
 
 use Drupal\simpletest\WebTestBase;
 

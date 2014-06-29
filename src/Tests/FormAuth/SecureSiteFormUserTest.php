@@ -4,6 +4,8 @@
  * Contains Drupal\securesite\Tests\FormAuth\SecureSiteFormUserTest
  */
 
+namespace Drupal\securesite\Tests\FormAuth;
+
 use Drupal\simpletest\WebTestBase;
 
 

@@ -3,6 +3,7 @@
  * @file
  * Contains Drupal\securesite\Tests\BasicAuth\SecureSiteBasicNoneTest
  */
+namespace Drupal\securesite\Tests\BasicAuth;
 
 use Drupal\simpletest\WebTestBase;
 

@@ -3,6 +3,7 @@
  * @file
  * Contains Drupal\securesite\Tests\BasicAuth\SecureSiteBasicGuestUnsetTest
  */
+namespace Drupal\securesite\Tests\BasicAuth;
 
 use Drupal\simpletest\WebTestBase;
 

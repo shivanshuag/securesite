@@ -4,6 +4,7 @@
  * @file
  * Contains Drupal\securesite\Tests\ForcedAuth\SecureSiteForceAlwaysTest
  */
+namespace Drupal\securesite\Tests\ForcedAuth;
 
 use Drupal\simpletest\WebTestBase;
 

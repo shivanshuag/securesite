@@ -3,6 +3,7 @@
  * @file
  * Contains Drupal\securesite\Tests\ForcedAuth\SecureSiteForceOfflineTest
  */
+namespace Drupal\securesite\Tests\ForcedAuth;
 
 use Drupal\simpletest\WebTestBase;
 

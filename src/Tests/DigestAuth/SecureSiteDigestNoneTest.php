@@ -4,6 +4,7 @@
  * @file
  * Contains Drupal\securesite\Tests\DigestAuth\SecureSiteDigestNoneTest
  */
+namespace Drupal\securesite\Tests\DigestAuth;
 
 use Drupal\simpletest\WebTestBase;
 /**

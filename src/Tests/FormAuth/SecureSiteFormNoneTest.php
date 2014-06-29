@@ -3,6 +3,7 @@
  * @file
  * Contains Drupal\securesite\Tests\FormAuth\SecureSiteFormNoneTest
  */
+namespace Drupal\securesite\Tests\FormAuth;
 
 use Drupal\simpletest\WebTestBase;
 

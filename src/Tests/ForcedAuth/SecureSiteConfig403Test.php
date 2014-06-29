@@ -4,6 +4,8 @@
  * Contains Drupal\securesite\Tests\ForcedAuth\SecureSiteConfig403Test
  */
 
+namespace Drupal\securesite\Tests\ForcedAuth;
+
 use Drupal\simpletest\WebTestBase;
 
 /**
