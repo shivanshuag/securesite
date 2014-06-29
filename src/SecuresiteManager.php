@@ -102,6 +102,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
             //todo check $_POST
             if (isset($_POST['form_id']) && $_POST['form_id'] == 'securesite_user_login_form') {
               $mechanism = SECURESITE_FORM;
+              var_dump('form authentication');
               break 2;
             }
             break;
@@ -284,8 +285,8 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       $content = '';
     }
     // Are we on a password reset page?
-    elseif (strpos($_GET['q'], 'user/reset/') === 0 || module_exists('locale') && $language->enabled && strpos($_GET['q'], $language->prefix . '/user/reset/') === 0) {
-      $args = explode('/', $_GET['q']);
+    elseif (strpos(current_path(), 'user/reset/') === 0 || module_exists('locale') && $language->enabled && strpos(current_path(), $language->prefix . '/user/reset/') === 0) {
+      $args = explode('/', current_path());
       if (module_exists('locale') && $language->enabled && $language->prefix != '') {
         // Remove the language argument.
         array_shift($args);
@@ -328,7 +329,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
           $response->setStatusCode(401);
           $response->headers->set('WWW-Authenticate', 'Basic realm="' . $this->getFakeRealm() . '"');
           $response->send();
-          return;
+          exit;
         case SECURESITE_FORM:
           $response->setStatusCode(200);
           break;
@@ -347,6 +348,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       $response->setContent($html);
       $response->headers->set('Content-Type', 'text/html');
       $response->send();
+      exit;
     }
   }
 
