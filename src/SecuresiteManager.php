@@ -172,7 +172,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     //todo not checked whether status = 1
     $accounts = $this->entityManager->getStorage('user')->loadByProperties(array('name' => $edit['name'], 'status' => 1));
     $account = reset($accounts);
-    var_dump($account->id());
+    //var_dump($account->id());
     if (!$account) {
       // Not a registered user.
       // If we have correct LDAP credentials, register this new user.
@@ -186,6 +186,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
       else {
         // See if we have guest user credentials.
+        var_dump('wrong user, guest login');
         $this->guestLogin($edit);
       }
     }
@@ -210,7 +211,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     global $user;
     if ($account->hasPermission('access secured pages')) {
       var_dump('has permission');
-      //\Drupal::currentUser()->setAccount($account);
+      \Drupal::currentUser()->setAccount($account);
       $newUser = User::load($account->id());
       user_login_finalize($newUser);
       //$this->request->headers->remove('Authorization');
@@ -249,6 +250,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     // Check anonymous user permission and credentials.
     if ($anonymous_user->hasPermission('access secured pages') && (empty($guest_name) || $edit['name'] == $guest_name) && (empty($guest_pass) || $edit['pass'] == $guest_pass)) {
       // Unset the session variable set by securesite_denied().
+      var_dump('has permission');
       if(isset($_SESSION['securesite_denied'])){
         unset($_SESSION['securesite_denied']);
       }
