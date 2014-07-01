@@ -46,6 +46,7 @@ class SecureSiteForceAlwaysTest extends WebTestBase {
    * Request home page.
    */
   function testSecureSiteForceAlwaysNobody() {
+    debug(\Drupal::config('securesite.settings')->get('securesite_enabled'));
     $this->drupalHead(NULL);
     $this->assertResponse(401, t('Requesting home page.'));
   }
@@ -81,7 +82,9 @@ class SecureSiteForceAlwaysTest extends WebTestBase {
    */
   function testSecureSiteForceAlwaysResetValid() {
     sleep(1); // Password reset URL must be created at least one second after last log-in.
-    $reset = user_pass_reset_url(array_shift(user_load_multiple(array(), $this->user->uid)));
+    debug($this->user->uid);
+    $account = \Drupal::entityManager()->getStorage('user')->load($this->user->uid);
+    $reset = user_pass_reset_url($account);
     sleep(1); // Password reset URL must be used at least one second after it is created.
     $this->drupalGet($reset);
     $this->assertResponse(200, t('Trying valid password reset URL.'));
