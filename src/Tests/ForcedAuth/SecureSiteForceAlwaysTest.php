@@ -82,13 +82,12 @@ class SecureSiteForceAlwaysTest extends WebTestBase {
    */
   function testSecureSiteForceAlwaysResetValid() {
     sleep(1); // Password reset URL must be created at least one second after last log-in.
-    debug($this->user->uid);
-    $account = \Drupal::entityManager()->getStorage('user')->load($this->user->uid);
-    $reset = user_pass_reset_url($account);
+    $reset = user_pass_reset_url($this->user);
     sleep(1); // Password reset URL must be used at least one second after it is created.
     $this->drupalGet($reset);
     $this->assertResponse(200, t('Trying valid password reset URL.'));
-    $this->assertText('This is a one-time login for ' . $this->user->name . ' and will expire on', t('Checking for one-time log-in link.'));
+    //todo fix next line
+    $this->assertText('This is a one-time login for ' . $this->user->getName() . ' and will expire on', t('Checking for one-time log-in link.'));
   }
 
   /**
