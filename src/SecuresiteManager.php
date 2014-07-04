@@ -6,7 +6,6 @@
 
 namespace Drupal\securesite;
 
-use Drupal\Core\Authentication\AuthenticationManager;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\user\Entity\User;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -17,8 +16,6 @@ use Drupal\Core\Entity\EntityManagerInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\user\UserAuthInterface;
 
-//use Drupal\basic_auth\Authentication\Provider\BasicAuth;
-
 class SecuresiteManager implements SecuresiteManagerInterface {
 
   /**
@@ -27,6 +24,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    * @var \Symfony\Component\HttpFoundation\Request
    */
   protected $request;
+
   /**
    * The entity manager.
    *
@@ -34,6 +32,11 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    */
   protected $entityManager;
 
+  /**
+   * The config factory.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
   protected $configFactory;
 
   /**
@@ -99,10 +102,8 @@ class SecuresiteManager implements SecuresiteManagerInterface {
             }
             break;
           case SECURESITE_FORM:
-            //todo check $_POST
-            if (isset($_POST['form_id']) && $_POST['form_id'] == 'securesite_user_login_form') {
+            if ( $request->request->get('form_id')!= null && $request->request->get('form_id') == 'securesite_user_login_form') {
               $mechanism = SECURESITE_FORM;
-              var_dump('form authentication');
               break 2;
             }
             break;
@@ -138,7 +139,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         if (!empty($_POST['openid_identifier'])) {
           openid_begin($_POST['openid_identifier'], $_POST['openid.return_to']);
         }
-        $edit = array('name' => $_POST['name'], 'pass' => $_POST['pass']);
+        $edit = array('name' => $request->request->get('name'), 'pass' => $request->request->get('pass'));
         $function = 'plainAuth';
         break;
     }
@@ -151,11 +152,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
     if ($differentUser && $notGuestLogin) {
       var_dump('calling plainauth');
-      return ($this->$function($edit, $request));
-    }
-    //todo check this
-    else {
-      return $currentUser;
+      $this->$function($edit, $request);
     }
   }
 
@@ -235,7 +232,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       return $account;
     }
     else {
-      _securesite_denied(t('You have not been authorized to log in to secured pages.'));
+      $this->denied(t('You have not been authorized to log in to secured pages.'));
     }
 
   }
@@ -266,12 +263,13 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     else {
       if (empty($edit['name'])) {
         watchdog('user', 'Log-in attempt failed for <em>anonymous</em> user.');
-        _securesite_denied(t('Anonymous users are not allowed to log in to secured pages.'));
+        //todo securesite denied
+        $this->denied(t('Anonymous users are not allowed to log in to secured pages.'));
       }
       else {
         watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
         drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
-        $this->showDialog(securesite_type_get());
+        $this->showDialog($this->getType());
       }
     }
 
@@ -354,6 +352,50 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       exit;
     }
   }
+
+  /**
+   * Deny access to users who are not authorized to access secured pages.
+   */
+  function denied($message) {
+    if (empty($_SESSION['securesite_denied'])) {
+      // Unset messages from previous log-in attempts.
+      if (isset($_SESSION['messages'])) {
+        unset($_SESSION['messages']);
+      }
+      // Set a session variable so that the log-in dialog will be displayed when the page is reloaded.
+      $_SESSION['securesite_denied'] = TRUE;
+      drupal_add_http_header('Status', '403 Forbidden');
+      drupal_set_title(t('Access denied'));
+      drupal_set_message(filter_xss($message), 'error');
+
+      // Theme and display output
+      $content = $this->dialogPage();
+      print _theme('securesite_page', array('content' => $content));
+
+      // Exit
+      exit();
+    }
+    else {
+      unset($_SESSION['securesite_denied']);
+      // Safari will attempt to use old credentials before requesting new credentials
+      // from the user. Logging out requires that the WWW-Authenticate header be sent
+      // twice.
+      $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? drupal_strtolower($_SERVER['HTTP_USER_AGENT']) : '');
+      if ($user_agent != str_replace('safari', '', $user_agent)) {
+        $_SESSION['securesite_repeat'] = TRUE;
+      }
+      $types = \Drupal::config('securesite.settings')->get('securesite_type');
+      //todo fix next few lines
+      if (in_array(SECURESITE_DIGEST, $types)) {
+        // Reset the digest header.
+        $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
+        _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
+      }
+      _securesite_dialog(securesite_type_get());
+    }
+  }
+
+
 
 
   /**
