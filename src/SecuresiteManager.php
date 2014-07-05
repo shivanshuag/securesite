@@ -279,14 +279,15 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     global $base_path, $language;
     $response =  new Response();
     // Has the password reset form been submitted?
-    if (isset($_POST['form_id']) && $_POST['form_id'] == 'securesite_user_pass') {
+    //todo what is the use of the following if statement? why get the form and not display it?
+    if (isset($_POST['form_id']) && $_POST['form_id'] == 'user_pass') {
       // Get form messages, but do not display form.
-      //todo see if next line works
       \Drupal::formBuilder()->getForm('securesite_user_pass');
       $content = '';
     }
     // Are we on a password reset page?
     elseif (strpos(current_path(), 'user/reset/') === 0 || module_exists('locale') && $language->enabled && strpos(current_path(), $language->prefix . '/user/reset/') === 0) {
+      var_dump('password reset page');
       $args = explode('/', current_path());
       if (module_exists('locale') && $language->enabled && $language->prefix != '') {
         // Remove the language argument.

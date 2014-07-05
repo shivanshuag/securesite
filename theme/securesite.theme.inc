@@ -32,6 +32,12 @@ function template_preprocess_securesite_user_login_form(&$variables) {
  *   An array of variables from the theme system.
  */
 function template_preprocess_securesite_user_pass(&$variables) {
+  $variables['form'] = \Drupal::formBuilder()->getForm('Drupal\user\Form\UserPasswordForm');
+  $variables['form']['name']['#title'] = t('User name or e-mail address');
+  $form_id = 'user_pass';
+  \Drupal::moduleHandler()->alter('form', $form, $form_state, $form_id);
+  $variables['form']['#redirect'] = FALSE;
+
   $variables['title'] = String::checkPlain(\Drupal::config('securesite.settings')->get('securesite_reset_form'));
   $variables['form']['name']['#required'] = FALSE;
   $variables['name'] = drupal_render($variables['form']['name']);
