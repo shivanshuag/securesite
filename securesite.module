@@ -51,6 +51,9 @@ function securesite_permission() {
   );
 }
 
+/**
+ * Implements hook_user_logout().
+ */
 function securesite_user_logout($account) {
   $types = \Drupal::config('securesite.settings')->get('securesite_type');
   var_dump($types);
@@ -72,6 +75,30 @@ function securesite_user_logout($account) {
     \Drupal::service('securesite.manager')->showDialog(array_pop($types));
   }
 }
+
+/**
+ * Implements hook_form_alter().
+ */
+function securesite_form_alter(&$form, $form_state, $form_id) {
+  if (in_array($form_id, array('user_register_form', 'user_profile_form'))) {
+    $form['#validate'][] = 'securesite_user_validate';
+  }
+}
+
+/**
+ * Validation callback for user registration and profile.
+ */
+function securesite_user_validate($form, $form_state) {
+  $formBuilder = \Drupal::formBuilder();
+  if (!array_key_exists('name', $formBuilder->getErrors($form_state)) && isset($form_state['values']['name']) && $form_state['values']['name'] == \Drupal::config('securesite.settings')->get('securesite_guest_name')) {
+    $formBuilder->setErrorByName('name', t('The name %name is being used as the %site guest name.', array(
+        '%name' => $form_state['values']['name'],
+        '%site' => \Drupal::config('system.site')->get('name'))
+    ));
+  }
+}
+
+
 
 /**
  * Implements hook_theme().
@@ -150,14 +177,6 @@ function securesite_user_login_form($form, &$form_state) {
  * @see user_pass_submit()
  */
 function securesite_user_pass($form, &$form_state) {
-  module_load_include('inc', 'user', 'user.pages');
-  $form = \Drupal::formBuilder()->getForm('Drupal\user\Form\UserPasswordForm');
-  $form['name']['#title'] = t('User name or e-mail address');
-  $form_id = 'user_pass';
-  \Drupal::moduleHandler()->alter('form', $form, $form_state, $form_id);
-  $form['#redirect'] = FALSE;
-  $form['#validate'][] = 'user_pass_validate';
-  $form['#submit'][] = 'user_pass_submit';
   return $form;
 }
 
