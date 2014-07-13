@@ -1,5 +1,5 @@
 <?php
-/*/**
+/**
  * @file
  * Enables HTTP authentication or an HTML form to restrict site access.
  */
@@ -97,6 +97,76 @@ function securesite_user_validate($form, $form_state) {
     ));
   }
 }
+
+/**
+ * Implements hook_user_insert().
+ */
+function securesite_user_insert(&$edit, $account, $category) {
+  _securesite_user_digest_cleanup($edit);
+}
+
+/**
+ * Implements hook_user_update().
+ */
+function securesite_user_update(&$edit, $account, $category) {
+  _securesite_user_digest_cleanup($edit);
+}
+
+/**
+ * Implements hook_user_load().
+ */
+function securesite_user_load($users) {
+  foreach ($users as $user) {
+    _securesite_user_digest_cleanup((array)$user);
+  }
+}
+
+/**
+ * Manage a users stored password.
+ *
+ * @see secure_user_insert
+ * @see secure_user_update
+ * @see secure_user_load
+ *
+ * @todo more documentation would be useful.
+ */
+function _securesite_user_digest_cleanup($account) {
+  $user = \Drupal::currentUser();
+  if (in_array(SECURESITE_DIGEST, \Drupal::config('securesite.settings')->get('securesite_type')) && isset($edit['pass'])) {
+    $edit['name'] = isset($edit['name']) ? $edit['name'] : $user->getUsername();
+    $script = \Drupal::config('securesite.settings')->get('securesite_password_script');
+    $values = array(
+      'username=' . escapeshellarg($edit['name']),
+      'realm=' . escapeshellarg(\Drupal::config('securesite.settings')->get('securesite_realm')),
+      'pass=' . escapeshellarg($edit['pass']),
+      'op=create',
+    );
+    exec($script . ' ' . implode(' ', $values), $output, $status);
+    if ($user->getUsername() != $edit['name']) {
+      securesite_user_delete($edit, $user);
+    }
+  }
+}
+
+/**
+ * Implements hook_user_delete().
+ */
+function securesite_user_delete($account) {
+  $user = \Drupal::currentUser();
+  if (in_array(SECURESITE_DIGEST, \Drupal::config('securesite.settings')->get('securesite_type'))) {
+    $script = \Drupal::config('securesite.settings')->get('securesite_password_script');
+    $values = array(
+      'username=' . escapeshellarg($user->getUsername()),
+      'realm=' . escapeshellarg(\Drupal::config('securesite.settings')->get('securesite_realm')),
+      'op=delete',
+    );
+    exec($script . ' ' . implode(' ', $values));
+  }
+}
+
+
+
+
 
 
 
