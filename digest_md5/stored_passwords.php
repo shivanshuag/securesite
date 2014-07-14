@@ -57,8 +57,8 @@ $edit['realm'] = isset($edit['realm']) ? $edit['realm'] : $uname['nodename'];
  */
 $cwd = getcwd();
 chdir($drupal);
-require "./includes/bootstrap.inc";
-require_once "./includes/database.inc";
+require "./core/includes/bootstrap.inc";
+require_once "./core/includes/database.inc";
 db_set_active();
 chdir($cwd);
 _securesite_schema();
@@ -83,7 +83,7 @@ function _stored_passwords_manage($edit) {
   $op = isset($edit['op']) ? $edit['op'] : NULL;
   switch ($op) {
     case 'create':
-      if (db_result(db_query_range("SELECT name FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm'], 0, 1)) === FALSE) {
+      if (db_query_range("SELECT name FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm'], 0, 1)->rowCount === 0) {
         $result = db_query("INSERT INTO {securesite_passwords} (name, realm, pass) VALUES ('%s', '%s', '%s')", $edit['username'], $edit['realm'], $edit['pass']);
         $output = $result === FALSE ? "Failed to add $edit[username] to $edit[realm]." : "Added $edit[username] to $edit[realm].";
       }
@@ -94,7 +94,7 @@ function _stored_passwords_manage($edit) {
       break;
     case 'delete':
       if (isset($edit['username'])) {
-        if (db_result(db_query_range("SELECT name FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm'], 0, 1)) === FALSE) {
+        if (db_query_range("SELECT name FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm'], 0, 1)->rowCount() === 0) {
           $output = "$edit[username] not found in $edit[realm].";
         }
         else {
@@ -108,7 +108,7 @@ function _stored_passwords_manage($edit) {
       }
       break;
     default:
-      if (db_result(db_query_range("SELECT name FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm'], 0, 1)) === FALSE) {
+      if (db_query_range("SELECT name FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm'], 0, 1)->rowCount() === 0) {
         $output = "$edit[username] not found in $edit[realm].";
       }
       else {

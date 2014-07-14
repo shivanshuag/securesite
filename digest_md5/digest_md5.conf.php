@@ -133,13 +133,13 @@ function _securesite_schema() {
     switch ($db_type) {
       case 'mysql':
       case 'mysqli':
-        $sql = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '%s' AND table_name = '%s'";
+        $sql = "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'";
         break;
       case 'pgsql':
-        $sql = "SELECT COUNT(*) FROM information_schema.tables WHERE table_catalog = '%s' AND table_schema = 'public' AND table_name = '%s'";
+        $sql = "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_CATALOG = '%s' AND TABLE_SCHEMA = 'public' AND TABLE_NAME = '%s'";
         break;
     }
-    if (db_result(db_query($sql, $database, $name)) == 0) {
+    if (db_query($sql, $database, $name)->fetchCol(1)[0] == 0) {
       db_create_table($ret, $name, $table);
     }
   }
