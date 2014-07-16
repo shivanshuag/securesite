@@ -12,10 +12,16 @@
  *   username=STRING  User identity. When not given, the delete op removes all
  *                    users from the realm.
  *   realm=STRING     Realm. Defaults to hostname.
- *   password=STRING  User password.
+ *   pass=STRING  User password.
  *   op=STRING        Create or delete. By default, an existing user will be
  *                    updated.
  */
+
+/**
+ * Set error level to report only fatal errors.
+ */
+
+error_reporting(E_ERROR);
 
 /**
  * Get configuration file variables.
@@ -57,8 +63,20 @@ $edit['realm'] = isset($edit['realm']) ? $edit['realm'] : $uname['nodename'];
  */
 $cwd = getcwd();
 chdir($drupal);
+
+/**
+ * include autoload.php to autoload all the classes used in bootstrap.inc and database.inc.
+ */
+include_once('./core/vendor/autoload.php');
+
 require "./core/includes/bootstrap.inc";
 require_once "./core/includes/database.inc";
+
+/**
+ * initilize settings for settings to be read from settings.php.
+ */
+drupal_settings_initialize();
+
 db_set_active();
 chdir($cwd);
 _securesite_schema();
@@ -66,6 +84,7 @@ _securesite_schema();
 /**
  * Execute command.
  */
+echo 'calling function';
 _stored_passwords_manage($edit);
 
 /**
@@ -83,8 +102,9 @@ function _stored_passwords_manage($edit) {
   $op = isset($edit['op']) ? $edit['op'] : NULL;
   switch ($op) {
     case 'create':
-      if (db_query_range("SELECT name FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm'], 0, 1)->rowCount === 0) {
-        $result = db_query("INSERT INTO {securesite_passwords} (name, realm, pass) VALUES ('%s', '%s', '%s')", $edit['username'], $edit['realm'], $edit['pass']);
+      print db_query("SELECT COUNT(*) FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array(':name' => $edit['username'], ':realm' => $edit['realm']))->fetchCol(0)[0];
+      if (db_query("SELECT COUNT(*) FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array(':name' => $edit['username'], ':realm' => $edit['realm']))->fetchCol(0)[0] == 0) {
+        $result = db_query("INSERT INTO `securesite_passwords` (name, realm, pass) VALUES (:name, :realm, :pass)", array(':name' => $edit['username'], ':realm' => $edit['realm'], ':pass' => $edit['pass']));
         $output = $result === FALSE ? "Failed to add $edit[username] to $edit[realm]." : "Added $edit[username] to $edit[realm].";
       }
       else {
@@ -94,25 +114,25 @@ function _stored_passwords_manage($edit) {
       break;
     case 'delete':
       if (isset($edit['username'])) {
-        if (db_query_range("SELECT name FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm'], 0, 1)->rowCount() === 0) {
+        if (db_query("SELECT COUNT(*) FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array(':name' => $edit['username'], ':realm' => $edit['realm']))->fetchCol(0)[0] == 0) {
           $output = "$edit[username] not found in $edit[realm].";
         }
         else {
-          $result = db_query("DELETE FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm']);
+          $result = db_query("DELETE FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array(':name' => $edit['username'], ':realm' => $edit['realm']));
           $output = $result === FALSE ? "Failed to remove $edit[username] from $edit[realm]." : "Removed $edit[username] from $edit[realm].";
         }
       }
       else {
-        $result = db_query("DELETE FROM {securesite_passwords} WHERE realm = '%s'", $edit['realm']);
+        $result = db_query("DELETE FROM `securesite_passwords` WHERE realm = :realm", array('realm' => $edit['realm']));
         $output = $result === FALSE ? "Failed to remove users from $edit[realm]." : "Removed users from $edit[realm].";
       }
       break;
     default:
-      if (db_query_range("SELECT name FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $edit['username'], $edit['realm'], 0, 1)->rowCount() === 0) {
+      if (db_query("SELECT COUNT(*) FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array(':name' => $edit['username'], ':realm' => $edit['realm']))->FetchCol(0)[0] == 0) {
         $output = "$edit[username] not found in $edit[realm].";
       }
       else {
-        $result = db_query("UPDATE {securesite_passwords} SET pass = '%s' WHERE name = '%s' AND realm = '%s'", $edit['pass'], $edit['username'], $edit['realm']);
+        $result = db_query("UPDATE `securesite_passwords` SET pass = :pass WHERE name = :name AND realm = :realm", array(':pass' => $edit['pass'], ':name' => $edit['username'], ':realm' => $edit['realm']));
         $output = $result === FALSE ? "Failed to update $edit[username] in $edit[realm]." : "Updated $edit[username] in $edit[realm].";
       }
       break;
@@ -130,7 +150,7 @@ function _stored_passwords_help() {
        '  username=STRING    User identity. When not given, the delete op removes all'."\n".
        '                     users from the realm.'."\n".
        '  realm=STRING       Realm. Defaults to hostname.'."\n".
-       '  password=STRING    User password.'."\n".
+       '  pass=STRING    User password.'."\n".
        '  op=STRING          Create or delete. By default, an existing user identity'."\n".
        '                     will be updated.'."\n".
        "\n");

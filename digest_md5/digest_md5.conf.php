@@ -50,7 +50,9 @@ $db_url = 'mysql://username:password@localhost/databasename';
  * Set up password and nonce storage.
  */
 function _securesite_schema() {
-  global $db_url, $db_type;
+  $db_type = db_driver();
+  global $db_url;
+  //todo realm should be text, not varchar
   $schema['securesite_passwords'] = array(
     'module' => 'securesite',
     'name' => 'securesite_passwords',
@@ -64,7 +66,8 @@ function _securesite_schema() {
         'description' => "User's {users}.name.",
       ),
       'realm' => array(
-        'type' => 'text',
+        'type' => 'varchar',
+        'length' => 255,
         'description' => "User's realm.",
       ),
       'pass' => array(
@@ -72,24 +75,25 @@ function _securesite_schema() {
         'length' => 32,
         'not null' => TRUE,
         'default' => '',
-        'description' => "User's password (plain text).",
+        'description' => "Users password (plain text).",
       ),
     ),
-    'primary key' => array('name, realm'),
+    'primary key' => array('name', 'realm'),
     'indexes' => array(
       'name' => array('name'),
       'realm' => array('realm'),
     ),
   );
+  //todo nonce and realm fields should be text
   $schema['securesite_nonce'] = array(
     'module' => 'securesite',
     'name' => 'securesite_nonce',
     'description' => 'Stores nonce values.',
     'fields' => array(
       'nonce' => array(
-        'type' => 'text',
+        'type' => 'varchar',
+        'length' => 255,
         'not null' => TRUE,
-        'default' => '',
         'description' => 'Nonce value.',
       ),
       'qop' => array(
@@ -115,33 +119,32 @@ function _securesite_schema() {
         'description' => 'Last use timestamp.',
       ),
       'realm' => array(
-        'type' => 'text',
+        'type' => 'varchar',
+        'length' => 255,
         'description' => "Nonce realm.",
       ),
     ),
-    'primary key' => array('nonce, realm'),
+    'primary key' => array('nonce', 'realm'),
     'indexes' => array(
       'nonce' => array('nonce'),
-      'opaque' => array('opaque'),
+      'opaque' => array(array('opaque',100)),
       'realm' => array('realm'),
     ),
   );
-  $ret = array();
   foreach ($schema as $name => $table) {
     $url = parse_url(is_array($db_url) ? $db_url['default'] : $db_url);
     $database = substr($url['path'], 1);
     switch ($db_type) {
       case 'mysql':
       case 'mysqli':
-        $sql = "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'";
+        $sql = "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = :arg1 AND TABLE_NAME = :arg2";
         break;
       case 'pgsql':
-        $sql = "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_CATALOG = '%s' AND TABLE_SCHEMA = 'public' AND TABLE_NAME = '%s'";
+        $sql = "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_CATALOG = :arg1 AND TABLE_SCHEMA = 'public' AND TABLE_NAME = :arg2";
         break;
     }
-    if (db_query($sql, $database, $name)->fetchCol(1)[0] == 0) {
-      db_create_table($ret, $name, $table);
+    if (db_query($sql, array(':arg1' => $database, ':arg2' => $name))->fetchCol(0)[0] == 0) {
+      db_create_table($name, $table);
     }
   }
-  return $ret;
 }
