@@ -143,7 +143,7 @@ function _securesite_schema() {
         $sql = "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_CATALOG = :arg1 AND TABLE_SCHEMA = 'public' AND TABLE_NAME = :arg2";
         break;
     }
-    if (db_query($sql, array(':arg1' => $database, ':arg2' => $name))->fetchCol(0)[0] == 0) {
+    if (db_query($sql, array(':arg1' => $database, ':arg2' => $name))->fetchField() == 0) {
       db_create_table($name, $table);
     }
   }

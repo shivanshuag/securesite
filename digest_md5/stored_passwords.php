@@ -84,7 +84,6 @@ _securesite_schema();
 /**
  * Execute command.
  */
-echo 'calling function';
 _stored_passwords_manage($edit);
 
 /**
@@ -102,8 +101,7 @@ function _stored_passwords_manage($edit) {
   $op = isset($edit['op']) ? $edit['op'] : NULL;
   switch ($op) {
     case 'create':
-      print db_query("SELECT COUNT(*) FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array(':name' => $edit['username'], ':realm' => $edit['realm']))->fetchCol(0)[0];
-      if (db_query("SELECT COUNT(*) FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array(':name' => $edit['username'], ':realm' => $edit['realm']))->fetchCol(0)[0] == 0) {
+      if (db_query("SELECT COUNT(*) FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array(':name' => $edit['username'], ':realm' => $edit['realm']))->fetchField() == 0) {
         $result = db_query("INSERT INTO `securesite_passwords` (name, realm, pass) VALUES (:name, :realm, :pass)", array(':name' => $edit['username'], ':realm' => $edit['realm'], ':pass' => $edit['pass']));
         $output = $result === FALSE ? "Failed to add $edit[username] to $edit[realm]." : "Added $edit[username] to $edit[realm].";
       }
@@ -114,7 +112,7 @@ function _stored_passwords_manage($edit) {
       break;
     case 'delete':
       if (isset($edit['username'])) {
-        if (db_query("SELECT COUNT(*) FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array(':name' => $edit['username'], ':realm' => $edit['realm']))->fetchCol(0)[0] == 0) {
+        if (db_query("SELECT COUNT(*) FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array(':name' => $edit['username'], ':realm' => $edit['realm']))->fetchField() == 0) {
           $output = "$edit[username] not found in $edit[realm].";
         }
         else {
@@ -128,7 +126,7 @@ function _stored_passwords_manage($edit) {
       }
       break;
     default:
-      if (db_query("SELECT COUNT(*) FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array(':name' => $edit['username'], ':realm' => $edit['realm']))->FetchCol(0)[0] == 0) {
+      if (db_query("SELECT COUNT(*) FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array(':name' => $edit['username'], ':realm' => $edit['realm']))->fetchField() == 0) {
         $output = "$edit[username] not found in $edit[realm].";
       }
       else {
