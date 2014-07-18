@@ -75,8 +75,21 @@ $edit['method'] = isset($edit['method']) ? $edit['method'] : 'AUTHENTICATE';
  */
 $cwd = getcwd();
 chdir($drupal);
-require "./includes/bootstrap.inc";
-require_once "./includes/database.inc";
+
+/**
+ * include autoload.php to autoload all the classes used in bootstrap.inc and database.inc.
+ */
+include_once('./core/vendor/autoload.php');
+
+require "./core/includes/bootstrap.inc";
+require_once "./core/includes/database.inc";
+
+/**
+ * initilize settings for settings to be read from settings.php.
+ */
+drupal_settings_initialize();
+
+
 db_set_active();
 chdir($cwd);
 _securesite_schema();
@@ -87,7 +100,7 @@ _securesite_schema();
 $time = time();
 $expire = isset($expire) ? $expire : 60;
 if (!empty($expire)) {
-  db_query("DELETE FROM {securesite_nonce} WHERE time < %d", $time - $expire);
+  db_query("DELETE FROM `securesite_nonce` WHERE time < :time", array(':time' => $time - $expire));
 }
 
 /**
@@ -107,7 +120,7 @@ else {
   $values = array('nonce' => $nonce, 'time' => $time, 'realm' => $edit['realm'], 'qop' => $qop);
   $values += isset($edit['entity-body']) ? array('hash' => md5($edit['entity-body'])) : array();
   $challenge = array('realm="'. $edit['fakerealm'] .'"', 'nonce="'. $nonce .'"', 'qop="'. $qop .'"');
-  if ($method != 'AUTHENTICATE') {
+  if ($edit['method'] != 'AUTHENTICATE') {
     $opaque = isset($edit['opaque']) ? $edit['opaque'] : base64_encode($nonce);
     $values['opaque'] = $opaque;
     $challenge[] = 'opaque="'. $opaque .'"';
@@ -138,7 +151,9 @@ function _digest_md5_challenge($edit) {
       }
     }
     if ($edit['new']) {
-      db_query("INSERT INTO {securesite_nonce} (". implode(', ', array_keys($values)) .") VALUES (". implode(', ', $types) .")", $values);
+      //todo check here
+      db_insert('securesite_nonce')->fields($values)->execute();
+      //db_query("INSERT INTO `securesite_nonce` (". implode(', ', array_keys($values)) .") VALUES (". implode(', ', $types) .")", $values);
     }
     else {
       unset($types['nonce'], $types['realm']);
@@ -146,7 +161,8 @@ function _digest_md5_challenge($edit) {
       foreach ($types as $field => $type) {
         $fields[] = "$field = $type";
       }
-      db_query("UPDATE {securesite_nonce} SET ". implode(', ', $fields) ." WHERE nonce = '%s' AND realm = '%s'", $values);
+      db_update('securesite_nonce')->fields($values)->condition('nonce', $values['nonce'])->condition('realm', $values['realm'])->execute();
+      //db_query("UPDATE `securesite_nonce` SET ". implode(', ', $fields) ." WHERE nonce = '%s' AND realm = '%s'", $values);
     }
   }
   if (isset($edit['challenge'])) {
@@ -188,8 +204,8 @@ function _digest_md5_response($edit) {
   if (array_diff($required, array_keys($fields)) == array() && (!isset($edit['uri']) || $uri['path'] == $field_uri['path'])) {
     // Required fields are present and URI matches.
     $edit['realm'] = isset($edit['realm']) ? $edit['realm'] : $fields['realm'];
-    $sn = db_fetch_array(db_query("SELECT qop, nc, opaque, hash FROM {securesite_nonce} WHERE nonce = '%s' AND realm = '%s'", $fields['nonce'], $edit['realm']));
-    $pass = db_result(db_query("SELECT pass FROM {securesite_passwords} WHERE name = '%s' AND realm = '%s'", $fields['username'], $edit['realm']));
+    $sn = db_query("SELECT qop, nc, opaque, hash FROM `securesite_nonce` WHERE nonce = :nonce AND realm = :realm", array( ':nonce' => $fields['nonce'], ':realm' => $edit['realm']))->fetchAssoc();
+    $pass = db_query("SELECT pass FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array( ':name' => $fields['username'], ':realm' => $edit['realm']))->fetchField();
     if ($pass !== FALSE) {
       // Password exists for this user.
       $ha1 = md5("$fields[username]:$fields[realm]:$pass");
@@ -228,7 +244,7 @@ function _digest_md5_response($edit) {
             elseif ($dec_nc > $max_nc) {
               // Stale nonce; send new challenge with stale notice.
               $status = STALE_NONCE;
-              db_query("DELETE FROM {securesite_nonce} WHERE nonce = '%s' AND realm = '%s'", $fields['nonce'], $edit['realm']);
+              db_query("DELETE FROM `securesite_nonce` WHERE nonce = :nonce AND realm = :realm", array( ':nonce' => $fields['nonce'], ':realm' => $edit['realm']));
               $fields['nonce'] = uniqid();
             }
             else {
@@ -266,7 +282,7 @@ function _digest_md5_response($edit) {
       $fields['realm'] = $edit['realm'];
     }
     if (isset($fields['nonce'])) {
-      $sn = db_fetch_array(db_query("SELECT qop, nc, opaque, hash FROM {securesite_nonce} WHERE nonce = '%s' AND realm = '%s'", $fields['nonce'], $edit['realm']));
+      $sn = db_query("SELECT qop, nc, opaque, hash FROM `securesite_nonce` WHERE nonce = :nonce AND realm = :realm", array( ':nonce' => $fields['nonce'], ':realm' => $edit['realm']))->fetchAssoc();
     }
     else {
       $fields['nonce'] = uniqid();
@@ -310,7 +326,7 @@ function _digest_md5_response($edit) {
         _digest_md5_challenge(array('values' => $values, 'new' => FALSE));
       }
       else {
-        db_query("DELETE FROM {securesite_nonce} WHERE nonce = '%s' AND realm = '%s'", $fields['nonce'], $edit['realm']);
+        db_query("DELETE FROM `securesite_nonce` WHERE nonce = :nonce AND realm = :realm", array( ':nonce' => $fields['nonce'], ':realm' => $edit['realm']));
         $nextnonce = uniqid();
         $values = array('nonce' => $nextnonce, 'opaque' => $fields['opaque'], 'time' => $time, 'realm' => $edit['realm'], 'qop' => $fields['qop']);
         $values += isset($edit['entity-body']) ? array('hash' => md5($edit['entity-body'])) : array();

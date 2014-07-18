@@ -122,10 +122,10 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
     switch ($type) {
       case SECURESITE_DIGEST:
-        $edit = _securesite_parse_directives($_SERVER['PHP_AUTH_DIGEST']);
+        $edit = $this->parseDirectives($request->headers->get('PHP_AUTH_DIGEST'));
         $edit['name'] = $edit['username'];
         $edit['pass'] = NULL;
-        $function = '_securesite_digest_auth';
+        $function = 'digestAuth';
         break;
       case SECURESITE_BASIC:
         var_dump('basic');
@@ -151,8 +151,8 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     var_dump($notGuestLogin);
 
     if ($differentUser && $notGuestLogin) {
-      var_dump('calling plainauth');
-      $this->$function($edit, $request);
+      var_dump('calling '.$function);
+      $this->$function($edit);
     }
   }
 
@@ -274,6 +274,101 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     }
 
   }
+
+  /**
+   * Perform digest authentication.
+   */
+  public function digestAuth($edit){
+    $user = \Drupal::currentUser();
+    $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
+    $header = _securesite_digest_validate($status, array('data' => $_SERVER['PHP_AUTH_DIGEST'], 'method' => $_SERVER['REQUEST_METHOD'], 'uri' => request_uri(), 'realm' => $realm));
+    $account = $this->entityManager->getStorage('user')->loadByProperties(array('name' => $edit['name'], 'status' => 1));
+    if (!$account) {
+      // Not a registered user. See if we have guest user credentials.
+      switch ($status) {
+        case 1:
+          drupal_add_http_header('Status', '400 Bad Request');
+          _securesite_dialog(securesite_type_get());
+          break;
+        case 0:
+          // Password is correct. Log user in.
+          drupal_add_http_header($header['name'], $header['value']);
+          $edit['pass'] = \Drupal::config('securesite.settings')->get('securesite_guest_pass');
+        default:
+          _securesite_guest_login($edit);
+          break;
+      }
+    }
+    else {
+      switch ($status) {
+        case 0:
+          // Password is correct. Log user in.
+          drupal_add_http_header($header['name'], $header['value']);
+          _securesite_user_login($edit, $account);
+          break;
+        case 2:
+          // Password not stored. Request credentials using next most secure authentication method.
+          $mechanism = _securesite_mechanism();
+          $types = \Drupal::config('securesite.settings')->get('securesite_type');
+          rsort($types);
+          foreach ($types as $type) {
+            if ($type < $mechanism) {
+              break;
+            }
+          }
+          watchdog('user', 'Secure log-in failed for %user.', array('%user' => $edit['name']));
+          drupal_set_message(t('Secure log-in failed. Please try again.'), 'error');
+          _securesite_dialog($type);
+          break;
+        case 1:
+          drupal_add_http_header('Status', '400 Bad Request');
+        default:
+          // Authentication failed. Request credentials using most secure authentication method.
+          watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
+          drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
+          _securesite_dialog(securesite_type_get());
+          break;
+      }
+    }
+  }
+
+  /**
+   * Get the result of digest validation.
+   *
+   * @param $status
+   *   Will be set to the return status of the validation script
+   * @param $edit
+   *   An array of parameters to pass to the validation script
+   * @return
+   *   An HTTP header string.
+   */
+  function _securesite_digest_validate(&$status, $edit = array()) {
+    static $header;
+    if (!empty($edit)) {
+      $args = array();
+      foreach ($edit as $key => $value) {
+        $args[] = "$key=" . escapeshellarg($value);
+      }
+      $script = \Drupal::config('securesite.settings')->get('securesite_digest_script');
+      $response = exec($script . ' ' . implode(' ', $args), $output, $status);
+
+      // drupal_set_header() is now drupal_add_http_header() and requires headers passed as name, value in an array.
+      // The script returns a string, so we shall break it up as best we can. The existing code doesn't seem
+      // to worry about correct data to append to 'WWW-Authenticate: ' etc so I won't add any for the D7 conversion.
+      $response = explode('=', $response);
+      $name = array_shift($response);
+      $value = implode('=', $response);
+
+      if (isset($edit['data']) && empty($status)) {
+        $header = array('name' => "Authentication-Info: " . $name, 'value' => $value);
+      }
+      else {
+        $header = array('name' => "WWW-Authenticate: Digest " . $name, 'value' => $value);
+      }
+    }
+    return $header;
+  }
+
 
   public function showDialog($type) {
     global $base_path, $language;
@@ -465,5 +560,14 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   protected function getType() {
     $securesite_type = \Drupal::config('securesite.settings')->get('securesite_type');
     return array_pop($securesite_type);
+  }
+
+  protected function parseDirectives($field_value) {
+    $directives = array();
+    foreach (explode(',', trim($field_value)) as $directive) {
+      list($directive, $value) = explode('=', trim($directive), 2);
+      $directives[$directive] = trim($value, '"');
+    }
+    return $directives;
   }
 }
