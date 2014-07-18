@@ -409,19 +409,19 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     elseif (!module_exists('openid') || $_GET['q'] != 'openid/authenticate') {
       // Display log-in dialog.
       switch ($type) {
-/*        case SECURESITE_DIGEST:
+        case SECURESITE_DIGEST:
           $header = _securesite_digest_validate($status);
           if (empty($header)) {
             $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
             $header = _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
           }
           if (strpos($header, 'WWW-Authenticate') === 0) {
-            drupal_add_http_header('Status', '401 Unauthorized');
+            $response->setStatusCode(401);
           }
           else {
-            drupal_add_http_header($header['name'], $header['value']);
+            $response->headers->set($header['name'], $header['value']);
           }
-          break;*/
+          break;
         case SECURESITE_BASIC:
           $response->setStatusCode(401);
           $response->headers->set('WWW-Authenticate', 'Basic realm="' . $this->getFakeRealm() . '"');

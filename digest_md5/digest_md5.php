@@ -339,7 +339,8 @@ function _digest_md5_response($edit) {
           case 'auth-int':
             $response[] = 'cnonce="'. $fields['cnonce'] .'"';
             $response[] = 'nc="'. $fields['nc'] .'"';
-            $ha2 = md5(":$fields[uri]:$hash");
+            //TODO check next line
+            $ha2 = md5(":$fields[uri]:$sn[hash]");
             break;
           case 'auth':
             $response[] = 'cnonce="'. $fields['cnonce'] .'"';
