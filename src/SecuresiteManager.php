@@ -89,8 +89,9 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       foreach ($types as $type) {
         switch ($type) {
           case SECURESITE_DIGEST:
+            var_dump('digest is selected');
             //todo replaced isset with != null. check for side effects
-            if ($request->headers->get('PHP_AUTH_DIGEST') != null) {
+            if ($_SERVER['PHP_AUTH_DIGEST'] != null) {
               $mechanism = SECURESITE_DIGEST;
               break 2;
             }
@@ -122,7 +123,8 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
     switch ($type) {
       case SECURESITE_DIGEST:
-        $edit = $this->parseDirectives($request->headers->get('PHP_AUTH_DIGEST'));
+        var_dump('boot digest');
+        $edit = $this->parseDirectives($_SERVER['PHP_AUTH_DIGEST']);
         $edit['name'] = $edit['username'];
         $edit['pass'] = NULL;
         $function = 'digestAuth';
@@ -281,21 +283,24 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   public function digestAuth($edit){
     $user = \Drupal::currentUser();
     $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
-    $header = _securesite_digest_validate($status, array('data' => $_SERVER['PHP_AUTH_DIGEST'], 'method' => $_SERVER['REQUEST_METHOD'], 'uri' => request_uri(), 'realm' => $realm));
+    $header = $this->_securesite_digest_validate($status, array('data' => $_SERVER['PHP_AUTH_DIGEST'], 'method' => $_SERVER['REQUEST_METHOD'], 'uri' => request_uri(), 'realm' => $realm));
+    var_dump($header);
     $account = $this->entityManager->getStorage('user')->loadByProperties(array('name' => $edit['name'], 'status' => 1));
+    var_dump($edit);
+    var_dump($status);
     if (!$account) {
       // Not a registered user. See if we have guest user credentials.
       switch ($status) {
         case 1:
           drupal_add_http_header('Status', '400 Bad Request');
-          _securesite_dialog(securesite_type_get());
+          $this->showDialog($this->getType());
           break;
         case 0:
           // Password is correct. Log user in.
           drupal_add_http_header($header['name'], $header['value']);
           $edit['pass'] = \Drupal::config('securesite.settings')->get('securesite_guest_pass');
         default:
-          _securesite_guest_login($edit);
+          $this->guestLogin($edit);
           break;
       }
     }
@@ -304,11 +309,11 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         case 0:
           // Password is correct. Log user in.
           drupal_add_http_header($header['name'], $header['value']);
-          _securesite_user_login($edit, $account);
+          $this->userLogin($edit, $account);
           break;
         case 2:
           // Password not stored. Request credentials using next most secure authentication method.
-          $mechanism = _securesite_mechanism();
+          $mechanism = $this->getMechanism();
           $types = \Drupal::config('securesite.settings')->get('securesite_type');
           rsort($types);
           foreach ($types as $type) {
@@ -318,7 +323,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
           }
           watchdog('user', 'Secure log-in failed for %user.', array('%user' => $edit['name']));
           drupal_set_message(t('Secure log-in failed. Please try again.'), 'error');
-          _securesite_dialog($type);
+          $this->showDialog($type);
           break;
         case 1:
           drupal_add_http_header('Status', '400 Bad Request');
@@ -326,7 +331,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
           // Authentication failed. Request credentials using most secure authentication method.
           watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
           drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
-          _securesite_dialog(securesite_type_get());
+          $this->showDialog($this->getType());
           break;
       }
     }
@@ -351,19 +356,21 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
       $script = \Drupal::config('securesite.settings')->get('securesite_digest_script');
       $response = exec($script . ' ' . implode(' ', $args), $output, $status);
-
+      var_dump($status);
+      var_dump($output);
+      var_dump($response);
       // drupal_set_header() is now drupal_add_http_header() and requires headers passed as name, value in an array.
       // The script returns a string, so we shall break it up as best we can. The existing code doesn't seem
       // to worry about correct data to append to 'WWW-Authenticate: ' etc so I won't add any for the D7 conversion.
-      $response = explode('=', $response);
-      $name = array_shift($response);
-      $value = implode('=', $response);
+      $response_explode = explode('=', $response);
+      $name = array_shift($response_explode);
+      $value = implode('=', $response_explode);
 
       if (isset($edit['data']) && empty($status)) {
         $header = array('name' => "Authentication-Info: " . $name, 'value' => $value);
       }
       else {
-        $header = array('name' => "WWW-Authenticate: Digest " . $name, 'value' => $value);
+        $header = array('name' => "WWW-Authenticate", 'value' => 'Digest '. $response);
       }
     }
     return $header;
@@ -410,17 +417,26 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       // Display log-in dialog.
       switch ($type) {
         case SECURESITE_DIGEST:
-          $header = _securesite_digest_validate($status);
+          var_dump('show dialog digest');
+          $header = $this->_securesite_digest_validate($status);
+          //var_dump($header);
           if (empty($header)) {
+            var_dump('empty header');
             $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
-            $header = _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
+            var_dump($realm);
+            $header = $this->_securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => $this->getFakeRealm()));
           }
+          //var_dump($header);
           if (strpos($header, 'WWW-Authenticate') === 0) {
             $response->setStatusCode(401);
           }
           else {
+            $response->setStatusCode(401);
+            //var_dump('set header');
             $response->headers->set($header['name'], $header['value']);
           }
+          $response->send();
+          exit;
           break;
         case SECURESITE_BASIC:
           $response->setStatusCode(401);
@@ -485,9 +501,9 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       if (in_array(SECURESITE_DIGEST, $types)) {
         // Reset the digest header.
         $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
-        _securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
+        $this->_securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
       }
-      _securesite_dialog(securesite_type_get());
+      $this->showDialog($this->getType());
     }
   }
 
