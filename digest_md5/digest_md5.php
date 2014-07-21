@@ -119,12 +119,13 @@ else {
   $qop = isset($edit['qop']) ? $edit['qop'] : 'auth';
   $values = array('nonce' => $nonce, 'time' => $time, 'realm' => $edit['realm'], 'qop' => $qop);
   $values += isset($edit['entity-body']) ? array('hash' => md5($edit['entity-body'])) : array();
+  //todo removing the use of $edit['method'] for now. don't know the use of this
   $challenge = array('realm="'. $edit['fakerealm'] .'"', 'nonce="'. $nonce .'"', 'qop="'. $qop .'"');
-  if ($edit['method'] != 'AUTHENTICATE') {
+//  if ($edit['method'] != 'AUTHENTICATE') {
     $opaque = isset($edit['opaque']) ? $edit['opaque'] : base64_encode($nonce);
     $values['opaque'] = $opaque;
     $challenge[] = 'opaque="'. $opaque .'"';
-  }
+//  }
   print _digest_md5_challenge(array('values' => $values, 'challenge' => $challenge, 'new' => TRUE)) ."\n";
   exit;
 }
@@ -194,9 +195,9 @@ function _digest_md5_response($edit) {
   $required = array('username', 'realm', 'nonce', 'uri', 'response');
   if (isset($fields['qop'])) {
     $required[] = 'cnonce';
-    if ($edit['method'] != 'AUTHENTICATE') {
+//    if ($edit['method'] != 'AUTHENTICATE') {
       $required[] = 'opaque';
-    }
+//    }
     $required[] = 'nc';
   }
   $uri = isset($edit['uri']) ? parse_url($edit['uri']) : NULL;
