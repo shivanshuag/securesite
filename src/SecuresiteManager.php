@@ -15,7 +15,7 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Entity\EntityManagerInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\user\UserAuthInterface;
-
+use \Drupal\Component\Utility\Xss;
 class SecuresiteManager implements SecuresiteManagerInterface {
 
   /**
@@ -64,6 +64,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   public function getMechanism() {
     static $mechanism;
     $request = $this->request;
+    //$request->getMeachanism = 'getting mechanism';
     if (!isset($mechanism)) {
       // PHP in CGI mode work-arounds. Sometimes "REDIRECT_" prefixes $_SERVER
       // variables. See http://www.php.net/reserved.variables.
@@ -124,6 +125,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     switch ($type) {
       case SECURESITE_DIGEST:
         var_dump('boot digest');
+        var_dump($_SERVER['PHP_AUTH_DIGEST']);
         $edit = $this->parseDirectives($_SERVER['PHP_AUTH_DIGEST']);
         $edit['name'] = $edit['username'];
         $edit['pass'] = NULL;
@@ -207,11 +209,13 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
 
   protected function userLogin($edit, AccountInterface $account) {
+    var_dump('inside user login');
     global $user;
     if ($account->hasPermission('access secured pages')) {
       var_dump('has permission');
       \Drupal::currentUser()->setAccount($account);
       $newUser = User::load($account->id());
+      var_dump($newUser);
       user_login_finalize($newUser);
       //$this->request->headers->remove('Authorization');
       // Mark the session so Secure Site will be triggered on log-out.
@@ -281,24 +285,33 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    * Perform digest authentication.
    */
   public function digestAuth($edit){
+    $request = $this->request;
+    $response =  new Response();
     $user = \Drupal::currentUser();
     $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
+    var_dump($_SERVER['REQUEST_METHOD']);
     $header = $this->_securesite_digest_validate($status, array('data' => $_SERVER['PHP_AUTH_DIGEST'], 'method' => $_SERVER['REQUEST_METHOD'], 'uri' => request_uri(), 'realm' => $realm));
     var_dump($header);
     $account = $this->entityManager->getStorage('user')->loadByProperties(array('name' => $edit['name'], 'status' => 1));
+    var_dump('after load');
     var_dump($edit);
     var_dump($status);
     if (!$account) {
       // Not a registered user. See if we have guest user credentials.
       switch ($status) {
         case 1:
-          drupal_add_http_header('Status', '400 Bad Request');
+          $response->setStatusCode(400);
+          $response->send();
           $this->showDialog($this->getType());
           break;
         case 0:
           // Password is correct. Log user in.
-          drupal_add_http_header($header['name'], $header['value']);
+          $request->securesiteHeaders += array($header['name'] => $header['value']);
+          //drupal_add_http_header($header['name'], $header['value']);
+          //$response->headers->set();
+          //$response->send();
           $edit['pass'] = \Drupal::config('securesite.settings')->get('securesite_guest_pass');
+
         default:
           $this->guestLogin($edit);
           break;
@@ -308,7 +321,11 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       switch ($status) {
         case 0:
           // Password is correct. Log user in.
-          drupal_add_http_header($header['name'], $header['value']);
+          var_dump('log the user in');
+          $request->securesiteHeaders += array($header['name'] => $header['value']);
+          //drupal_add_http_header($header['name'], $header['value']);
+//          $response->headers->set($header['name'], $header['value']);
+//          $response->send();
           $this->userLogin($edit, $account);
           break;
         case 2:
@@ -326,7 +343,9 @@ class SecuresiteManager implements SecuresiteManagerInterface {
           $this->showDialog($type);
           break;
         case 1:
-          drupal_add_http_header('Status', '400 Bad Request');
+          $response->setStatusCode(400);
+          $response->send();
+          $this->showDialog($this->getType());
         default:
           // Authentication failed. Request credentials using most secure authentication method.
           watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
@@ -356,18 +375,16 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
       $script = \Drupal::config('securesite.settings')->get('securesite_digest_script');
       $response = exec($script . ' ' . implode(' ', $args), $output, $status);
-      var_dump($status);
       var_dump($output);
-      var_dump($response);
       // drupal_set_header() is now drupal_add_http_header() and requires headers passed as name, value in an array.
       // The script returns a string, so we shall break it up as best we can. The existing code doesn't seem
       // to worry about correct data to append to 'WWW-Authenticate: ' etc so I won't add any for the D7 conversion.
-      $response_explode = explode('=', $response);
+/*      $response_explode = explode('=', $response);
       $name = array_shift($response_explode);
-      $value = implode('=', $response_explode);
+      $value = implode('=', $response_explode);*/
 
       if (isset($edit['data']) && empty($status)) {
-        $header = array('name' => "Authentication-Info: " . $name, 'value' => $value);
+        $header = array('name' => "Authentication-Info", 'value' => $response);
       }
       else {
         $header = array('name' => "WWW-Authenticate", 'value' => 'Digest '. $response);
@@ -432,14 +449,14 @@ class SecuresiteManager implements SecuresiteManagerInterface {
           }
           else {
             $response->setStatusCode(401);
-            //var_dump('set header');
+            var_dump('set header');
             $response->headers->set($header['name'], $header['value']);
           }
           $response->send();
           exit;
           break;
         case SECURESITE_BASIC:
-          $response->setStatusCode(401);
+          //$response->setStatusCode(401);
           $response->headers->set('WWW-Authenticate', 'Basic realm="' . $this->getFakeRealm() . '"');
           $response->send();
           exit;
@@ -469,6 +486,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    * Deny access to users who are not authorized to access secured pages.
    */
   function denied($message) {
+    $request = $this->request;
     if (empty($_SESSION['securesite_denied'])) {
       // Unset messages from previous log-in attempts.
       if (isset($_SESSION['messages'])) {
@@ -476,9 +494,11 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
       // Set a session variable so that the log-in dialog will be displayed when the page is reloaded.
       $_SESSION['securesite_denied'] = TRUE;
-      drupal_add_http_header('Status', '403 Forbidden');
-      drupal_set_title(t('Access denied'));
-      drupal_set_message(filter_xss($message), 'error');
+      $request->securesiteHeaders += array('Status' => '403 Forbidden');
+      //drupal_add_http_header('Status', '403 Forbidden');
+      //todo find alternative
+      //drupal_set_title(t('Access denied'));
+      drupal_set_message(Xss::Filter($message), 'error');
 
       // Theme and display output
       $content = $this->dialogPage();
