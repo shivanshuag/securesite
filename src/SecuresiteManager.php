@@ -209,15 +209,11 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
 
   protected function userLogin($edit, AccountInterface $account) {
-    var_dump('inside user login');
     global $user;
     if ($account->hasPermission('access secured pages')) {
-      var_dump('has permission');
       \Drupal::currentUser()->setAccount($account);
       $newUser = User::load($account->id());
-      var_dump($newUser);
       user_login_finalize($newUser);
-      //$this->request->headers->remove('Authorization');
       // Mark the session so Secure Site will be triggered on log-out.
       $_SESSION['securesite_login'] = TRUE;
 
@@ -244,6 +240,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   }
 
   protected function guestLogin($edit) {
+    var_dump('guest login');
     //todo check if the function works correctly
     $request = $this->request;
     $config = \Drupal::config('securesite.settings');
@@ -286,13 +283,14 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    */
   public function digestAuth($edit){
     $request = $this->request;
-    $response =  new Response();
+    //$response =  new Response();
     $user = \Drupal::currentUser();
     $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
     var_dump($_SERVER['REQUEST_METHOD']);
     $header = $this->_securesite_digest_validate($status, array('data' => $_SERVER['PHP_AUTH_DIGEST'], 'method' => $_SERVER['REQUEST_METHOD'], 'uri' => request_uri(), 'realm' => $realm));
     var_dump($header);
     $account = $this->entityManager->getStorage('user')->loadByProperties(array('name' => $edit['name'], 'status' => 1));
+    $account = reset($account);
     var_dump('after load');
     var_dump($edit);
     var_dump($status);
@@ -300,13 +298,14 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       // Not a registered user. See if we have guest user credentials.
       switch ($status) {
         case 1:
-          $response->setStatusCode(400);
-          $response->send();
+          $this->request->securesiteHeaders += array('Status', '400 Bad Request');
+/*          $response->setStatusCode(400);
+          $response->send();*/
           $this->showDialog($this->getType());
           break;
         case 0:
           // Password is correct. Log user in.
-          $request->securesiteHeaders += array($header['name'] => $header['value']);
+          $this->request->securesiteHeaders += array($header['name'] => $header['value']);
           //drupal_add_http_header($header['name'], $header['value']);
           //$response->headers->set();
           //$response->send();
@@ -322,7 +321,9 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         case 0:
           // Password is correct. Log user in.
           var_dump('log the user in');
-          $request->securesiteHeaders += array($header['name'] => $header['value']);
+          var_dump($request->securesiteHeaders);
+          $this->request->securesiteHeaders += array($header['name'] => $header['value']);
+          //var_dump($this->request->securesiteHeaders);
           //drupal_add_http_header($header['name'], $header['value']);
 //          $response->headers->set($header['name'], $header['value']);
 //          $response->send();
@@ -343,8 +344,8 @@ class SecuresiteManager implements SecuresiteManagerInterface {
           $this->showDialog($type);
           break;
         case 1:
-          $response->setStatusCode(400);
-          $response->send();
+          $this->request->securesiteHeaders += array('Status', '400 Bad Request');
+          //$response->send();
           $this->showDialog($this->getType());
         default:
           // Authentication failed. Request credentials using most secure authentication method.
@@ -396,6 +397,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
   public function showDialog($type) {
     global $base_path, $language;
+    $request = $this->request;
     $response =  new Response();
     // Has the password reset form been submitted?
     //todo what is the use of the following if statement? why get the form and not display it?
@@ -431,6 +433,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     }
     // Allow OpenID log-in page to bypass dialog.
     elseif (!module_exists('openid') || $_GET['q'] != 'openid/authenticate') {
+
       // Display log-in dialog.
       switch ($type) {
         case SECURESITE_DIGEST:
@@ -445,23 +448,29 @@ class SecuresiteManager implements SecuresiteManagerInterface {
           }
           //var_dump($header);
           if (strpos($header, 'WWW-Authenticate') === 0) {
-            $response->setStatusCode(401);
+            //$response->setStatusCode(401);
+            $this->request->securesiteHeaders += array('Status' => '401');
           }
           else {
-            $response->setStatusCode(401);
+           // $response->setStatusCode(401);
+            $this->request->securesiteHeaders += array('Status' => '401');
             var_dump('set header');
-            $response->headers->set($header['name'], $header['value']);
+            //$response->headers->set($header['name'], $header['value']);
+            $this->request->securesiteHeaders += array($header['name'] => $header['value']);
           }
-          $response->send();
-          exit;
+          //$response->send();
+          //exit;
           break;
         case SECURESITE_BASIC:
+          $this->request->securesiteHeaders += array('Status' => '401');
           //$response->setStatusCode(401);
-          $response->headers->set('WWW-Authenticate', 'Basic realm="' . $this->getFakeRealm() . '"');
-          $response->send();
-          exit;
+          //$response->headers->set('WWW-Authenticate', 'Basic realm="' . $this->getFakeRealm() . '"');
+          $this->request->securesiteHeaders += array('WWW-Authenticate' => 'Basic realm="' . $this->getFakeRealm() . '"');
+          //$response->send();
+          //exit;
         case SECURESITE_FORM:
-          $response->setStatusCode(200);
+          //$response->setStatusCode(200);
+          $this->request->securesiteHeaders += array('Status' => '200');
           break;
       }
       // Form authentication doesn't work for cron, so allow cron.php to run
@@ -477,8 +486,8 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       $html = _theme('securesite_page', array('content' => $content));
       $response->setContent($html);
       $response->headers->set('Content-Type', 'text/html');
-      $response->send();
-      exit;
+      //$response->send();
+      //exit;
     }
   }
 
@@ -494,7 +503,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
       // Set a session variable so that the log-in dialog will be displayed when the page is reloaded.
       $_SESSION['securesite_denied'] = TRUE;
-      $request->securesiteHeaders += array('Status' => '403 Forbidden');
+      $this->request->securesiteHeaders += array('Status' => '403 Forbidden');
       //drupal_add_http_header('Status', '403 Forbidden');
       //todo find alternative
       //drupal_set_title(t('Access denied'));

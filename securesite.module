@@ -39,6 +39,8 @@ define('SECURESITE_BASIC', 2);
  */
 define('SECURESITE_DIGEST', 3);
 
+use \Drupal\Core\Session\AnonymousUserSession;
+
 /**
  * Implements hook_permission().
  */
@@ -55,13 +57,11 @@ function securesite_permission() {
  * Implements hook_user_logout().
  */
 function securesite_user_logout($account) {
+  var_dump('logging out');
   $types = \Drupal::config('securesite.settings')->get('securesite_type');
-  var_dump($types);
-  debug($types);
   if ((in_array(SECURESITE_BASIC, $types) || in_array(SECURESITE_DIGEST, $types)) && !empty($_SESSION['securesite_login'])) {
     // Load the anonymous user.
-    \Drupal::currentUser()->setAccount(drupal_anonymous_user());
-    var_dump('logged out');
+    \Drupal::currentUser()->setAccount(new AnonymousUserSession());
     // Safari will attempt to use old credentials before requesting new credentials
     // from the user. Logging out requires that the WWW-Authenticate header be sent
     // twice.
@@ -73,6 +73,18 @@ function securesite_user_logout($account) {
     }
     // Clear stored credentials.
     \Drupal::service('securesite.manager')->showDialog(array_pop($types));
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function securesite_form_system_site_information_settings_alter(&$form, $form_state) {
+  if (\Drupal::config('securesite.settings')->get('securesite_enabled') == SECURESITE_403) {
+    $form['error_page']['securesite_403'] = $form['error_page']['site_403'];
+    $form['error_page']['securesite_403']['#default_value'] = \Drupal::config('securesite.settings')->get('securesite_403');
+    $form['error_page']['securesite_403']['#weight'] = 0;
+    unset($form['error_page']['site_403']);
   }
 }
 
@@ -116,6 +128,7 @@ function securesite_user_update(&$edit, $account, $category) {
  * Implements hook_user_load().
  */
 function securesite_user_load($users) {
+  var_dump('inside load');
   foreach ($users as $user) {
     _securesite_user_digest_cleanup((array)$user);
   }
@@ -130,7 +143,7 @@ function securesite_user_load($users) {
  *
  * @todo more documentation would be useful.
  */
-function _securesite_user_digest_cleanup($account) {
+function _securesite_user_digest_cleanup($edit) {
   $user = \Drupal::currentUser();
   if (in_array(SECURESITE_DIGEST, \Drupal::config('securesite.settings')->get('securesite_type')) && isset($edit['pass'])) {
     $edit['name'] = isset($edit['name']) ? $edit['name'] : $user->getUsername();

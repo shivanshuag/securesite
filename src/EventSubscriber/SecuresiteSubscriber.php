@@ -44,12 +44,19 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    *   The event to process.
    */
   public function onKernelRequest(GetResponseEvent $event) {
+
+    if ($event->getRequestType() !== HttpKernelInterface::MASTER_REQUEST) {
+      return;
+    }
+
+
     $account = \Drupal::currentUser();
     $request = $event->getRequest();
-    $this->manager->setRequest($request);
 
     //creating an array of headers to be added to the response. This array will be populated later on
     $request->securesiteHeaders = array();
+
+    $this->manager->setRequest($request);
 
     // Did the user send credentials that we accept?
     $type = $this->manager->getMechanism();
@@ -79,17 +86,27 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    *   The event to process.
    */
   public function onResponse(FilterResponseEvent $event) {
-
+    var_dump('responding');
     if ($event->getRequestType() !== HttpKernelInterface::MASTER_REQUEST) {
       return;
     }
-
     $request = $event->getRequest();
     $response = $event->getResponse();
-    foreach ($request->securesiteHeaders as $name => $value){
-      $response->headers->set($name, $value);
+    //$response->setStatusCode(401);
+    //var_dump($request->securesiteHeaders);
+    foreach ($request->securesiteHeaders as $name => $value) {
+      //var_dump($name);
+      //var_dump($value);
+      if($name === 'Status') {
+        var_dump('setting status');
+        $response->setStatusCode($value);
+        //$response->setContent('');
+      }
+      else {
+        $response->headers->set($name, $value);
+      }
     }
-
+    //$response->send();
     //var_dump($response);
   }
 
@@ -103,7 +120,7 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    */
   static function getSubscribedEvents() {
     $events[KernelEvents::REQUEST][] = array('onKernelRequest', 0);
-    $events[KernelEvents::RESPONSE][] = array('onResponse', 0);
+    $events[KernelEvents::RESPONSE][] = array('onResponse', -255);
     return $events;
   }
 
