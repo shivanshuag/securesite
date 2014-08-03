@@ -486,8 +486,8 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       $html = _theme('securesite_page', array('content' => $content));
       $response->setContent($html);
       $response->headers->set('Content-Type', 'text/html');
-      //$response->send();
-      //exit;
+      $response->send();
+      exit;
     }
   }
 
