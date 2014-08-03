@@ -475,7 +475,8 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
       // Form authentication doesn't work for cron, so allow cron.php to run
       // without authenticating when no other authentication type is enabled.
-      if (request_uri() != $base_path . 'cron.php' || \Drupal::config('securesite.settings')->get('securesite_type') != array(SECURESITE_FORM)) {
+      if ((request_uri() != $base_path . 'cron.php' || \Drupal::config('securesite.settings')->get('securesite_type') != array(SECURESITE_FORM)) && in_array(SECURESITE_FORM, \Drupal::config('securesite.settings')->get('securesite_type'))) {
+        var_dump(request_uri());
         //todo fix next line
         //drupal_set_title(t('Authentication required'));
         $content = $this->dialogPage();
@@ -503,18 +504,28 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
       // Set a session variable so that the log-in dialog will be displayed when the page is reloaded.
       $_SESSION['securesite_denied'] = TRUE;
-      $this->request->securesiteHeaders += array('Status' => '403 Forbidden');
+      $types = \Drupal::config('securesite.settings')->get('securesite_type');
+      if(array_pop($types) != SECURESITE_FORM){
+        $response = new Response();
+        $response->setStatusCode(403);
+        $response->send();
+        exit();
+      }
+      //$this->request->securesiteHeaders += array('Status' => '403');
       //drupal_add_http_header('Status', '403 Forbidden');
       //todo find alternative
       //drupal_set_title(t('Access denied'));
-      drupal_set_message(Xss::Filter($message), 'error');
 
-      // Theme and display output
-      $content = $this->dialogPage();
-      print _theme('securesite_page', array('content' => $content));
+      else {
+        drupal_set_message(Xss::Filter($message), 'error');
 
-      // Exit
-      exit();
+        // Theme and display output
+        $content = $this->dialogPage();
+        print _theme('securesite_page', array('content' => $content));
+
+        // Exit
+        exit();
+      }
     }
     else {
       unset($_SESSION['securesite_denied']);
