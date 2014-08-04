@@ -87,9 +87,9 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    */
   public function onResponse(FilterResponseEvent $event) {
     var_dump('responding');
-    if ($event->getRequestType() !== HttpKernelInterface::MASTER_REQUEST) {
+/*    if ($event->getRequestType() !== HttpKernelInterface::MASTER_REQUEST) {
       return;
-    }
+    }*/
     $request = $event->getRequest();
     $response = $event->getResponse();
     //$response->setStatusCode(401);
@@ -119,7 +119,7 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    *   An array of event listener definitions.
    */
   static function getSubscribedEvents() {
-    $events[KernelEvents::REQUEST][] = array('onKernelRequest', 0);
+    $events[KernelEvents::REQUEST][] = array('onKernelRequest', 255);
     $events[KernelEvents::RESPONSE][] = array('onResponse', -255);
     return $events;
   }
