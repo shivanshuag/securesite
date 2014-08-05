@@ -226,7 +226,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
       // Prevent a log-in/log-out loop by redirecting off the log-out page.
       if (current_path() == 'user/logout') {
-        var_dump('logging out');
         $response = new RedirectResponse('/');
         $response->send();
 
@@ -497,22 +496,20 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    */
   function denied($message) {
     $request = $this->request;
+    var_dump('denied');
     if (empty($_SESSION['securesite_denied'])) {
+      var_dump('empty');
       // Unset messages from previous log-in attempts.
       if (isset($_SESSION['messages'])) {
         unset($_SESSION['messages']);
       }
       // Set a session variable so that the log-in dialog will be displayed when the page is reloaded.
       $_SESSION['securesite_denied'] = TRUE;
+      var_dump('session set');
       $types = \Drupal::config('securesite.settings')->get('securesite_type');
       if(array_pop($types) != SECURESITE_FORM){
-        $response = new Response();
-        $response->setStatusCode(403);
-        $response->send();
-        exit();
+        $this->request->securesiteHeaders += array('Status' => '403');
       }
-      //$this->request->securesiteHeaders += array('Status' => '403');
-      //drupal_add_http_header('Status', '403 Forbidden');
       //todo find alternative
       //drupal_set_title(t('Access denied'));
 
@@ -528,12 +525,13 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
     }
     else {
+      var_dump('already set');
       unset($_SESSION['securesite_denied']);
       // Safari will attempt to use old credentials before requesting new credentials
       // from the user. Logging out requires that the WWW-Authenticate header be sent
       // twice.
       $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? drupal_strtolower($_SERVER['HTTP_USER_AGENT']) : '');
-      if ($user_agent != str_replace('safari', '', $user_agent)) {
+      if ($user_agent != str_replace('- ', '', $user_agent)) {
         $_SESSION['securesite_repeat'] = TRUE;
       }
       $types = \Drupal::config('securesite.settings')->get('securesite_type');
@@ -626,4 +624,20 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     }
     return $directives;
   }
+
+  /**
+   * Menu callback; handle restricted pages.
+   */
+  public static function handle403() {
+    global $user;
+    if (empty($user->uid) && !isset($_SESSION['securesite_guest']) && $_GET['q'] != 'user/logout') {
+      _securesite_dialog(securesite_type_get());
+    }
+    else {
+      $path = \Drupal::service('path.alias_manager.cached')->getSystemPath(\Drupal::config('securesite.settings')->get('securesite_403'));
+      menu_set_active_item($path);
+      return menu_execute_active_handler($path);
+    }
+  }
+
 }
