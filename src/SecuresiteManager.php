@@ -322,10 +322,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
           var_dump('log the user in');
           var_dump($request->securesiteHeaders);
           $this->request->securesiteHeaders += array($header['name'] => $header['value']);
-          //var_dump($this->request->securesiteHeaders);
-          //drupal_add_http_header($header['name'], $header['value']);
-//          $response->headers->set($header['name'], $header['value']);
-//          $response->send();
           $this->userLogin($edit, $account);
           break;
         case 2:
@@ -531,7 +527,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       // from the user. Logging out requires that the WWW-Authenticate header be sent
       // twice.
       $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? drupal_strtolower($_SERVER['HTTP_USER_AGENT']) : '');
-      if ($user_agent != str_replace('- ', '', $user_agent)) {
+      if ($user_agent != str_replace('safari', '', $user_agent)) {
         $_SESSION['securesite_repeat'] = TRUE;
       }
       $types = \Drupal::config('securesite.settings')->get('securesite_type');
@@ -541,7 +537,19 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
         $this->_securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
       }
-      $this->showDialog($this->getType());
+      if($this->getType() == SECURESITE_FORM) {
+        drupal_set_message(Xss::Filter($message), 'error');
+
+        // Theme and display output
+        $content = $this->dialogPage();
+        print _theme('securesite_page', array('content' => $content));
+
+        // Exit
+        exit();
+      }
+      else {
+        $this->showDialog($this->getType());
+      }
     }
   }
 
