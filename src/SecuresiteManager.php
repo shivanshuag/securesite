@@ -64,7 +64,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   public function getMechanism() {
     static $mechanism;
     $request = $this->request;
-    //$request->getMeachanism = 'getting mechanism';
     if (!isset($mechanism)) {
       // PHP in CGI mode work-arounds. Sometimes "REDIRECT_" prefixes $_SERVER
       // variables. See http://www.php.net/reserved.variables.
@@ -135,7 +134,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         var_dump('basic');
         $edit['name'] = $request->headers->get('PHP_AUTH_USER', '');
         $edit['pass'] = $request->headers->get('PHP_AUTH_PW', '');
-        var_dump($edit);
         $function = 'plainAuth';
         break;
       case SECURESITE_FORM:
@@ -169,11 +167,8 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       $this->showDialog($this->getType());
     }
 
-    //$users = user_load_multiple(array(), array('name' => $edit['name'], 'status' => 1));
-    //todo not checked whether status = 1
     $accounts = $this->entityManager->getStorage('user')->loadByProperties(array('name' => $edit['name'], 'status' => 1));
     $account = reset($accounts);
-    //var_dump($account->id());
     if (!$account) {
       // Not a registered user.
       // If we have correct LDAP credentials, register this new user.
@@ -265,7 +260,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     else {
       if (empty($edit['name'])) {
         watchdog('user', 'Log-in attempt failed for <em>anonymous</em> user.');
-        //todo securesite denied
         $this->denied(t('Anonymous users are not allowed to log in to secured pages.'));
       }
       else {
@@ -291,23 +285,17 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     $account = $this->entityManager->getStorage('user')->loadByProperties(array('name' => $edit['name'], 'status' => 1));
     $account = reset($account);
     var_dump('after load');
-    var_dump($edit);
     var_dump($status);
     if (!$account) {
       // Not a registered user. See if we have guest user credentials.
       switch ($status) {
         case 1:
           $this->request->securesiteHeaders += array('Status', '400 Bad Request');
-/*          $response->setStatusCode(400);
-          $response->send();*/
           $this->showDialog($this->getType());
           break;
         case 0:
           // Password is correct. Log user in.
           $this->request->securesiteHeaders += array($header['name'] => $header['value']);
-          //drupal_add_http_header($header['name'], $header['value']);
-          //$response->headers->set();
-          //$response->send();
           $edit['pass'] = \Drupal::config('securesite.settings')->get('securesite_guest_pass');
 
         default:
@@ -411,7 +399,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
       // The password reset function doesn't work well if it doesn't have all the
       // required parameters or if the UID parameter isn't valid
-      //todo see if loadByProperties works
       if (count($args) < 5 || $this->entityManager->getStorage('user')->loadByProperties(array('uid' => $args[2], 'status' => 1)) == FALSE) {
         $error = t('You have tried to use an invalid one-time log-in link.');
         $reset = \Drupal::config('securesite.settings')->get('securesite_reset_form');
@@ -434,37 +421,24 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         case SECURESITE_DIGEST:
           var_dump('show dialog digest');
           $header = $this->_securesite_digest_validate($status);
-          //var_dump($header);
           if (empty($header)) {
             var_dump('empty header');
             $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
             var_dump($realm);
             $header = $this->_securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => $this->getFakeRealm()));
           }
-          //var_dump($header);
           if (strpos($header, 'WWW-Authenticate') === 0) {
-            //$response->setStatusCode(401);
             $this->request->securesiteHeaders += array('Status' => '401');
           }
           else {
-           // $response->setStatusCode(401);
             $this->request->securesiteHeaders += array('Status' => '401');
-            var_dump('set header');
-            //$response->headers->set($header['name'], $header['value']);
             $this->request->securesiteHeaders += array($header['name'] => $header['value']);
           }
-          //$response->send();
-          //exit;
           break;
         case SECURESITE_BASIC:
           $this->request->securesiteHeaders += array('Status' => '401');
-          //$response->setStatusCode(401);
-          //$response->headers->set('WWW-Authenticate', 'Basic realm="' . $this->getFakeRealm() . '"');
           $this->request->securesiteHeaders += array('WWW-Authenticate' => 'Basic realm="' . $this->getFakeRealm() . '"');
-          //$response->send();
-          //exit;
         case SECURESITE_FORM:
-          //$response->setStatusCode(200);
           $this->request->securesiteHeaders += array('Status' => '200');
           break;
       }
@@ -535,7 +509,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       if (in_array(SECURESITE_DIGEST, $types)) {
         // Reset the digest header.
         $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
-        $this->_securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => _securesite_fake_realm()));
+        $this->_securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => $this->getFakeRealm()));
       }
       if($this->getType() == SECURESITE_FORM) {
         drupal_set_message(Xss::Filter($message), 'error');

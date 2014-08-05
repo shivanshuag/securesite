@@ -85,10 +85,7 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
     $request = $event->getRequest();
     $response = $event->getResponse();
     foreach ($request->securesiteHeaders as $name => $value) {
-      //var_dump($name);
-      //var_dump($value);
       if($name === 'Status') {
-        var_dump('setting status');
         $response->setStatusCode($value);
         if($value == '401' || $value == '403')
           $response->setContent('');
@@ -97,7 +94,6 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
         $response->headers->set($name, $value);
       }
     }
-    //var_dump($response);
   }
 
 
