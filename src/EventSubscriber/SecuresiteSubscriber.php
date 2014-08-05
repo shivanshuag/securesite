@@ -45,11 +45,6 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    */
   public function onKernelRequest(GetResponseEvent $event) {
 
-    if ($event->getRequestType() !== HttpKernelInterface::MASTER_REQUEST) {
-      return;
-    }
-
-
     $account = \Drupal::currentUser();
     $request = $event->getRequest();
 
@@ -87,9 +82,6 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    */
   public function onResponse(FilterResponseEvent $event) {
     var_dump('responding');
-/*    if ($event->getRequestType() !== HttpKernelInterface::MASTER_REQUEST) {
-      return;
-    }*/
     $request = $event->getRequest();
     $response = $event->getResponse();
     //$response->setStatusCode(401);
@@ -100,13 +92,13 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
       if($name === 'Status') {
         var_dump('setting status');
         $response->setStatusCode($value);
-        //$response->setContent('');
+        if($value == '401')
+          $response->setContent('');
       }
       else {
         $response->headers->set($name, $value);
       }
     }
-    //$response->send();
     //var_dump($response);
   }
 
@@ -120,7 +112,7 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    */
   static function getSubscribedEvents() {
     $events[KernelEvents::REQUEST][] = array('onKernelRequest', 255);
-    $events[KernelEvents::RESPONSE][] = array('onResponse', -255);
+    $events[KernelEvents::RESPONSE][] = array('onResponse', 255);
     return $events;
   }
 
