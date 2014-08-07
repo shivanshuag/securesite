@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\Core\Entity\EntityManagerInterface;
+use Drupal\Core\Entity\EntityManager;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\user\UserAuthInterface;
 use \Drupal\Component\Utility\Xss;
@@ -46,7 +46,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    */
   protected $userAuth;
 
-  public function __construct(EntityManagerInterface $entity_manager, ConfigFactoryInterface $config_factory, UserAuthInterface $user_auth){
+  public function __construct(EntityManager $entity_manager, ConfigFactoryInterface $config_factory, UserAuthInterface $user_auth){
     $this->entityManager = $entity_manager;
     $this->configFactory = $config_factory;
     $this->userAuth = $user_auth;
@@ -187,7 +187,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
     }
     else {
-      if ( $this->userAuth->authenticate($edit['name'], $edit['pass']) || module_exists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
+      if ( $this->userAuth->authenticate($edit['name'], $edit['pass']) ||  \Drupal::moduleHandler()->moduleExists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
         // Password is correct. Perform log-in.
         var_dump('correct password');
         $this->userLogin($edit, $account);
@@ -203,7 +203,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   }
 
 
-  protected function userLogin($edit, AccountInterface $account) {
+  public function userLogin($edit, AccountInterface $account) {
     global $user;
     if ($account->hasPermission('access secured pages')) {
       \Drupal::currentUser()->setAccount($account);
@@ -233,7 +233,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
   }
 
-  protected function guestLogin($edit) {
+  public function guestLogin($edit) {
     var_dump('guest login');
     //todo check if the function works correctly
     $request = $this->request;
@@ -350,7 +350,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    * @return
    *   An HTTP header string.
    */
-  function _securesite_digest_validate(&$status, $edit = array()) {
+  public function _securesite_digest_validate(&$status, $edit = array()) {
     static $header;
     if (!empty($edit)) {
       $args = array();
@@ -390,10 +390,10 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       $content = '';
     }
     // Are we on a password reset page?
-    elseif (strpos(current_path(), 'user/reset/') === 0 || module_exists('locale') && $language->enabled && strpos(current_path(), $language->prefix . '/user/reset/') === 0) {
+    elseif (strpos(current_path(), 'user/reset/') === 0 ||  \Drupal::moduleHandler()->moduleExists('locale') && $language->enabled && strpos(current_path(), $language->prefix . '/user/reset/') === 0) {
       var_dump('password reset page');
       $args = explode('/', current_path());
-      if (module_exists('locale') && $language->enabled && $language->prefix != '') {
+      if ( \Drupal::moduleHandler()->moduleExists('locale') && $language->enabled && $language->prefix != '') {
         // Remove the language argument.
         array_shift($args);
       }
@@ -414,7 +414,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
     }
     // Allow OpenID log-in page to bypass dialog.
-    elseif (!module_exists('openid') || $_GET['q'] != 'openid/authenticate') {
+    elseif (! \Drupal::moduleHandler()->moduleExists('openid') || $_GET['q'] != 'openid/authenticate') {
 
       // Display log-in dialog.
       switch ($type) {
@@ -464,7 +464,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   /**
    * Deny access to users who are not authorized to access secured pages.
    */
-  function denied($message) {
+  public function denied($message) {
     $request = $this->request;
     var_dump('denied');
     if (empty($_SESSION['securesite_denied'])) {
@@ -583,7 +583,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    * attempting to use them even when they have failed multiple times. We add a
    * random string to the realm to allow users to log out.
    */
-  protected function getFakeRealm() {
+  public function getFakeRealm() {
     $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
     $user_agent = drupal_strtolower($this->request->server->get('HTTP_USER_AGENT', ''));
     if ($user_agent != str_replace(array('msie', 'opera'), '', $user_agent)) {
@@ -593,12 +593,12 @@ class SecuresiteManager implements SecuresiteManagerInterface {
   }
 
 
-  protected function getType() {
+  public function getType() {
     $securesite_type = \Drupal::config('securesite.settings')->get('securesite_type');
     return array_pop($securesite_type);
   }
 
-  protected function parseDirectives($field_value) {
+  public function parseDirectives($field_value) {
     $directives = array();
     foreach (explode(',', trim($field_value)) as $directive) {
       list($directive, $value) = explode('=', trim($directive), 2);

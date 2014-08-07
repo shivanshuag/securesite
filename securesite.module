@@ -57,7 +57,6 @@ function securesite_permission() {
  * Implements hook_user_logout().
  */
 function securesite_user_logout($account) {
-  var_dump('logging out');
   $types = \Drupal::config('securesite.settings')->get('securesite_type');
   if ((in_array(SECURESITE_BASIC, $types) || in_array(SECURESITE_DIGEST, $types)) && !empty($_SESSION['securesite_login'])) {
     // Load the anonymous user.

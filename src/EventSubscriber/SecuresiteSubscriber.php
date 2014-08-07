@@ -44,7 +44,6 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    *   The event to process.
    */
   public function onKernelRequest(GetResponseEvent $event) {
-
     $account = \Drupal::currentUser();
     $request = $event->getRequest();
 
