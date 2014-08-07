@@ -194,7 +194,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
       else {
         // Request credentials using most secure authentication method.
-        watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
+        \Drupal::logger('user')->notice('Log-in attempt failed for %user.', array('%user' => $edit['name']));
         drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
         $this->showDialog($this->getType());
       }
@@ -259,11 +259,11 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     }
     else {
       if (empty($edit['name'])) {
-        watchdog('user', 'Log-in attempt failed for <em>anonymous</em> user.');
+        \Drupal::logger('user')->notice('Log-in attempt failed for <em>anonymous</em> user.');
         $this->denied(t('Anonymous users are not allowed to log in to secured pages.'));
       }
       else {
-        watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
+        \Drupal::logger('user')->notice('Log-in attempt failed for %user.', array('%user' => $edit['name']));
         drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
         $this->showDialog($this->getType());
       }
@@ -322,7 +322,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
               break;
             }
           }
-          watchdog('user', 'Secure log-in failed for %user.', array('%user' => $edit['name']));
+          \Drupal::logger('user')->notice('Secure log-in failed for %user.', array('%user' => $edit['name']));
           drupal_set_message(t('Secure log-in failed. Please try again.'), 'error');
           $this->showDialog($type);
           break;
@@ -332,7 +332,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
           $this->showDialog($this->getType());
         default:
           // Authentication failed. Request credentials using most secure authentication method.
-          watchdog('user', 'Log-in attempt failed for %user.', array('%user' => $edit['name']));
+          \Drupal::logger('user')->notice('Log-in attempt failed for %user.', array('%user' => $edit['name']));
           drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
           $this->showDialog($this->getType());
           break;
