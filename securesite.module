@@ -40,7 +40,8 @@ define('SECURESITE_BASIC', 2);
 define('SECURESITE_DIGEST', 3);
 
 use \Drupal\Core\Session\AnonymousUserSession;
-
+use Drupal\Core\Entity\EntityInterface;
+use  Drupal\Core\Form\FormStateInterface;
 /**
  * Implements hook_permission().
  */
@@ -87,50 +88,44 @@ function securesite_form_system_site_information_settings_alter(&$form, $form_st
   }
 }
 
+function securesite_user_login_callback($form, &$form_state){
+  $edit['name'] = $form_state['values']['name'];
+  $edit['pass'] = $form_state['values']['pass'];
+  _securesite_user_digest_cleanup($edit);
+}
+
+
 /**
  * Implements hook_form_alter().
  */
 function securesite_form_alter(&$form, $form_state, $form_id) {
+  var_dump($form_id);
   if (in_array($form_id, array('user_register_form', 'user_profile_form'))) {
     $form['#validate'][] = 'securesite_user_validate';
+  }
+  else if (in_array($form_id, array("user_login_form"))) {
+    $form['#submit'][] = 'securesite_user_login_callback';
   }
 }
 
 /**
  * Validation callback for user registration and profile.
  */
-function securesite_user_validate($form, $form_state) {
-  $formBuilder = \Drupal::formBuilder();
-  if (!array_key_exists('name', $formBuilder->getErrors($form_state)) && isset($form_state['values']['name']) && $form_state['values']['name'] == \Drupal::config('securesite.settings')->get('securesite_guest_name')) {
-    $formBuilder->setErrorByName('name', t('The name %name is being used as the %site guest name.', array(
+function securesite_user_validate($form,  FormStateInterface $form_state) {
+  if (!array_key_exists('name', $form_state->getErrors($form_state)) && isset($form_state['values']['name']) && $form_state['values']['name'] == \Drupal::config('securesite.settings')->get('securesite_guest_name')) {
+    $form_state->setErrorByName('name', t('The name %name is being used as the %site guest name.', array(
         '%name' => $form_state['values']['name'],
         '%site' => \Drupal::config('system.site')->get('name'))
     ));
   }
 }
 
-/**
- * Implements hook_user_insert().
- */
-function securesite_user_insert(&$edit, $account, $category) {
-  _securesite_user_digest_cleanup($edit);
-}
 
 /**
  * Implements hook_user_update().
  */
 function securesite_user_update(&$edit, $account, $category) {
   _securesite_user_digest_cleanup($edit);
-}
-
-/**
- * Implements hook_user_load().
- */
-function securesite_user_load($users) {
-  var_dump('inside load');
-  foreach ($users as $user) {
-    _securesite_user_digest_cleanup((array)$user);
-  }
 }
 
 /**
@@ -161,7 +156,8 @@ function _securesite_user_digest_cleanup($edit) {
 }
 
 /**
- * Implements hook_user_delete().
+ * Implements hook_user_delete().'
+ * TODO fix this
  */
 function securesite_user_delete($account) {
   $user = \Drupal::currentUser();
