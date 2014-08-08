@@ -91,7 +91,9 @@ function securesite_form_system_site_information_settings_alter(&$form, $form_st
 function securesite_user_login_callback($form, &$form_state){
   $edit['name'] = $form_state['values']['name'];
   $edit['pass'] = $form_state['values']['pass'];
-  _securesite_user_digest_cleanup($edit);
+  if(\Drupal::service('user.auth')->authenticate($edit['name'], $edit['pass'])) {
+    _securesite_user_digest_cleanup($edit);
+  }
 }
 
 

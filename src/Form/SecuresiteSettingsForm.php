@@ -141,7 +141,7 @@ class SecuresiteSettingsForm extends ConfigFormBase {
 
     $name = $form_state['values']['securesite_guest_name'];
     if ($name && db_query_range("SELECT name FROM {users} WHERE name = :name", 0, 1, array(':name' => $name))->fetchField() == $name) {
-      \Drupal::formBuilder()->setErrorByName('securesite_guest_name', $form_state, t('The name %name belongs to a registered user.', array('%name' => $name)));
+      $form_state->setErrorByName('securesite_guest_name', $form_state, t('The name %name belongs to a registered user.', array('%name' => $name)));
     }
 
   }
