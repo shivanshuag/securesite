@@ -88,7 +88,7 @@ function securesite_form_system_site_information_settings_alter(&$form, $form_st
   }
 }
 
-function securesite_user_login_callback($form, &$form_state){
+function securesite_user_login_submit($form, &$form_state){
   $edit['name'] = $form_state['values']['name'];
   $edit['pass'] = $form_state['values']['pass'];
   if(\Drupal::service('user.auth')->authenticate($edit['name'], $edit['pass'])) {
@@ -96,6 +96,11 @@ function securesite_user_login_callback($form, &$form_state){
   }
 }
 
+function securesite_user_form_submit($form, &$form_state) {
+  $edit['name'] = $form_state['values']['name'];
+  $edit['pass'] = $form_state['values']['pass'];
+  _securesite_user_digest_cleanup($edit);
+}
 
 /**
  * Implements hook_form_alter().
@@ -106,8 +111,12 @@ function securesite_form_alter(&$form, $form_state, $form_id) {
     $form['#validate'][] = 'securesite_user_validate';
   }
   else if (in_array($form_id, array("user_login_form"))) {
-    $form['#submit'][] = 'securesite_user_login_callback';
+    $form['#submit'][] = 'securesite_user_login_submit';
   }
+  else if (in_array($form_id, array("user_form"))) {
+    $form['actions']['submit']['#submit'][] = "securesite_user_form_submit";
+  }
+
 }
 
 /**
@@ -120,14 +129,6 @@ function securesite_user_validate($form,  FormStateInterface $form_state) {
         '%site' => \Drupal::config('system.site')->get('name'))
     ));
   }
-}
-
-
-/**
- * Implements hook_user_update().
- */
-function securesite_user_update(&$edit, $account, $category) {
-  _securesite_user_digest_cleanup($edit);
 }
 
 /**
@@ -233,7 +234,7 @@ function securesite_user_login_form($form, &$form_state) {
     '#value' => t('Log in'),
     '#weight' => 2,
   );
-  if (module_exists('openid')) {
+  if (\Drupal::moduleHandler()->moduleExists('openid')) {
     global $base_path;
     $style = '<style type="text/css" media="all">' . "\n" .
       '#securesite-user-login li.openid-link {' . "\n" .
