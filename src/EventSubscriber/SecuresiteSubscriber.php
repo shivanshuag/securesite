@@ -54,7 +54,7 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
 
     // Did the user send credentials that we accept?
     $type = $this->manager->getMechanism();
-    var_dump($type);
+    //var_dump($type);
     if ($type !== FALSE && (isset($_SESSION['securesite_repeat']) ? !$_SESSION['securesite_repeat'] : TRUE)) {
       $this->manager->boot($type);
     }
@@ -66,7 +66,7 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
       if ($this->manager->forcedAuth()) {
         $types = \Drupal::config('securesite.settings')->get('securesite_type');
         sort($types, SORT_NUMERIC);
-        var_dump('showing dialog');
+        //var_dump('showing dialog');
         $this->manager->showDialog(array_pop($types));
       }
     }

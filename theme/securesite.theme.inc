@@ -18,11 +18,11 @@ function template_preprocess_securesite_login_form(&$variables) {
   $variables['title'] = String::checkPlain(\Drupal::config('securesite.settings')->get('securesite_login_form'));
   $variables['messages'] = _theme('status_messages');
   $variables['openid_identifier'] = drupal_render($variables['form']['openid_identifier']);
-  $variables['name'] = drupal_render($variables['form']['name']);
-  $variables['pass'] = drupal_render($variables['form']['pass']);
-  $variables['submit'] = drupal_render($variables['form']['submit']);
-  $variables['openid_links'] = drupal_render($variables['form']['openid_links']);
-  $variables['children'] = drupal_render_children($variables['form']);
+  $variables['name'] = $variables['form']['name'];
+  $variables['form']['#attached'] = array('css' => array(drupal_get_path('module', 'securesite') . '/theme/securesite.css' => array()));
+  $variables['pass'] = $variables['form']['pass'];
+  $variables['submit'] = $variables['form']['submit'];
+  $variables['openid_links'] = $variables['form']['openid_links'];
 }
 
 /**
@@ -32,17 +32,11 @@ function template_preprocess_securesite_login_form(&$variables) {
  *   An array of variables from the theme system.
  */
 function template_preprocess_securesite_user_pass(&$variables) {
-  //$variables['form'] = \Drupal::formBuilder()->getForm('Drupal\user\Form\UserPasswordForm');
-/*  $variables['form']['name']['#title'] = t('User name or e-mail address');
-  $form_id = 'user_pass';
-  \Drupal::moduleHandler()->alter('form', $form, $form_state, $form_id);
-  $variables['form']['#redirect'] = FALSE;*/
-
   $variables['title'] = String::checkPlain(\Drupal::config('securesite.settings')->get('securesite_reset_form'));
   //$variables['form']['name']['#required'] = FALSE;
-  $variables['name'] = drupal_render($variables['form']['name']);
-  $variables['submit'] = drupal_render($variables['form']['submit']);
-  $variables['children'] = drupal_render_children($variables['form']);
+  $variables['name'] = $variables['form']['name'];
+  $variables['submit'] = $variables['form']['submit'];
+  //$variables['children'] = drupal_render_children($variables['form']);
 }
 
 /**
@@ -57,6 +51,7 @@ function template_preprocess_securesite_page(&$variables) {
   $variables['base_path']  = base_path();
   $variables['logo']       = theme_get_setting('logo')['url'];
   $variables['front_page'] = url();
+
   // Check if logo exists before output it in a template file
   // First get relative path from logo theme setting
   $logo_parts = parse_url($variables['logo']);
@@ -75,12 +70,11 @@ function template_preprocess_securesite_page(&$variables) {
   
   // Add our css file back, so it will be the only one
   _drupal_add_css(drupal_get_path('module', 'securesite') . '/theme/securesite.css');
-
   // By default a lot unnecessary JS is load,
   // By default we should not need any JS.
   $js = &drupal_static('_drupal_add_js', array());
   $js = array();
-  
+
   // Required by Core template_process_html()
   $variables['page_object'] = new HtmlPage();
   // Call Drupal core default html page preprocess function
