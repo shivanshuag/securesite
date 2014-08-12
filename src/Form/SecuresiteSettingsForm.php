@@ -10,6 +10,7 @@ namespace Drupal\securesite\Form;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Form\FormStateInterface;
+use  Drupal\Core\DrupalKernel;
 
 class SecuresiteSettingsForm extends ConfigFormBase {
 
@@ -177,6 +178,8 @@ class SecuresiteSettingsForm extends ConfigFormBase {
     }
     $script = $config_securesite->get('securesite_password_script');
     $realm = $config_securesite->get('securesite_realm');
+    $site_path = DrupalKernel::findSitePath(\Drupal::request());
+
     if (in_array(SECURESITE_DIGEST, $config_securesite->get('securesite_type'))) {
       // If digest authentication was enabled, we may need to do some clean-up.
       $securesite_guest_name = $config_securesite->get('securesite_guest_name');
@@ -186,11 +189,11 @@ class SecuresiteSettingsForm extends ConfigFormBase {
         $realm != $values['securesite_realm'] // Realm has changed.
       ) {
         // Delete all stored passwords.
-        exec("$script realm=" . escapeshellarg($realm) . ' op=delete');
+        exec("$script realm=" . escapeshellarg($realm) . ' op=delete site_path=' . $site_path);
       }
       elseif ($values['securesite_guest_name'] != $securesite_guest_name) {
         // Guest user name has changed. Delete old guest user password.
-        exec("$script username=" . escapeshellarg($securesite_guest_name) . ' realm=' . escapeshellarg($realm) . ' op=delete');
+        exec("$script username=" . escapeshellarg($securesite_guest_name) . ' realm=' . escapeshellarg($realm) . ' op=delete site_path=' . $site_path);
       }
     }
     if (in_array(SECURESITE_DIGEST, $values['securesite_type']) && (!isset($values['op']) || $values['op'] != t('Reset to defaults'))) {
@@ -200,6 +203,7 @@ class SecuresiteSettingsForm extends ConfigFormBase {
         'pass=' . escapeshellarg($values['securesite_guest_pass']),
         'realm=' . escapeshellarg($realm),
         'op=create',
+        'site_path=' . $site_path,
       );
       exec($script . ' ' . implode(' ', $args));
     }

@@ -71,11 +71,13 @@ include_once('./core/vendor/autoload.php');
 
 require "./core/includes/bootstrap.inc";
 require_once "./core/includes/database.inc";
-
+use Drupal\Core\Site\Settings;
 /**
  * initilize settings for settings to be read from settings.php.
  */
-drupal_settings_initialize();
+
+//$conf_path = conf_path();
+Settings::initialize($edit['site_path']);
 
 db_set_active();
 chdir($cwd);

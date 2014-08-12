@@ -39,9 +39,9 @@ define('SECURESITE_BASIC', 2);
  */
 define('SECURESITE_DIGEST', 3);
 
-use \Drupal\Core\Session\AnonymousUserSession;
-use Drupal\Core\Entity\EntityInterface;
+use  Drupal\Core\Session\AnonymousUserSession;
 use  Drupal\Core\Form\FormStateInterface;
+use  Drupal\Core\DrupalKernel;
 /**
  * Implements hook_permission().
  */
@@ -88,14 +88,23 @@ function securesite_form_system_site_information_settings_alter(&$form, $form_st
   }
 }
 
+
+/**
+ * Callback when a user logs in through user_login form
+ */
 function securesite_user_login_submit($form, &$form_state){
+  var_dump('user logging in');
   $edit['name'] = $form_state['values']['name'];
   $edit['pass'] = $form_state['values']['pass'];
   if(\Drupal::service('user.auth')->authenticate($edit['name'], $edit['pass'])) {
+    var_dump('correct user name and password');
     _securesite_user_digest_cleanup($edit);
   }
 }
 
+/**
+ * Callback when user updates his profile
+ */
 function securesite_user_form_submit($form, &$form_state) {
   $edit['name'] = $form_state['values']['name'];
   $edit['pass'] = $form_state['values']['pass'];
@@ -142,6 +151,7 @@ function securesite_user_validate($form,  FormStateInterface $form_state) {
  */
 function _securesite_user_digest_cleanup($edit) {
   $user = \Drupal::currentUser();
+  $site_path = DrupalKernel::findSitePath(\Drupal::request());
   if (in_array(SECURESITE_DIGEST, \Drupal::config('securesite.settings')->get('securesite_type')) && isset($edit['pass'])) {
     $edit['name'] = isset($edit['name']) ? $edit['name'] : $user->getUsername();
     $script = \Drupal::config('securesite.settings')->get('securesite_password_script');
@@ -150,26 +160,29 @@ function _securesite_user_digest_cleanup($edit) {
       'realm=' . escapeshellarg(\Drupal::config('securesite.settings')->get('securesite_realm')),
       'pass=' . escapeshellarg($edit['pass']),
       'op=create',
+      'site_path=' . $site_path,
     );
     exec($script . ' ' . implode(' ', $values), $output, $status);
-    if ($user->getUsername() != $edit['name']) {
+/*    if ($user->getUsername() != $edit['name']) {
       securesite_user_delete($edit, $user);
-    }
+    }*/
   }
 }
 
 /**
- * Implements hook_user_delete().'
+ * Implements hook_user_delete().
  * TODO fix this
  */
 function securesite_user_delete($account) {
   $user = \Drupal::currentUser();
+  $site_path = DrupalKernel::findSitePath(\Drupal::request());
   if (in_array(SECURESITE_DIGEST, \Drupal::config('securesite.settings')->get('securesite_type'))) {
     $script = \Drupal::config('securesite.settings')->get('securesite_password_script');
     $values = array(
       'username=' . escapeshellarg($user->getUsername()),
       'realm=' . escapeshellarg(\Drupal::config('securesite.settings')->get('securesite_realm')),
       'op=delete',
+      'site_path=' . $site_path,
     );
     exec($script . ' ' . implode(' ', $values));
   }
@@ -216,7 +229,7 @@ function securesite_theme() {
  * @ingroup forms
  * @see user_login()
  */
-function securesite_user_login_form($form, &$form_state) {
+function securesite_user_login_form($form, FormStateInterface $form_state) {
   $form['name'] = array(
     '#type' => 'textfield',
     '#title' => t('User name'),
@@ -245,7 +258,7 @@ function securesite_user_login_form($form, &$form_state) {
   }
 
   // drupal_alter takes this variable by reference so can't be a literal.
-  $form_id = 'user_login';
+  $form_id = 'user_login_form';
   \Drupal::moduleHandler()->alter('form', $form, $form_state, $form_id);
   return $form;
 }
