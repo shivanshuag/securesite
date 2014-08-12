@@ -17,6 +17,7 @@ use Drupal\Core\Entity\EntityManagerInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\user\UserAuthInterface;
 use Drupal\Component\Utility\Xss;
+use Drupal\Component\Utility\SafeMarkup;
 
 class SecuresiteManager implements SecuresiteManagerInterface {
 
@@ -104,7 +105,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
             }
             break;
           case SECURESITE_FORM:
-            if ( $request->request->get('form_id')!= null && $request->request->get('form_id') == 'securesite_user_login_form') {
+            if ( $request->request->get('form_id')!= null && $request->request->get('form_id') == 'securesite_login_form') {
               $mechanism = SECURESITE_FORM;
               break 2;
             }
@@ -521,10 +522,10 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     $formBuilder = \Drupal::formBuilder();
     $reset = \Drupal::config('securesite.settings')->get('securesite_reset_form');
     if (in_array(SECURESITE_FORM, \Drupal::config('securesite.settings')->get('securesite_type'))) {
-      $user_login = $formBuilder->getForm('securesite_user_login_form');
+      $user_login = $formBuilder->getForm('Drupal\securesite\Form\SecuresiteLoginForm');
       $output = render($user_login);
       if (!empty($reset)) {
-        $user_pass = $formBuilder->getForm('securesite_user_pass');
+        $user_pass = $formBuilder->getForm('Drupal\user\Form\UserPasswordForm');
         $output .= "<hr />\n" . render($user_pass);
       }
     }
@@ -537,6 +538,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
         $output = '<p>' . t('Reload the page to try logging in again.') . '</p>';
       }
     }
+    $output = SafeMarkup::set($output);
     return $output;
   }
 
