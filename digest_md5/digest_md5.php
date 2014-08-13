@@ -108,7 +108,6 @@ if (!empty($expire)) {
  * Respond to authentication request.
  */
 if (isset($edit['data'])) {
-  //var_dump($edit['realm']);
   list($output, $status) = _digest_md5_response($edit);
   print "$output\n";
   exit($status);
@@ -116,7 +115,6 @@ if (isset($edit['data'])) {
 else {
   $nonce = uniqid();
   $uname = posix_uname();
-  //var_dump($edit['realm']);
   $edit['realm'] = isset($edit['realm']) ? $edit['realm'] : $uname['nodename'];
   $edit['fakerealm'] = isset($edit['fakerealm']) ? $edit['fakerealm'] : $edit['realm'];
   $qop = isset($edit['qop']) ? $edit['qop'] : 'auth';
@@ -207,9 +205,7 @@ function _digest_md5_response($edit) {
   $field_uri = isset($fields['uri']) ? parse_url($fields['uri']) : NULL;
   if (array_diff($required, array_keys($fields)) == array() && (!isset($edit['uri']) || $uri['path'] == $field_uri['path'])) {
     // Required fields are present and URI matches.
-    //var_dump($fields);
     $edit['realm'] = isset($edit['realm']) ? $edit['realm'] : $fields['realm'];
-    //var_dump($edit['realm']);
     $sn = db_query("SELECT qop, nc, opaque, hash FROM `securesite_nonce` WHERE nonce = :nonce AND realm = :realm", array( ':nonce' => $fields['nonce'], ':realm' => $edit['realm']))->fetchAssoc();
     $pass = db_query("SELECT pass FROM `securesite_passwords` WHERE name = :name AND realm = :realm", array( ':name' => $fields['username'], ':realm' => $edit['realm']))->fetchField();
     if ($pass !== FALSE) {

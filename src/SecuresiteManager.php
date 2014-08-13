@@ -92,7 +92,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       foreach ($types as $type) {
         switch ($type) {
           case SECURESITE_DIGEST:
-            var_dump('digest is selected');
             if ($_SERVER['PHP_AUTH_DIGEST'] != null) {
               $mechanism = SECURESITE_DIGEST;
               break 2;
@@ -125,14 +124,12 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
     switch ($type) {
       case SECURESITE_DIGEST:
-        var_dump('boot digest');
         $edit = $this->parseDirectives($_SERVER['PHP_AUTH_DIGEST']);
         $edit['name'] = $edit['username'];
         $edit['pass'] = NULL;
         $function = 'digestAuth';
         break;
       case SECURESITE_BASIC:
-        var_dump('basic');
         $edit['name'] = $request->headers->get('PHP_AUTH_USER', '');
         $edit['pass'] = $request->headers->get('PHP_AUTH_PW', '');
         $function = 'plainAuth';
@@ -148,11 +145,9 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     }
     // Are credentials different from current user?
     $differentUser = ($currentUser->getUsername() == \Drupal::config('user.settings')->get('anonymous')) || ($edit['name'] !== $currentUser->getUsername());
-    //var_dump($differentUser);
     $notGuestLogin = !isset($_SESSION['securesite_guest']) || $edit['name'] !== $_SESSION['securesite_guest'];
 
     if ($differentUser && $notGuestLogin) {
-      //var_dump('calling '.$function);
       $this->$function($edit);
     }
   }
@@ -160,7 +155,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
   public function plainAuth($edit) {
     // We cant set username to be a required field so we check here if it is empty
-    var_dump('inside plainauth');
     if (empty($edit['name'])) {
       drupal_set_message(t('Unrecognized user name and/or password.'), 'error');
       $this->showDialog($this->getType());
@@ -181,14 +175,12 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
       else {
         // See if we have guest user credentials.
-        var_dump('wrong user, guest login');
         $this->guestLogin($edit);
       }
     }
     else {
       if ( $this->userAuth->authenticate($edit['name'], $edit['pass']) ||  \Drupal::moduleHandler()->moduleExists('ldapauth') && _ldapauth_auth($edit['name'], $edit['pass']) !== FALSE) {
         // Password is correct. Perform log-in.
-        var_dump('correct password');
         $this->userLogin($edit, $account);
       }
       else {
@@ -240,7 +232,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     // Check anonymous user permission and credentials.
     if ($anonymous_user->hasPermission('access secured pages') && (empty($guest_name) || $edit['name'] == $guest_name) && (empty($guest_pass) || $edit['pass'] == $guest_pass)) {
       // Unset the session variable set by securesite_denied().
-      var_dump('has permission');
       if(isset($_SESSION['securesite_denied'])){
         unset($_SESSION['securesite_denied']);
       }
@@ -297,7 +288,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       switch ($status) {
         case 0:
           // Password is correct. Log user in.
-          var_dump('log the user in');
           $this->request->securesiteHeaders += array($header['name'] => $header['value']);
           $this->userLogin($edit, $account);
           break;
@@ -379,7 +369,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     }
     // Are we on a password reset page?
     elseif (strpos(current_path(), 'user/reset/') === 0 ||  \Drupal::moduleHandler()->moduleExists('locale') && $language->enabled && strpos(current_path(), $language->prefix . '/user/reset/') === 0) {
-      var_dump('password reset page');
       $args = explode('/', current_path());
       if ( \Drupal::moduleHandler()->moduleExists('locale') && $language->enabled && $language->prefix != '') {
         // Remove the language argument.
@@ -407,7 +396,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       // Display log-in dialog.
       switch ($type) {
         case SECURESITE_DIGEST:
-          var_dump('show dialog digest');
           $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
           $header = $this->_securesite_digest_validate($status, array('realm' => $realm, 'fakerealm' => $this->getFakeRealm()));
           if (strpos($header, 'WWW-Authenticate') === 0) {
@@ -428,7 +416,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       // Form authentication doesn't work for cron, so allow cron.php to run
       // without authenticating when no other authentication type is enabled.
       if ((request_uri() != $base_path . 'cron.php' || \Drupal::config('securesite.settings')->get('securesite_type') != array(SECURESITE_FORM)) && in_array(SECURESITE_FORM, \Drupal::config('securesite.settings')->get('securesite_type'))) {
-        //var_dump(request_uri());
         //todo fix next line
         //drupal_set_title(t('Authentication required'));
         $content = $this->dialogPage();
@@ -449,16 +436,13 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    */
   public function denied($message) {
     $request = $this->request;
-    //var_dump('denied');
     if (empty($_SESSION['securesite_denied'])) {
-      //var_dump('empty');
       // Unset messages from previous log-in attempts.
       if (isset($_SESSION['messages'])) {
         unset($_SESSION['messages']);
       }
       // Set a session variable so that the log-in dialog will be displayed when the page is reloaded.
       $_SESSION['securesite_denied'] = TRUE;
-      //var_dump('session set');
       $types = \Drupal::config('securesite.settings')->get('securesite_type');
       if(array_pop($types) != SECURESITE_FORM){
         $this->request->securesiteHeaders += array('Status' => '403');
@@ -478,7 +462,6 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
     }
     else {
-      //var_dump('already set');
       unset($_SESSION['securesite_denied']);
       // Safari will attempt to use old credentials before requesting new credentials
       // from the user. Logging out requires that the WWW-Authenticate header be sent
