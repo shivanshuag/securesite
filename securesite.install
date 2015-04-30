@@ -9,8 +9,8 @@
  * Implements hook_install().
  */
 function securesite_install(){
-  $config_securesite = \Drupal::config('securesite.settings');
-  $config_site = \Drupal::config('system.site');
+  $config_securesite = \Drupal::configFactory()->getEditable('securesite.settings');
+  $config_site = \Drupal::configFactory()->getEditable('system.site');
   $config_securesite->set('securesite_digest_script', drupal_get_path('module', 'securesite') . '/digest_md5/digest_md5.php');
   $config_securesite->set('securesite_password_script', drupal_get_path('module', 'securesite') . '/digest_md5/stored_passwords.php');
   $config_securesite->set('securesite_realm', $config_site->get('name'));
@@ -22,8 +22,8 @@ function securesite_install(){
  * Implements hook_uninstall().
  */
 function securesite_uninstall() {
-  $config_securesite = \Drupal::config('securesite.settings');
-  \Drupal::config('system.site')
+  $config_securesite = \Drupal::configFactory()->getEditable('securesite.settings');
+  \Drupal::configFactory()->getEditable('system.site')
     ->set('page.403', $config_securesite->get('securesite_403'))
     ->save();
   if (in_array(SECURESITE_DIGEST, $config_securesite->get('securesite_type'))) {

@@ -18,7 +18,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\user\UserAuthInterface;
 use Drupal\Component\Utility\Xss;
 use Drupal\Component\Utility\SafeMarkup;
-
+use Drupal\Component\Utility\Unicode;
 class SecuresiteManager implements SecuresiteManagerInterface {
 
   /**
@@ -75,7 +75,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       }
       if (!empty($request->headers->get('HTTP_AUTHORIZATION'))) {
         list($type, $authorization) = explode(' ', $request->headers->get('HTTP_AUTHORIZATION'), 2);
-        switch (drupal_strtolower($type)) {
+        switch (Unicode::strtolower($type)) {
           case 'digest':
             $request->headers->set('PHP_AUTH_DIGEST', $authorization);
             break;
@@ -105,6 +105,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
             break;
           case SECURESITE_FORM:
             if ( $request->request->get('form_id')!= null && $request->request->get('form_id') == 'securesite_login_form') {
+              echo "form";
               $mechanism = SECURESITE_FORM;
               break 2;
             }
@@ -210,13 +211,13 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       // Clear the guest session.
       unset($_SESSION['securesite_guest']);
 
+      $path = \Drupal::service('path.current')->getPath();
       // Prevent a log-in/log-out loop by redirecting off the log-out page.
-      if (current_path() == 'user/logout') {
-        $response = new RedirectResponse('/');
-        $response->send();
-
+      if ($path == '/user/logout') {
+        $path = '';
       }
-      return $account;
+      $response = new RedirectResponse($path);
+      $response->send();
     }
     else {
       $this->denied(t('You have not been authorized to log in to secured pages.'));
@@ -239,7 +240,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       $_SESSION['securesite_guest'] = $edit['name'];
       $_SESSION['securesite_login'] = TRUE;
       // Prevent a 403 error by redirecting off the logout page.
-      if (current_path() == 'user/logout') {
+      if (\Drupal::service('path.current')->getPath() == '/user/logout') {
         $response = new RedirectResponse('/');
         $response->send();
       }
@@ -368,8 +369,8 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       $content = '';
     }
     // Are we on a password reset page?
-    elseif (strpos(current_path(), 'user/reset/') === 0 ||  \Drupal::moduleHandler()->moduleExists('locale') && $language->enabled && strpos(current_path(), $language->prefix . '/user/reset/') === 0) {
-      $args = explode('/', current_path());
+    elseif (strpos(\Drupal::service('path.current')->getPath(), '/user/reset/') === 0 ||  \Drupal::moduleHandler()->moduleExists('locale') && $language->enabled && strpos(\Drupal::service('path.current')->getPath(), $language->prefix . '/user/reset/') === 0) {
+      $args = explode('/', \Drupal::service('path.current')->getPath());
       if ( \Drupal::moduleHandler()->moduleExists('locale') && $language->enabled && $language->prefix != '') {
         // Remove the language argument.
         array_shift($args);
@@ -423,7 +424,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     }
     if (isset($content)) {
       // Theme and display output
-      $html = _theme('securesite_page', array('content' => $content));
+      $html = $this->theme($content);
       $response->setContent($html);
       $response->headers->set('Content-Type', 'text/html');
       $response->send();
@@ -455,7 +456,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
         // Theme and display output
         $content = $this->dialogPage();
-        print _theme('securesite_page', array('content' => $content));
+        print $this->theme($content);
 
         // Exit
         exit();
@@ -466,7 +467,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
       // Safari will attempt to use old credentials before requesting new credentials
       // from the user. Logging out requires that the WWW-Authenticate header be sent
       // twice.
-      $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? drupal_strtolower($_SERVER['HTTP_USER_AGENT']) : '');
+      $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? Unicode::strtolower($_SERVER['HTTP_USER_AGENT']) : '');
       if ($user_agent != str_replace('safari', '', $user_agent)) {
         $_SESSION['securesite_repeat'] = TRUE;
       }
@@ -482,7 +483,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
 
         // Theme and display output
         $content = $this->dialogPage();
-        print _theme('securesite_page', array('content' => $content));
+        print $this->theme($content);
 
         // Exit
         exit();
@@ -530,7 +531,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    */
   public function forcedAuth() {
     // Do we require credentials to display this page?
-    if (php_sapi_name() == 'cli' || current_path() == 'admin/reports/request-test') {
+    if (php_sapi_name() == 'cli' || \Drupal::service('path.current')->getPath() == '/admin/reports/request-test') {
       return FALSE;
     }
     else {
@@ -552,7 +553,7 @@ class SecuresiteManager implements SecuresiteManagerInterface {
    */
   public function getFakeRealm() {
     $realm = \Drupal::config('securesite.settings')->get('securesite_realm');
-    $user_agent = drupal_strtolower($this->request->server->get('HTTP_USER_AGENT', ''));
+    $user_agent = Unicode::strtolower($this->request->server->get('HTTP_USER_AGENT', ''));
     if ($user_agent != str_replace(array('msie', 'opera'), '', $user_agent)) {
       $realm .= ' - ' . mt_rand(10, 999);
     }
@@ -574,6 +575,20 @@ class SecuresiteManager implements SecuresiteManagerInterface {
     return $directives;
   }
 
+  public static function theme($content) {
+    $page = array(
+      '#theme' => 'securesite_page',
+      '#content' => $content,
+      '#html' => array(
+        '#attached' => array(
+          'css' => array(
+            drupal_get_path('module', 'securesite') . '/theme/securesite.css' => array(),
+          ),
+        ),
+      ),
+    );
+    return \Drupal::service('renderer')->render($page);
+  }
   /**
    * Menu callback; handle restricted pages.
    */

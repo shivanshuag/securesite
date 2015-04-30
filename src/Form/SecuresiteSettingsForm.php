@@ -11,6 +11,7 @@ use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Form\FormStateInterface;
 use  Drupal\Core\DrupalKernel;
+use Drupal\Core\Url;
 
 class SecuresiteSettingsForm extends ConfigFormBase {
 
@@ -19,6 +20,15 @@ class SecuresiteSettingsForm extends ConfigFormBase {
    */
   public function getFormId() {
     return 'securesite_admin_settings';
+  }
+  /**
+   * {@inheritdoc}
+   */
+  protected function getEditableConfigNames() {
+    return [
+      'securesite.settings',
+      'system.site',
+    ];
   }
 
   /**
@@ -30,7 +40,7 @@ class SecuresiteSettingsForm extends ConfigFormBase {
     $form['authentication'] = array(
       '#type' => 'fieldset',
       '#title' => t('Authentication'),
-      '#description' => t('Enable Secure Site below. Users must have the <em>!access</em> permission in order to access the site if authentication is forced.', array('!access' => l(t('access secured pages'), 'admin/people/permissions', array('fragment' => 'module-securesite'))))
+      '#description' => t('Enable Secure Site below. Users must have the <em>!access</em> permission in order to access the site if authentication is forced.', array('!access' => \Drupal::l(t('access secured pages'), Url::fromUri('base:admin/people/permissions', array('fragment' => 'module-securesite')))))
     );
     $form['authentication']['securesite_enabled'] = array(
       '#type' => 'radios',
@@ -55,9 +65,9 @@ class SecuresiteSettingsForm extends ConfigFormBase {
       '#required' => TRUE,
     );
     $form['authentication']['securesite_type']['#description'] = "\n<p>" .
-      t('HTTP authentication requires extra configuration if PHP is not installed as an Apache module. See the !link section of the Secure Site help for details.', array('!link' => l(t('Known issues'), 'admin/help/securesite', array('fragment' => 'issues')))) . "</p>\n<p>" .
+      t('HTTP authentication requires extra configuration if PHP is not installed as an Apache module. See the !link section of the Secure Site help for details.', array('!link' => \Drupal::l(t('Known issues'), Url::fromUri('base:admin/help/securesite', array('fragment' => 'issues'))))) . "</p>\n<p>" .
       t('Digest authentication protects a user&rsquo;s password from eavesdroppers when you are not using SSL to encrypt the connection. However, it can only be used when a copy of the password is stored on the server.') . ' ' .
-      t('For security reasons, Drupal does not store passwords. You will need to configure scripts to securely save passwords and authenticate users. See the !link section of the Secure Site help for details.', array('!link' => l(t('Secure password storage'), 'admin/help/securesite', array('fragment' => 'passwords')))) . "</p>\n<p>" .
+      t('For security reasons, Drupal does not store passwords. You will need to configure scripts to securely save passwords and authenticate users. See the !link section of the Secure Site help for details.', array('!link' => \Drupal::l(t('Secure password storage'), Url::fromUri('base:admin/help/securesite', array('fragment' => 'passwords'))))) . "</p>\n<p>" .
       t('When digest authentication is enabled, passwords will be saved when users log in or set their passwords. If you use digest authentication to protect your whole site, you should allow guest access or allow another authentication type until users whose passwords are not yet saved have logged in. Otherwise, <strong>you may lock yourself out of your own site.</strong>') . '</p>' . "\n";
     $form['authentication']['securesite_digest_script'] = array(
       '#type' => 'textarea',
@@ -84,7 +94,7 @@ class SecuresiteSettingsForm extends ConfigFormBase {
     $form['guest'] = array(
       '#type' => 'fieldset',
       '#title' => t('Guest access'),
-      '#description' => t('Guest access allows anonymous users to view secure pages, though they will still be prompted for a user name and password. If you give anonymous users the <em>!access</em> permission, you can set the user name and password for anonymous users below.', array('!access' => l(t('access secured pages'), 'admin/people/permissions', array('fragment' => 'module-securesite')))),
+      '#description' => t('Guest access allows anonymous users to view secure pages, though they will still be prompted for a user name and password. If you give anonymous users the <em>!access</em> permission, you can set the user name and password for anonymous users below.', array('!access' => \Drupal::l(t('access secured pages'), Url::fromUri('base:admin/people/permissions', array('fragment' => 'module-securesite'))))),
     );
     $guest_access = !$anonymous_user->hasPermission('access secured pages');
     $form['guest']['securesite_guest_name'] = array(
@@ -133,14 +143,14 @@ class SecuresiteSettingsForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state){
-    foreach ($form_state['values']['securesite_type'] as $type => $value) {
+    foreach ($form_state->getValues()['securesite_type'] as $type => $value) {
       if (empty($value)) {
-        unset($form_state['values']['securesite_type'][$type]);
+        unset($form_state->getValues()['securesite_type'][$type]);
       }
     }
-    sort($form_state['values']['securesite_type']);
+    sort($form_state->getValues()['securesite_type']);
 
-    $name = $form_state['values']['securesite_guest_name'];
+    $name = $form_state->getValues()['securesite_guest_name'];
     if ($name && db_query_range("SELECT name FROM {users} WHERE name = :name", 0, 1, array(':name' => $name))->fetchField() == $name) {
       $form_state->setErrorByName('securesite_guest_name', $form_state, t('The name %name belongs to a registered user.', array('%name' => $name)));
     }
@@ -152,7 +162,7 @@ class SecuresiteSettingsForm extends ConfigFormBase {
    * Configure access denied page and manage stored guest password.
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $values = $form_state['values'];
+    $values = $form_state->getValues();
 
     $config_securesite = $this->config('securesite.settings');
     $config_site = $this->config('system.site');

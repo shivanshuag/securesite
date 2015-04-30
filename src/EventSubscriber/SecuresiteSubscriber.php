@@ -44,9 +44,12 @@ class SecuresiteSubscriber implements EventSubscriberInterface {
    *   The event to process.
    */
   public function onKernelRequest(GetResponseEvent $event) {
+
+    if (function_exists('drush_verify_cli') && drush_verify_cli()) {
+      return;
+    }
     $account = \Drupal::currentUser();
     $request = $event->getRequest();
-
     //creating an array of headers to be added to the response. This array will be populated later on
     $request->securesiteHeaders = array();
 

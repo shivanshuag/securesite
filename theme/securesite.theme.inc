@@ -6,7 +6,6 @@
  */
 
 use Drupal\Component\Utility\String;
-use Drupal\Core\Page\HtmlPage;
 
 /**
  * Process variables for securesite-user-login.html.twig
@@ -16,7 +15,7 @@ use Drupal\Core\Page\HtmlPage;
  */
 function template_preprocess_securesite_login_form(&$variables) {
   $variables['title'] = String::checkPlain(\Drupal::config('securesite.settings')->get('securesite_login_form'));
-  $variables['messages'] = _theme('status_messages');
+  $variables['messages'] = 'status_messages';
   $variables['openid_identifier'] = drupal_render($variables['form']['openid_identifier']);
   $variables['name'] = $variables['form']['name'];
   $variables['form']['#attached'] = array('css' => array(drupal_get_path('module', 'securesite') . '/theme/securesite.css' => array()));
@@ -46,11 +45,12 @@ function template_preprocess_securesite_user_pass(&$variables) {
  *   An array of variables from the theme system.
  */
 function template_preprocess_securesite_page(&$variables) {
+  //var_dump($variables);
   // Add relevant default variables, taken from template_preprocess_page()
-  $variables['messages']   = !empty($variables['show_messages']) ? _theme('status_messages') : '';
+  $variables['messages']   = !empty($variables['show_messages']) ? 'status_messages' : '';
   $variables['base_path']  = base_path();
   $variables['logo']       = theme_get_setting('logo')['url'];
-  $variables['front_page'] = url();
+  //$variables['front_page'] = url();
 
   // Check if logo exists before output it in a template file
   // First get relative path from logo theme setting
@@ -65,18 +65,18 @@ function template_preprocess_securesite_page(&$variables) {
   }
   
   // Clear out existing CSS
-  $css = &drupal_static('_drupal_add_css', array());
-  $css = array();
+  //$css = &drupal_static('_drupal_add_css', array());
+  //$css = array();
   
   // Add our css file back, so it will be the only one
-  _drupal_add_css(drupal_get_path('module', 'securesite') . '/theme/securesite.css');
+  //_drupal_add_css(drupal_get_path('module', 'securesite') . '/theme/securesite.css');
   // By default a lot unnecessary JS is load,
   // By default we should not need any JS.
-  $js = &drupal_static('_drupal_add_js', array());
-  $js = array();
+  //$js = &drupal_static('_drupal_add_js', array());
+  //$js = array();
 
   // Required by Core template_process_html()
-  $variables['page_object'] = new HtmlPage();
+  //$variables['page_object'] = new HtmlPage();
   // Call Drupal core default html page preprocess function
-  template_preprocess_html($variables);
+  //template_preprocess_html($variables);
 }

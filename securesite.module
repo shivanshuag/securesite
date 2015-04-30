@@ -42,6 +42,7 @@ define('SECURESITE_DIGEST', 3);
 use  Drupal\Core\Session\AnonymousUserSession;
 use  Drupal\Core\Form\FormStateInterface;
 use  Drupal\Core\DrupalKernel;
+use Drupal\Component\Utility\Unicode;
 /**
  * Implements hook_permission().
  */
@@ -65,7 +66,7 @@ function securesite_user_logout($account) {
     // Safari will attempt to use old credentials before requesting new credentials
     // from the user. Logging out requires that the WWW-Authenticate header be sent
     // twice.
-    $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? drupal_strtolower($_SERVER['HTTP_USER_AGENT']) : '');
+    $user_agent = (isset($_SERVER['HTTP_USER_AGENT']) ? Unicode::strtolower($_SERVER['HTTP_USER_AGENT']) : '');
     if ($user_agent != str_replace('safari', '', $user_agent)) {
       session_set_save_handler('sess_open', 'sess_close', 'sess_read', 'sess_write', 'sess_destroy_sid', 'sess_gc');
       session_start();
@@ -93,8 +94,8 @@ function securesite_form_system_site_information_settings_alter(&$form, $form_st
  * Callback when a user logs in through user_login form
  */
 function securesite_user_login_submit($form, &$form_state){
-  $edit['name'] = $form_state['values']['name'];
-  $edit['pass'] = $form_state['values']['pass'];
+  $edit['name'] = $form_state->getValues()['name'];
+  $edit['pass'] = $form_state->getValues()['pass'];
   if(\Drupal::service('user.auth')->authenticate($edit['name'], $edit['pass'])) {
     _securesite_user_digest_cleanup($edit);
   }
@@ -104,8 +105,8 @@ function securesite_user_login_submit($form, &$form_state){
  * Callback when user updates his profile
  */
 function securesite_user_form_submit($form, &$form_state) {
-  $edit['name'] = $form_state['values']['name'];
-  $edit['pass'] = $form_state['values']['pass'];
+  $edit['name'] = $form_state->getValues()['name'];
+  $edit['pass'] = $form_state->getValues()['pass'];
   _securesite_user_digest_cleanup($edit);
 }
 
@@ -137,7 +138,7 @@ function securesite_form_alter(&$form, $form_state, $form_id) {
 function securesite_user_validate($form,  FormStateInterface $form_state) {
   if (!array_key_exists('name', $form_state->getErrors($form_state)) && isset($form_state['values']['name']) && $form_state['values']['name'] == \Drupal::config('securesite.settings')->get('securesite_guest_name')) {
     $form_state->setErrorByName('name', t('The name %name is being used as the %site guest name.', array(
-        '%name' => $form_state['values']['name'],
+        '%name' => $form_state->getValues()['name'],
         '%site' => \Drupal::config('system.site')->get('name'))
     ));
   }
@@ -206,6 +207,7 @@ function securesite_theme() {
       'template' => 'securesite-page',
       'variables' => array(
         'content' => NULL,
+        'html' => NULL,
       ),
       'file' => 'securesite.theme.inc',
       'path' => drupal_get_path('module', 'securesite') . '/theme',

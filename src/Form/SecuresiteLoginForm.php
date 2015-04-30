@@ -54,7 +54,7 @@ class SecuresiteLoginForm extends FormBase {
         '  background:transparent url(' . $base_path . drupal_get_path('module', 'openid') . '/login-bg.png) no-repeat scroll 1px 0.35em;' . "\n" .
         '}' . "\n" .
         '</style>';
-      drupal_add_html_head($style);
+      _drupal_add_html_head($style);
     }
     return $form;
   }
